@@ -15,3 +15,5 @@ dataDir=$PWD/config/"$(basename "$0" .sh)"
 ledgerDir=$PWD/config/ledger
 echo $dataDir
 echo $ledgerDir
+
+##test
