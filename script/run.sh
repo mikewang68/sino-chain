@@ -17,3 +17,4 @@ echo $dataDir
 echo $ledgerDir
 
 ##test
+echo $dataDir
