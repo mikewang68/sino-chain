@@ -8,3 +8,5 @@ netDir=$(
 )
 
 echo $netDir
+
+#test ......
