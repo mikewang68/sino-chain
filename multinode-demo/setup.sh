@@ -5,3 +5,5 @@ source "$here"/common.sh
 
 script_dir="$(readlink -f "$(dirname "$0")")"
 echo $script_dir
+check；
+check；
