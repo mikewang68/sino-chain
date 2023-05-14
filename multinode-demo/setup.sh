@@ -7,3 +7,4 @@ script_dir="$(readlink -f "$(dirname "$0")")"
 echo $script_dir
 check；
 check；
+check；
