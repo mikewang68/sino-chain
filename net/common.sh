@@ -10,3 +10,4 @@ netDir=$(
 echo $netDir
 
 #test ......
+println!("this is a test");
