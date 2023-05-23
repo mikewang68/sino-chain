@@ -1,0 +1,18 @@
+[package]
+name = "rayon-threadlimit"
+version = "1.9.29"
+description = "rayon-threadlimit"
+homepage = ""
+documentation = ""
+readme = "../README.md"
+repository = ""
+authors = [""]
+license = "Apache-2.0"
+edition = "2021"
+
+[dependencies]
+num_cpus = "1.13.0"
+lazy_static = "1.4.0"
+
+[package.metadata.docs.rs]
+targets = ["x86_64-unknown-linux-gnu"]

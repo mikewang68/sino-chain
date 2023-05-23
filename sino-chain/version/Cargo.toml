@@ -1,0 +1,22 @@
+[package]
+name = "version"
+version = "0.6.3"
+license = "Apache-2.0"
+edition = "2021"
+
+[dependencies]
+log = "0.4.14"
+serde = "1.0.130"
+serde_derive = "1.0.103"
+frozen-abi = { path = "../frozen-abi", version = "=1.9.29" }
+frozen-abi-macro = { path = "../frozen-abi/macro", version = "=1.9.29" }
+sdk = { path = "../sdk", version = "=1.9.29" }
+
+[lib]
+name = "version"
+
+[package.metadata.docs.rs]
+targets = ["x86_64-unknown-linux-gnu"]
+
+[build-dependencies]
+rustc_version = "0.4"

@@ -1,0 +1,22 @@
+[package]
+name = "logger"
+version = "1.9.29"
+description = "Logger"
+authors = [""]
+repository = ""
+license = "Apache-2.0"
+homepage = ""
+documentation = ""
+edition = "2021"
+
+[dependencies]
+regex = "=1.7.3"
+env_logger = "0.9.0"
+lazy_static = "1.4.0"
+log = "0.4.14"
+
+[lib]
+name = "logger"
+
+[package.metadata.docs.rs]
+targets = ["x86_64-unknown-linux-gnu"]
