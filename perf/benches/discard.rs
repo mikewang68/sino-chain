@@ -11,7 +11,7 @@ const NUM: usize = 1000;
 
 #[bench]
 fn bench_discard(bencher: &mut Bencher) {
-    logger::setup();
+    sino_logger::setup();
     let tx = test_tx();
     let num_packets = NUM;
 

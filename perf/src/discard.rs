@@ -22,7 +22,7 @@ mod tests {
 
     #[test]
     fn test_batch_discard_random() {
-        logger::setup();
+        sino_logger::setup();
         let mut batch = PacketBatch::default();
         batch.packets.resize(1, Packet::default());
         let num_batches = 100;

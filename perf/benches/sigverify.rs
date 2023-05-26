@@ -39,7 +39,7 @@ fn bench_sigverify_simple(bencher: &mut Bencher) {
 #[bench]
 #[ignore]
 fn bench_sigverify_uneven(bencher: &mut Bencher) {
-    logger::setup();
+    sino_logger::setup();
     let simple_tx = test_tx();
     let multi_tx = test_multisig_tx();
     let mut tx;

@@ -600,7 +600,7 @@ mod tests {
 
     #[test]
     fn test_vote_process_instruction() {
-        logger::setup();
+        sino_logger::setup();
         let instructions = create_account(
             &Pubkey::new_unique(),
             &Pubkey::new_unique(),

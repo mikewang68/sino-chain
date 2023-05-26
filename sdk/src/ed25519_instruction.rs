@@ -211,7 +211,7 @@ pub mod test {
 
     #[test]
     fn test_invalid_offsets() {
-        logger::setup();
+        sino_logger::setup();
 
         let mut instruction_data = vec![0u8; DATA_START];
         let offsets = Ed25519SignatureOffsets::default();
@@ -343,7 +343,7 @@ pub mod test {
 
     #[test]
     fn test_ed25519() {
-        logger::setup();
+        sino_logger::setup();
 
         let privkey = ed25519_dalek::Keypair::generate(&mut thread_rng());
         let message_arr = b"hello";

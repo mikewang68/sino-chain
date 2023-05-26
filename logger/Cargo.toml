@@ -16,7 +16,7 @@ lazy_static = "1.4.0"
 log = "0.4.14"
 
 [lib]
-name = "logger"
+name = "sino_logger"
 
 [package.metadata.docs.rs]
 targets = ["x86_64-unknown-linux-gnu"]

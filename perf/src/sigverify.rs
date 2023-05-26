@@ -854,7 +854,7 @@ mod tests {
 
     #[test]
     fn test_pubkey_too_small() {
-        logger::setup();
+        sino_logger::setup();
         let mut tx = test_tx();
         let sig = tx.signatures[0];
         const NUM_SIG: usize = 18;
@@ -880,7 +880,7 @@ mod tests {
         // See that the verify cannot walk off the end of the packet
         // trying to index into the account_keys to access pubkey.
         use sdk::signer::{keypair::Keypair, Signer};
-        logger::setup();
+        sino_logger::setup();
 
         const NUM_SIG: usize = 17;
         let keypair1 = Keypair::new();
@@ -1176,7 +1176,7 @@ mod tests {
 
     #[test]
     fn test_verify_multisig() {
-        logger::setup();
+        sino_logger::setup();
 
         let tx = test_multisig_tx();
         let mut packet = sigverify::make_packet_from_transaction(tx);
@@ -1212,7 +1212,7 @@ mod tests {
     #[test]
     fn test_verify_fuzz() {
         use rand::{thread_rng, Rng};
-        logger::setup();
+        sino_logger::setup();
 
         let tx = test_multisig_tx();
         let packet = sigverify::make_packet_from_transaction(tx);
@@ -1261,7 +1261,7 @@ mod tests {
 
     #[test]
     fn test_get_checked_scalar() {
-        logger::setup();
+        sino_logger::setup();
         use {
             curve25519_dalek::scalar::Scalar,
             rand::{thread_rng, Rng},
@@ -1303,7 +1303,7 @@ mod tests {
 
     #[test]
     fn test_ge_small_order() {
-        logger::setup();
+        sino_logger::setup();
         use {
             curve25519_dalek::edwards::CompressedEdwardsY,
             rand::{thread_rng, Rng},
@@ -1352,7 +1352,7 @@ mod tests {
 
     #[test]
     fn test_is_simple_vote_transaction() {
-        logger::setup();
+        sino_logger::setup();
         let mut rng = rand::thread_rng();
 
         // tansfer tx is not
@@ -1399,7 +1399,7 @@ mod tests {
 
     #[test]
     fn test_is_simple_vote_transaction_with_offsets() {
-        logger::setup();
+        sino_logger::setup();
         let mut rng = rand::thread_rng();
 
         let mut current_offset = 0usize;

@@ -109,7 +109,7 @@ mod test {
 
     #[test]
     fn test_interval_update() {
-        logger::setup();
+        sino_logger::setup();
         let i = AtomicInterval::default();
         assert!(!i.should_update(1000));
 

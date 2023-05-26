@@ -89,7 +89,7 @@ mod tests {
 
     #[test]
     fn slot_history_test1() {
-        logger::setup();
+        sino_logger::setup();
         // should be divisible by 64 since the clear logic works on blocks
         assert_eq!(MAX_ENTRIES % 64, 0);
         let mut slot_history = SlotHistory::default();
@@ -133,7 +133,7 @@ mod tests {
 
     #[test]
     fn slot_history_test_wrap() {
-        logger::setup();
+        sino_logger::setup();
         let mut slot_history = SlotHistory::default();
         info!("add 2");
         slot_history.add(2);
@@ -161,7 +161,7 @@ mod tests {
 
     #[test]
     fn slot_history_test_same_index() {
-        logger::setup();
+        sino_logger::setup();
         let mut slot_history = SlotHistory::default();
         info!("add 3,4");
         slot_history.add(3);
