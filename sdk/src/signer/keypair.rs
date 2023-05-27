@@ -68,7 +68,8 @@ impl Keypair {
 
 impl Signer for Keypair {
     fn pubkey(&self) -> Pubkey {
-        Pubkey::new(self.0.public.as_ref())
+        let pubkey = Pubkey::new(self.0.public.as_ref());
+        return  pubkey;
     }
 
     fn try_pubkey(&self) -> Result<Pubkey, SignerError> {
@@ -116,9 +117,25 @@ pub fn write_keypair<W: Write>(
     keypair: &Keypair,
     writer: &mut W,
 ) -> Result<String, Box<dyn error::Error>> {
-    let keypair_bytes = keypair.0.to_bytes();
+    let keypair_bytes = keypair.0.to_bytes(); // 私钥
+    // println!("输出keypair_bytes:{:?}\n长度:{}",keypair_bytes,keypair_bytes.len());
     let serialized = serde_json::to_string(&keypair_bytes.to_vec())?;
+    // println!("输出serialized:{:?}\n长度:{}",serialized,serialized.len());
     writer.write_all(&serialized.clone().into_bytes())?;
+    println!("输出publickey:{:?}\n输出publickey.to_bytes:{:?}\n长度:{}\n输出publickey.as_ref:{:?}\n长度:{}\npubkey:{:?}",
+        keypair.0.public,
+        keypair.0.public.to_bytes(),
+        keypair.0.public.to_bytes().len(),
+        keypair.0.public.as_ref(),
+        keypair.0.public.as_ref().len(),
+        keypair.pubkey()
+    );
+    println!("{:?}",<[u8; 32]>::try_from(<&[u8]>::clone(&keypair.0.public.as_ref())));
+    println!("{:?}",Pubkey::new(keypair.0.public.as_ref()));
+    println!("{:?}\n{}",bs58::encode(keypair.0.to_bytes()).into_string(),bs58::encode(keypair.0.to_bytes()).into_string().len());
+    println!("{:?}\n{}",bs58::encode(keypair.0.public.as_ref()).into_string(),bs58::encode(keypair.0.public.as_ref()).into_string().len());
+    println!("{:?}\n{}",keypair.0.public.to_bytes().to_vec(),keypair.0.public.to_bytes().to_vec().len());
+    
     Ok(serialized)
 }
 
