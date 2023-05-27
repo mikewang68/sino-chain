@@ -1,0 +1,23 @@
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum MerkleValue<'a> { // | on extension (H256 -> Branch<'a> | Branch<'a>)
+    Empty,
+    Full(Box<MerkleNode<'a>>),
+    Hash(H256),
+}
+
+struct Link<T> {
+    hash: H256,
+    data: RefCell<Option<T>>
+}
+
+impl Link<T: rlp::Decodable> {
+    fn deserialize(db: &impl Database) -> Result<T, Error> {todo!()}
+    fn deref(&self, db: &impl Database) -> &T {
+        se
+    }
+}
+
+enum MerkleValue2<'a, T=MerkleNode<'a>> {
+    Full(Box<T>),
+    Hash(Link<T>),
+}
