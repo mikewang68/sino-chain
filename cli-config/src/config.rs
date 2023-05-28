@@ -10,7 +10,7 @@ lazy_static! {
     ///
     /// This is a [lazy_static] of `Option<String>`, the value of which is
     ///
-    /// > `~/.config/solana/cli/config.yml`
+    /// > `~/.config/sino/cli/config.yml`
     ///
     /// It will only be `None` if it is unable to identify the user's home
     /// directory, which should not happen under typical OS environments.
@@ -24,13 +24,13 @@ lazy_static! {
     };
 }
 
-/// The Solana CLI configuration.
+/// The Sino CLI configuration.
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
 pub struct Config {
-    /// The RPC address of a Solana validator node.
+    /// The RPC address of a Sino validator node.
     ///
     /// Typical values for mainnet, devnet, and testnet are [described in the
-    /// Solana documentation][rpcdocs].
+    /// Sino documentation][rpcdocs].
     ///
     /// For local testing, the typical value is `http://localhost:8899`.
     ///
@@ -53,7 +53,7 @@ pub struct Config {
     /// The signing source can be loaded with either the `signer_from_path`
     /// function, or with `clap_utils::keypair::DefaultSigner`.
     pub keypair_path: String,
-    /// A mapping from Solana addresses to human-readable names.
+    /// A mapping from Sino addresses to human-readable names.
     ///
     /// By default the only value in this map is the system program.
     #[serde(default)]
@@ -73,7 +73,7 @@ impl Default for Config {
             keypair_path.extend([".config", "sino", "id.json"]);
             keypair_path.to_str().unwrap().to_string()
         };
-        let json_rpc_url = "https://api.mainnet.velas.com".to_string();
+        let json_rpc_url = "https://api.mainnet.sino.com".to_string();
 
         // Empty websocket_url string indicates the client should
         // `Config::compute_websocket_url(&json_rpc_url)`
@@ -177,13 +177,13 @@ mod test {
     #[test]
     fn compute_websocket_url() {
         assert_eq!(
-            Config::compute_websocket_url("http://api.devnet.velas.com"),
-            "ws://api.devnet.velas.com/".to_string()
+            Config::compute_websocket_url("http://api.devnet.sino.com"),
+            "ws://api.devnet.sino.com/".to_string()
         );
 
         assert_eq!(
-            Config::compute_websocket_url("https://api.devnet.velas.com"),
-            "wss://api.devnet.velas.com/".to_string()
+            Config::compute_websocket_url("https://api.devnet.sino.com"),
+            "wss://api.devnet.sino.com/".to_string()
         );
 
         assert_eq!(

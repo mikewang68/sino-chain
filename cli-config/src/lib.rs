@@ -1,15 +1,15 @@
-//! Loading and saving the Solana CLI configuration file.
+//! Loading and saving the Sino CLI configuration file.
 //!
-//! The configuration file used by the Solana CLI includes information about the
+//! The configuration file used by the Sino CLI includes information about the
 //! RPC node to connect to, the path to the user's signing source, and more.
-//! Other software than the Solana CLI may wish to access the same configuration
+//! Other software than the Sino CLI may wish to access the same configuration
 //! and signer.
 //!
 //! The default path to the configuration file can be retrieved from
 //! [`CONFIG_FILE`], which is a [lazy_static] of `Option<String>`, the value of
 //! which is
 //!
-//! > `~/.config/solana/cli/config.yml`
+//! > `~/.config/sino/cli/config.yml`
 //!
 //! [`CONFIG_FILE`]: struct@CONFIG_FILE
 //! [lazy_static]: https://docs.rs/lazy_static
@@ -23,7 +23,7 @@
 //! Two important fields of `Config` are
 //!
 //! - [`json_rpc_url`], the URL to pass to
-//!   `solana_client::rpc_client::RpcClient`.
+//!   `sino_client::rpc_client::RpcClient`.
 //! - [`keypair_path`], a signing source, which may be a keypair file, but
 //!   may also represent several other types of signers, as described in
 //!   the documentation for `clap_utils::keypair::signer_from_path`.
@@ -46,7 +46,7 @@
 //!     .ok_or_else(|| anyhow!("unable to get config file path"))?;
 //! let mut cli_config = Config::load(&config_file)?;
 //! // Set the RPC URL to devnet
-//! cli_config.json_rpc_url = "https://api.devnet.solana.com".to_string();
+//! cli_config.json_rpc_url = "https://api.devnet.sino.com".to_string();
 //! cli_config.save(&config_file)?;
 //! # Ok::<(), anyhow::Error>(())
 //! ```

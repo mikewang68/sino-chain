@@ -1,12 +1,12 @@
 //! Loading signers and keypairs from the command line.
 //!
 //! This module contains utilities for loading [Signer]s and [Keypair]s from
-//! standard signing sources, from the command line, as in the Solana CLI.
+//! standard signing sources, from the command line, as in the Sino CLI.
 //!
 //! The key function here is [`signer_from_path`], which loads a `Signer` from
 //! one of several possible sources by interpreting a "path" command line
 //! argument. Its documentation includes a description of all possible signing
-//! sources supported by the Solana CLI. Many other functions here are
+//! sources supported by the Sino CLI. Many other functions here are
 //! variations on, or delegate to, `signer_from_path`.
 
 use {

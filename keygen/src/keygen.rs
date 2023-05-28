@@ -35,6 +35,7 @@ use {
         time::Instant,
     },
 };
+use sdk::signature::read_keypair_file;
 
 const NO_PASSPHRASE: &str = "";
 
@@ -136,6 +137,7 @@ fn get_keypair_from_matches(
     config: Config,
     wallet_manager: &mut Option<Arc<RemoteWalletManager>>,
 ) -> Result<Box<dyn Signer>, Box<dyn error::Error>> {
+    println!("get_keypair_from_matches");
     let mut path = dirs_next::home_dir().expect("home directory");
     let path = if matches.is_present("keypair") {
         matches.value_of("keypair").unwrap()
@@ -329,6 +331,15 @@ fn grind_parse_args(
     grind_matches
 }
 
+fn to_hex(nums: &[u8]) -> String {
+    let mut hex = String::new();
+    for num in nums {
+        let n = format!("{:02x}", num);
+        hex.push_str(&n);
+    }
+    hex
+}
+
 fn main() -> Result<(), Box<dyn error::Error>> {
     let default_num_threads = num_cpus::get().to_string();
     let matches = App::new(crate_name!())
@@ -487,6 +498,39 @@ fn main() -> Result<(), Box<dyn error::Error>> {
                         .help("Overwrite the output file if it exists"),
                 )
         )
+
+        .subcommand(
+            SubCommand::with_name("seckey")
+                .about("Display the secretkey from a keypair file")
+                .setting(AppSettings::DisableVersion)
+                .arg(
+                    Arg::with_name("keypair")
+                        .index(1)
+                        .value_name("KEYPAIR")
+                        .takes_value(true)
+                        .help("Filepath or URL to a keypair"),
+                )
+                .arg(
+                    Arg::with_name(SKIP_SEED_PHRASE_VALIDATION_ARG.name)
+                        .long(SKIP_SEED_PHRASE_VALIDATION_ARG.long)
+                        .help(SKIP_SEED_PHRASE_VALIDATION_ARG.help),
+                )
+                .arg(
+                    Arg::with_name("outfile")
+                        .short("o")
+                        .long("outfile")
+                        .value_name("FILEPATH")
+                        .takes_value(true)
+                        .help("Path to generated file"),
+                )
+                .arg(
+                    Arg::with_name("force")
+                        .short("f")
+                        .long("force")
+                        .help("Overwrite the output file if it exists"),
+                )
+        )
+
         .subcommand(
             SubCommand::with_name("recover")
                 .about("Recover keypair from seed phrase and optional BIP39 passphrase")
@@ -546,6 +590,18 @@ fn do_main(matches: &ArgMatches<'_>) -> Result<(), Box<dyn error::Error>> {
             } else {
                 println!("{}", pubkey);
             }
+        }
+        ("seckey", Some(matches)) => {
+            let path = matches.value_of("keypair").unwrap();
+            let data = read_keypair_file(&path);
+            let keypair = data.unwrap();
+            let seckey = keypair.secret().as_ref();
+            let hex = to_hex(&seckey);
+            println!("{:?}",hex);
+            println!("{}",hex.len())
+            // println!("{:?}",bs58::encode(keypair.to_bytes()).into_string());
+            // println!("{:?}",keypair.pubkey());
+            // println!("{:?}",keypair.secret().as_ref())
         }
         ("new", Some(matches)) => {
             let mut path = dirs_next::home_dir().expect("home directory");
@@ -791,4 +847,24 @@ fn do_main(matches: &ArgMatches<'_>) -> Result<(), Box<dyn error::Error>> {
     }
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use{
+        super::*
+    };
+    use std::fs;
+    use sdk::signature::read_keypair_file;
+
+    fn read_file_string(filepath: &str) -> Result<Vec<u8>, Box<dyn std::error::Error>> {
+        let data = fs::read(filepath)?;
+        Ok(data)
+    }
+
+    #[test]
+    fn test(){
+
+    }
+    
 }
