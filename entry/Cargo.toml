@@ -1,0 +1,38 @@
+[package]
+name = "entry"
+version = "1.9.29"
+description = "entry"
+authors = [""]
+repository = ""
+license = "Apache-2.0"
+homepage = ""
+documentation = ""
+edition = "2021"
+[dependencies]
+dlopen = "0.1.8"
+dlopen_derive = "0.1.4"
+log = "0.4.11"
+rand = "0.7.0"
+rayon = "1.5.1"
+serde = "1.0.130"
+measure = { path = "../measure", version = "=1.9.29" }
+#merkle-tree = { path = "../merkle-tree", version = "=1.9.29" }
+metrics = { path = "../metrics", version = "=1.9.29" }
+perf = { path = "../perf", version = "=1.9.29" }
+rayon-threadlimit = { path = "../rayon-threadlimit", version = "=1.9.29" }
+sdk = { path = "../sdk", version = "=1.9.29" }
+bincode = "1.3.3"
+
+[dev-dependencies]
+matches = "0.1.9"
+logger = { path = "../logger", version = "=1.9.29" }
+
+[lib]
+crate-type = ["lib"]
+name = "entry"
+
+#[[bench]]
+#name = "entry_sigverify"
+
+[package.metadata.docs.rs]
+targets = ["x86_64-unknown-linux-gnu"]
