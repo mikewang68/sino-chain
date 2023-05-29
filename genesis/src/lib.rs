@@ -1,5 +1,5 @@
 #![allow(clippy::integer_arithmetic)]
-
+pub mod unlocks;
 
 use serde::{Deserialize, Serialize};
 

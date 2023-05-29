@@ -133,7 +133,7 @@ let default_faucet_pubkey = cli_config::Config::default().keypair_path;
         .to_string();
     // stake account 质押账户
     let default_bootstrap_validator_stake_lamports = &sol_to_lamports(0.5)
-        .max(StakeState::get_rent_exempt_reserve(&rent))
+        .max(StakeState::get_rent_exempt_reserve(&rent)).to_string();
 
     let default_target_tick_duration =
         timing::duration_as_us(&PohConfig::default().target_tick_duration);
