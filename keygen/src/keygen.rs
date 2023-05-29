@@ -592,12 +592,19 @@ fn do_main(matches: &ArgMatches<'_>) -> Result<(), Box<dyn error::Error>> {
             }
         }
         ("seckey", Some(matches)) => {
-            let path = matches.value_of("keypair").unwrap();
-            let data = read_keypair_file(&path);
+            let mut path = dirs_next::home_dir().expect("home directory");
+            let outfile = if matches.is_present("keypair") {
+                matches.value_of("keypair")
+            } else {
+                path.extend([".config", "sino", "id.json"]);
+                Some(path.to_str().unwrap())
+            };
+            let data = read_keypair_file(&outfile.unwrap());
             let keypair = data.unwrap();
             let seckey = keypair.secret().as_ref();
             let pubkey = keypair.public().as_ref();
             let hex = to_hex(&seckey);
+            println!("read from path: {:?}",outfile.unwrap());
             println!("pubkey: {:?}",keypair.pubkey());
             println!("pubkey: {:?}",to_hex(&pubkey));
             println!("seckey: {:?}",hex);
