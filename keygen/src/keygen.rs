@@ -596,11 +596,14 @@ fn do_main(matches: &ArgMatches<'_>) -> Result<(), Box<dyn error::Error>> {
             let data = read_keypair_file(&path);
             let keypair = data.unwrap();
             let seckey = keypair.secret().as_ref();
+            let pubkey = keypair.public().as_ref();
             let hex = to_hex(&seckey);
-            println!("{:?}",hex);
-            println!("{}",hex.len())
+            println!("pubkey: {:?}",keypair.pubkey());
+            println!("pubkey: {:?}",to_hex(&pubkey));
+            println!("seckey: {:?}",hex);
+            println!("seckey: {}",hex.len());
             // println!("{:?}",bs58::encode(keypair.to_bytes()).into_string());
-            // println!("{:?}",keypair.pubkey());
+            
             // println!("{:?}",keypair.secret().as_ref())
         }
         ("new", Some(matches)) => {
