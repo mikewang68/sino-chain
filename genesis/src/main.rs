@@ -32,7 +32,7 @@ use {
         stake::state::StakeState,
         system_program, timing,
     },
-    //stake_program::stake_state,//内容过多，暂不解析
+    stake_program::stake_state,//内容过多，暂不解析
     vote_program::vote_state::{self, VoteState},
     std::{
         collections::HashMap,

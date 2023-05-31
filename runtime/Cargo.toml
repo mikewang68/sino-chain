@@ -47,7 +47,7 @@ metrics = { path = "../metrics", version = "=1.9.29" }
 program-runtime = { path = "../program-runtime", version = "=1.9.29" }
 rayon-threadlimit = { path = "../rayon-threadlimit", version = "=1.9.29" }
 sdk = { path = "../sdk", version = "=1.9.29" }
-#stake-program = { path = "../programs/stake", version = "=1.9.29" }
+stake-program = { path = "../programs/stake", version = "=1.9.29" }
 vote-program = { path = "../programs/vote", version = "=1.9.29" }
 symlink = "0.1.0"
 tar = "0.4.37"

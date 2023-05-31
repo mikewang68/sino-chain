@@ -21,7 +21,7 @@ ledger = { path = "../ledger", version = "=1.9.29" }
 logger = { path = "../logger", version = "=1.9.29" }
 runtime = { path = "../runtime", version = "=1.9.29" }
 sdk = { path = "../sdk", version = "=1.9.29" }
-#stake-program = { path = "../programs/stake", version = "=1.9.29" }
+stake-program = { path = "../programs/stake", version = "=1.9.29" }
 version = { path = "../version", version = "=0.6.3" }
 vote-program = { path = "../programs/vote", version = "=1.9.29" }
 
