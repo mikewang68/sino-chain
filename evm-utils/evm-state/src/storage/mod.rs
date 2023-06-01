@@ -97,7 +97,7 @@ impl AsRef<Path> for Location {
 
 pub struct Storage<D=OptimisticTransactionDB>
 where
-    D: VelasDBCommon,
+    D: SinoDBCommon,
 {
     pub(crate) db: Arc<DbWithClose<D>>,
     // Location should be second field, because of drop order in Rust.
@@ -105,7 +105,7 @@ where
     gc_enabled: bool,
 }
 
-impl<D: VelasDBCommon> Clone for Storage<D> {
+impl<D: SinoDBCommon> Clone for Storage<D> {
     fn clone(&self) -> Self {
         Self {
             db: Arc::clone(&self.db),
@@ -115,7 +115,7 @@ impl<D: VelasDBCommon> Clone for Storage<D> {
     }
 }
 
-impl<D: VelasDBCommon> std::fmt::Debug for Storage<D> {
+impl<D: SinoDBCommon> std::fmt::Debug for Storage<D> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("Storage<D>")
             .field("db", &self.db)
@@ -199,7 +199,7 @@ impl Descriptors {
 
 impl<D> Storage<D>
 where
-    D: VelasDBCommon,
+    D: SinoDBCommon,
 {
     pub fn gc_enabled(&self) -> bool {
         self.gc_enabled
@@ -749,7 +749,7 @@ impl Storage<OptimisticTransactionDB> {
     }
 }
 
-static SECONDARY_MODE_PATH_SUFFIX: &str = "velas-secondary";
+static SECONDARY_MODE_PATH_SUFFIX: &str = "sino-secondary";
 
 pub fn account_extractor(data: &[u8]) -> Vec<H256> {
     if let Ok(account) = rlp::decode::<Account>(data) {
@@ -824,7 +824,7 @@ impl Borrow<DB> for Storage<OptimisticTransactionDB> {
     }
 }
 
-pub trait VelasDBCommon: DBAccess + std::fmt::Debug + Sized {
+pub trait SinoDBCommon: DBAccess + std::fmt::Debug + Sized {
 
     fn flush(&self) -> Result<(), rocksdb::Error> ;    
     fn cancel_all_background_work(&self, wait: bool) ;
@@ -850,7 +850,7 @@ pub trait VelasDBCommon: DBAccess + std::fmt::Debug + Sized {
         
 }
 
-impl VelasDBCommon for rocksdb::DBWithThreadMode<rocksdb::SingleThreaded> {
+impl SinoDBCommon for rocksdb::DBWithThreadMode<rocksdb::SingleThreaded> {
 
     fn flush(&self) -> Result<(), rocksdb::Error> {
         self.flush()
@@ -890,7 +890,7 @@ impl VelasDBCommon for rocksdb::DBWithThreadMode<rocksdb::SingleThreaded> {
     
 }
 
-impl VelasDBCommon for OptimisticTransactionDB {
+impl SinoDBCommon for OptimisticTransactionDB {
     fn flush(&self) -> Result<(), rocksdb::Error> {
         self.flush()
     }
@@ -934,11 +934,11 @@ impl VelasDBCommon for OptimisticTransactionDB {
 
 #[derive(AsRef, Deref)]
 // Hack to close rocksdb background threads. And flush database.
-pub struct DbWithClose<D: VelasDBCommon>(D);
+pub struct DbWithClose<D: SinoDBCommon>(D);
 
 impl<D> Drop for DbWithClose<D>
 where
-    D: VelasDBCommon,
+    D: SinoDBCommon,
 {
     fn drop(&mut self) {
         if let Err(e) = self.flush() {
@@ -948,7 +948,7 @@ where
     }
 }
 
-impl<D: VelasDBCommon> std::fmt::Debug for DbWithClose<D> {
+impl<D: SinoDBCommon> std::fmt::Debug for DbWithClose<D> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("DbWithClose<D>")
             .field("0", &self.0)
@@ -1004,7 +1004,7 @@ impl SubStorage for TransactionHashesPerBlock {
 
 impl<D> Storage<D>
 where
-    D: VelasDBCommon,
+    D: SinoDBCommon,
 {
     pub fn get<S: SubStorage>(&self, key: S::Key) -> Option<S::Value> {
         let cf = self.cf::<S>();

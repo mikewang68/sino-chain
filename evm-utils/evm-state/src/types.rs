@@ -402,7 +402,7 @@ impl BlockHeader {
 
     pub fn rlp_append_legacy(&self, s: &mut RlpStream) {
         const EMPTH_HASH: H256 = H256::zero();
-        const EXTRA_DATA: &[u8; 32] = b"Velas EVM compatibility layer...";
+        const EXTRA_DATA: &[u8; 32] = b"Sino EVM compatibility layer....";
         let extra_data = H256::from_slice(EXTRA_DATA);
         s.begin_list(15);
         s.append(&self.parent_hash);
@@ -425,7 +425,7 @@ impl BlockHeader {
     pub fn rlp_append_newer(&self, s: &mut RlpStream) {
         const EMPTH_HASH: H256 = H256::zero();
         const ZERO_DIFFICULTY: U256 = U256::zero();
-        const EXTRA_DATA: &[u8; 32] = b"Velas EVM compatibility layer.v2";
+        const EXTRA_DATA: &[u8; 32] = b"Sino EVM compatibility layer.v2 ";
         let extra_data = H256::from_slice(EXTRA_DATA);
         let nonce = H64::from_low_u64_be(self.native_chain_slot);
         s.begin_list(15);

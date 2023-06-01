@@ -168,7 +168,7 @@ where
 // TODO: Implement some procedural macro to render this in more
 pub static ETH_TO_VLX_ADDR: Lazy<H160> = Lazy::new(|| {
     H160::from_str(concat!(
-        "56454c41532d434841494e", // 'VELAS-CHAIN'
+        "56454c41532d434841494e", // 'SINO-CHAIN'
         "0000000000",             // just spaces
         "53574150",               // 'SWAP'
     ))

@@ -49,22 +49,22 @@ impl EvmProcessor {
 
         let cross_execution_enabled = invoke_context
             .feature_set
-            .is_active(&sdk::feature_set::velas::evm_cross_execution::id());
+            .is_active(&sdk::feature_set::sino::evm_cross_execution::id());
         let register_swap_tx_in_evm = invoke_context
             .feature_set
-            .is_active(&sdk::feature_set::velas::native_swap_in_evm_history::id());
+            .is_active(&sdk::feature_set::sino::native_swap_in_evm_history::id());
         let new_error_handling = invoke_context
             .feature_set
-            .is_active(&sdk::feature_set::velas::evm_new_error_handling::id());
+            .is_active(&sdk::feature_set::sino::evm_new_error_handling::id());
         let ignore_reset_on_cleared = invoke_context
             .feature_set
-            .is_active(&sdk::feature_set::velas::ignore_reset_on_cleared::id());
+            .is_active(&sdk::feature_set::sino::ignore_reset_on_cleared::id());
         let free_ownership_require_signer = invoke_context
             .feature_set
-            .is_active(&sdk::feature_set::velas::free_ownership_require_signer::id());
+            .is_active(&sdk::feature_set::sino::free_ownership_require_signer::id());
         let borsh_serialization_enabled = invoke_context
             .feature_set
-            .is_active(&sdk::feature_set::velas::evm_instruction_borsh_serialization::id());
+            .is_active(&sdk::feature_set::sino::evm_instruction_borsh_serialization::id());
 
         let cross_execution = invoke_context.get_stack_height() != 1;
 
@@ -208,8 +208,8 @@ impl EvmProcessor {
         ) -> precompiles::PrecompileSet {
             match (support_precompile, evm_new_precompiles) {
                 (false, _) => precompiles::PrecompileSet::No,
-                (true, false) => precompiles::PrecompileSet::VelasClassic,
-                (true, true) => precompiles::PrecompileSet::VelasNext,
+                (true, false) => precompiles::PrecompileSet::SinoClassic,
+                (true, true) => precompiles::PrecompileSet::SinoNext,
             }
         }
 
@@ -234,7 +234,7 @@ impl EvmProcessor {
                     executor.support_precompile(),
                     invoke_context
                         .feature_set
-                        .is_active(&sdk::feature_set::velas::evm_new_precompiles::id()),
+                        .is_active(&sdk::feature_set::sino::evm_new_precompiles::id()),
                 );
                 executor.transaction_execute(
                     tx,
@@ -273,7 +273,7 @@ impl EvmProcessor {
                     executor.support_precompile(),
                     invoke_context
                         .feature_set
-                        .is_active(&sdk::feature_set::velas::evm_new_precompiles::id()),
+                        .is_active(&sdk::feature_set::sino::evm_new_precompiles::id()),
                 );
                 executor.transaction_execute_unsinged(
                     from,
@@ -856,15 +856,15 @@ mod test {
                 evm::EvmConfig::new(
                     evm::TEST_CHAIN_ID,
                     self.feature_set
-                        .is_active(&sdk::feature_set::velas::burn_fee::id()),
+                        .is_active(&sdk::feature_set::sino::burn_fee::id()),
                 ),
                 evm_state::executor::FeatureSet::new(
                     self.feature_set
-                        .is_active(&sdk::feature_set::velas::unsigned_tx_fix::id()),
+                        .is_active(&sdk::feature_set::sino::unsigned_tx_fix::id()),
                     self.feature_set
-                        .is_active(&sdk::feature_set::velas::clear_logs_on_error::id()),
+                        .is_active(&sdk::feature_set::sino::clear_logs_on_error::id()),
                     self.feature_set.is_active(
-                        &sdk::feature_set::velas::accept_zero_gas_price_with_native_fee::id(
+                        &sdk::feature_set::sino::accept_zero_gas_price_with_native_fee::id(
                         ),
                     ),
                 ),
@@ -914,7 +914,7 @@ mod test {
                         .deconstruct_evm()
                         .expect("Evm executor should exist");
                     let clear_logs = self.feature_set.is_active(
-                        &sdk::feature_set::velas::clear_logs_on_native_error::id(),
+                        &sdk::feature_set::sino::clear_logs_on_native_error::id(),
                     );
                     self.evm_state
                         .apply_failed_update(&executor.evm_backend, clear_logs);
@@ -981,7 +981,7 @@ mod test {
     #[test]
     fn execute_tx() {
         let mut evm_context = EvmMockContext::new(0);
-        evm_context.disable_feature(&sdk::feature_set::velas::burn_fee::id());
+        evm_context.disable_feature(&sdk::feature_set::sino::burn_fee::id());
         let secret_key = evm::SecretKey::from_slice(&SECRET_KEY_DUMMY).unwrap();
 
         let address = secret_key.to_address();
@@ -1038,7 +1038,7 @@ mod test {
             .with_utc_timestamps()
             .init();
         let mut evm_context = EvmMockContext::new(0);
-        evm_context.disable_feature(&sdk::feature_set::velas::burn_fee::id());
+        evm_context.disable_feature(&sdk::feature_set::sino::burn_fee::id());
 
         let user_id = Pubkey::new_unique();
         let program_id = Pubkey::new_unique();
@@ -1080,7 +1080,7 @@ mod test {
     fn deploy_tx_refund_fee() {
         let init_evm_balance = 1000000;
         let mut evm_context = EvmMockContext::new(init_evm_balance);
-        evm_context.disable_feature(&sdk::feature_set::velas::burn_fee::id());
+        evm_context.disable_feature(&sdk::feature_set::sino::burn_fee::id());
         let user_id = Pubkey::new_unique();
         evm_context
             .native_account(user_id)
@@ -1127,7 +1127,7 @@ mod test {
     #[test]
     fn tx_preserve_nonce() {
         let mut evm_context = EvmMockContext::new(0);
-        evm_context.disable_feature(&sdk::feature_set::velas::burn_fee::id());
+        evm_context.disable_feature(&sdk::feature_set::sino::burn_fee::id());
         let secret_key = evm::SecretKey::from_slice(&SECRET_KEY_DUMMY).unwrap();
         let address = secret_key.to_address();
         evm_context.deposit_evm(address, U256::from(2u32) * 300000u32);
@@ -1223,7 +1223,7 @@ mod test {
     #[test]
     fn execute_tx_with_state_apply() {
         let mut evm_context = EvmMockContext::new(0);
-        evm_context.disable_feature(&sdk::feature_set::velas::burn_fee::id());
+        evm_context.disable_feature(&sdk::feature_set::sino::burn_fee::id());
 
         let secret_key = evm::SecretKey::from_slice(&SECRET_KEY_DUMMY).unwrap();
 
@@ -1496,7 +1496,7 @@ mod test {
     #[test]
     fn execute_transfer_roundtrip() {
         let mut evm_context = EvmMockContext::new(0);
-        evm_context.disable_feature(&sdk::feature_set::velas::burn_fee::id());
+        evm_context.disable_feature(&sdk::feature_set::sino::burn_fee::id());
 
         let user_id = Pubkey::new_unique();
         let acc = evm_context.native_account(user_id);
@@ -1791,7 +1791,7 @@ mod test {
             // Create clear executor for each run, to avoid state conflicts in instructions (signed and unsigned tx with same nonce).
             let mut evm_context = EvmMockContext::new(0);
 
-            evm_context.disable_feature(&sdk::feature_set::velas::burn_fee::id());
+            evm_context.disable_feature(&sdk::feature_set::sino::burn_fee::id());
             let secret_key = evm::SecretKey::from_slice(&SECRET_KEY_DUMMY).unwrap();
             evm_context.deposit_evm(secret_key.to_address(), U256::from(2u32) * 300000u32); // deposit some small amount for gas payments
                                                                                             // insert new accounts, if some missing
@@ -1852,7 +1852,7 @@ mod test {
                 continue;
             }
             let mut evm_context = EvmMockContext::new(1_000_000_000);
-            evm_context.disable_feature(&sdk::feature_set::velas::burn_fee::id());
+            evm_context.disable_feature(&sdk::feature_set::sino::burn_fee::id());
             let receiver = Pubkey::new(&hex!(
                 "9b73845fe592e092a13df83a8f8485296ba9c0a28c7c0824c33b1b3b352b4043"
             ));
@@ -1970,7 +1970,7 @@ mod test {
             hex!("cf280be10000000000000000000000000000000000000000000000000000000000000001");
 
         let mut evm_context = EvmMockContext::new(1_000_000_000);
-        evm_context.disable_feature(&sdk::feature_set::velas::burn_fee::id());
+        evm_context.disable_feature(&sdk::feature_set::sino::burn_fee::id());
         let _receiver = Pubkey::new(&hex!(
             "9b73845fe592e092a13df83a8f8485296ba9c0a28c7c0824c33b1b3b352b4043"
         ));
@@ -2039,7 +2039,7 @@ mod test {
             {
                 let mut evm_context = evm_context.clone(); // make copy for test
                 evm_context
-                    .disable_feature(&sdk::feature_set::velas::clear_logs_on_error::id());
+                    .disable_feature(&sdk::feature_set::sino::clear_logs_on_error::id());
                 let _result = evm_context.process_instruction(instruction);
                 let executor = evm_context.evm_state;
                 let tx = executor.find_transaction_receipt(tx_hash).unwrap();
@@ -2081,7 +2081,7 @@ mod test {
 
                 let _result = evm_context.process_instruction(instruction);
                 evm_context
-                    .disable_feature(&sdk::feature_set::velas::clear_logs_on_error::id());
+                    .disable_feature(&sdk::feature_set::sino::clear_logs_on_error::id());
 
                 let executor = evm_context.evm_state;
                 let tx = executor.find_transaction_receipt(tx_hash).unwrap();
@@ -2095,7 +2095,7 @@ mod test {
     #[test]
     fn authorized_tx_only_from_signer() {
         let mut evm_context = EvmMockContext::new(0);
-        evm_context.disable_feature(&sdk::feature_set::velas::burn_fee::id());
+        evm_context.disable_feature(&sdk::feature_set::sino::burn_fee::id());
         let secret_key = evm::SecretKey::from_slice(&SECRET_KEY_DUMMY).unwrap();
 
         let address = secret_key.to_address();
@@ -2246,7 +2246,7 @@ mod test {
             .with_utc_timestamps()
             .init();
         let mut evm_context = EvmMockContext::new(1000);
-        evm_context.disable_feature(&sdk::feature_set::velas::burn_fee::id());
+        evm_context.disable_feature(&sdk::feature_set::sino::burn_fee::id());
 
         let mut rand = evm_state::rand::thread_rng();
         let dummy_key = evm::SecretKey::new(&mut rand);
@@ -2389,7 +2389,7 @@ mod test {
             .with_utc_timestamps()
             .init();
         let mut evm_context = EvmMockContext::new(1000);
-        evm_context.disable_feature(&sdk::feature_set::velas::burn_fee::id());
+        evm_context.disable_feature(&sdk::feature_set::sino::burn_fee::id());
 
         let mut rand = evm_state::rand::thread_rng();
         let dummy_key = evm::SecretKey::new(&mut rand);
@@ -2434,7 +2434,7 @@ mod test {
             .with_utc_timestamps()
             .init();
         let mut evm_context = EvmMockContext::new(1000);
-        evm_context.disable_feature(&sdk::feature_set::velas::burn_fee::id());
+        evm_context.disable_feature(&sdk::feature_set::sino::burn_fee::id());
 
         let mut rand = evm_state::rand::thread_rng();
         let dummy_key = evm::SecretKey::new(&mut rand);
@@ -2497,7 +2497,7 @@ mod test {
             hex!("6057361d0000000000000000000000000000000000000000000000000000000000000001");
 
         let mut evm_context = EvmMockContext::new(1000);
-        evm_context.disable_feature(&sdk::feature_set::velas::burn_fee::id());
+        evm_context.disable_feature(&sdk::feature_set::sino::burn_fee::id());
 
         let mut rand = evm_state::rand::thread_rng();
         let contract_address = evm::SecretKey::new(&mut rand).to_address();
