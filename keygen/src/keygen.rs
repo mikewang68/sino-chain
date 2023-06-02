@@ -137,7 +137,7 @@ fn get_keypair_from_matches(
     config: Config,
     wallet_manager: &mut Option<Arc<RemoteWalletManager>>,
 ) -> Result<Box<dyn Signer>, Box<dyn error::Error>> {
-    println!("get_keypair_from_matches");
+    // println!("get_keypair_from_matches");
     let mut path = dirs_next::home_dir().expect("home directory");
     let path = if matches.is_present("keypair") {
         matches.value_of("keypair").unwrap()
@@ -592,16 +592,20 @@ fn do_main(matches: &ArgMatches<'_>) -> Result<(), Box<dyn error::Error>> {
             }
         }
         ("seckey", Some(matches)) => {
-            let path = matches.value_of("keypair").unwrap();
-            let data = read_keypair_file(&path);
+            let mut path = dirs_next::home_dir().expect("home directory");
+            let outfile = if matches.is_present("keypair") {
+                matches.value_of("keypair")
+            } else {
+                path.extend([".config", "sino", "id.json"]);
+                Some(path.to_str().unwrap())
+            };
+            let data = read_keypair_file(&outfile.unwrap());
             let keypair = data.unwrap();
-            let seckey = keypair.secret().as_ref();
-            let hex = to_hex(&seckey);
-            println!("{:?}",hex);
-            println!("{}",hex.len())
-            // println!("{:?}",bs58::encode(keypair.to_bytes()).into_string());
-            // println!("{:?}",keypair.pubkey());
-            // println!("{:?}",keypair.secret().as_ref())
+            let seckey = keypair.secret().as_bytes();
+            let hex = to_hex(seckey);
+            let divider = String::from_utf8(vec![b'='; hex.len()+10]).unwrap();
+            println!("Reading from path: {}",outfile.unwrap());
+            println!("{}\nSeckey: {}\n{}\nSeckey len: {}",divider,hex,divider,hex.len());
         }
         ("new", Some(matches)) => {
             let mut path = dirs_next::home_dir().expect("home directory");

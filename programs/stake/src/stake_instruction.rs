@@ -1,6 +1,6 @@
 #[deprecated(
     since = "1.8.0",
-    note = "Please use `solana_sdk::stake::instruction` or `solana_program::stake::instruction` instead"
+    note = "Please use `sdk::stake::instruction` or `program::stake::instruction` instead"
 )]
 pub use sdk::stake::instruction::*;
 use {

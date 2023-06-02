@@ -20,7 +20,7 @@ pub trait ConfigState: serde::Serialize + Default {
     fn max_space() -> u64;
 }
 
-// TODO move ConfigState into `solana_program` to implement trait locally
+// TODO move ConfigState into `program` to implement trait locally
 impl ConfigState for StakeConfig {
     fn max_space() -> u64 {
         serialized_size(&StakeConfig::default()).unwrap()

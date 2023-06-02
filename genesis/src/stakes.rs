@@ -4,7 +4,7 @@ use {
         address_generator::AddressGenerator,
         unlocks::{UnlockInfo, Unlocks},
     },
-    solana_sdk::{
+    sdk::{
         account::Account,
         clock::Slot,
         genesis_config::GenesisConfig,
@@ -16,7 +16,7 @@ use {
         system_program,
         timing::years_as_slots,
     },
-    solana_stake_program::stake_state::create_lockup_stake_account,
+    stake_program::stake_state::create_lockup_stake_account,
 };
 
 #[derive(Debug)]
@@ -165,7 +165,7 @@ pub fn create_and_add_stakes(
 
 #[cfg(test)]
 mod tests {
-    use {super::*, solana_sdk::rent::Rent};
+    use {super::*, sdk::rent::Rent};
 
     fn create_and_check_stakes(
         genesis_config: &mut GenesisConfig,

@@ -17,6 +17,8 @@ members = [
     "merkle-tree",
     "metrics",
     "perf",
+    "programs/config",
+    "programs/stake",
     "programs/vote",
     "programs/config",
     "programs/stake",

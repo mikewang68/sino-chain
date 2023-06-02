@@ -1,12 +1,12 @@
 [package]
 name = "config-program"
 version = "1.9.29"
-description = "Solana Config program"
-authors = ["Solana Maintainers <maintainers@solana.foundation>"]
-repository = "https://github.com/solana-labs/solana"
+description = "Config program"
+authors = [""]
+repository = ""
 license = "Apache-2.0"
-homepage = "https://solana.com/"
-documentation = "https://docs.rs/solana-config-program"
+homepage = ""
+documentation = ""
 edition = "2021"
 
 [dependencies]

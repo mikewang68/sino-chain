@@ -134,7 +134,7 @@ impl Default for RPCBlock {
             difficulty: U256::zero().into(),
             total_difficulty: U256::zero().into(),
             uncles: vec![],
-            extra_data: b"Velas EVM compatibility layer...".to_vec().into(),
+            extra_data: b"Sino EVM compatibility layer....".to_vec().into(),
             sha3_uncles: Hex(empty_uncle),
         }
     }
@@ -150,10 +150,10 @@ impl RPCBlock {
         let block_hash = header.hash();
         let extra_data = match header.version {
             evm_state::BlockVersion::InitVersion => {
-                b"Velas EVM compatibility layer...".to_vec().into()
+                b"Sino EVM compatibility layer....".to_vec().into()
             }
             evm_state::BlockVersion::VersionConsistentHashes => {
-                b"Velas EVM compatibility layer.v2".to_vec().into()
+                b"Sino EVM compatibility layer.v2 ".to_vec().into()
             }
         };
         RPCBlock {

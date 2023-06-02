@@ -7,7 +7,7 @@
 //!   information on the additional steps to follow can be found at:
 //!   <https://spl.solana.com/feature-proposal#feature-proposal-life-cycle>
 //!
-//! 1. Generate a new keypair with `velas-keygen new --outfile feature.json --no-passphrase`
+//! 1. Generate a new keypair with `sino-keygen new --outfile feature.json --no-passphrase`
 //!    - Keypairs should be held by core contributors only. If you're a non-core contirbutor going
 //!      through these steps, the PR process will facilitate a keypair holder being picked. That
 //!      person will generate the keypair, provide pubkey for PR, and ultimately enable the feature.
@@ -37,7 +37,7 @@ pub mod pico_inflation {
 }
 
 pub mod full_inflation {
-    pub mod devnet_and_testnet_velas_mainnet {
+    pub mod devnet_and_testnet_sino_mainnet {
         sdk::declare_id!("DT4n6ABDqs6w4bnfwrXT9rsprcPf6cdDga1egctaPkLC");
     }
 
@@ -374,7 +374,7 @@ pub mod system_transfer_zero_check {
     sdk::declare_id!("EqohBJpJsJym3qAJ3N7AH35c4u2rfS5yYvS693ThYTbG");
 }
 
-pub mod velas {
+pub mod sino {
     pub mod hardfork_pack {
         // 1. difficulty not a hash but a number.
         // 2. transactionRoot, receiptRoot - should calculate, and empty hashes should be setted too
@@ -442,7 +442,7 @@ lazy_static! {
         (secp256k1_program_enabled::id(), "secp256k1 program"),
         (deprecate_rewards_sysvar::id(), "deprecate unused rewards sysvar"),
         (pico_inflation::id(), "pico inflation"),
-        (full_inflation::devnet_and_testnet_velas_mainnet::id(), "full inflation on devnet and testnet"),
+        (full_inflation::devnet_and_testnet_sino_mainnet::id(), "full inflation on devnet and testnet"),
         (spl_token_v2_multisig_fix::id(), "spl-token multisig fix"),
         (no_overflow_rent_distribution::id(), "no overflow rent distribution"),
         (filter_stake_delegation_accounts::id(), "filter stake_delegation_accounts #14062"),
@@ -532,21 +532,21 @@ lazy_static! {
             (enable_durable_nonce::id(), "enable durable nonce #25744"),
             (nonce_must_be_authorized::id(), "nonce must be authorized"),
             (nonce_must_be_advanceable::id(), "durable nonces must be advanceable"),
-            // Velas features
-            (velas::hardfork_pack::id(), "EVMblockhashes sysvar history, roothashes calculation. Apply old (reconfigure_native_token, unlock_switch_vote)."),
-            (velas::evm_cross_execution::id(), "EVM cross execution."),
-            (velas::native_swap_in_evm_history::id(), "Native swap in evm history."),
-            (velas::evm_new_error_handling::id(), "EVM new error handling."),
-            (velas::unsigned_tx_fix::id(), "Authorized transaction hash fixed."),
-            (velas::ignore_reset_on_cleared::id(), "Don't reset evm_swap address balance, when it already swapped, to avoid empty blocks."),
-            (velas::free_ownership_require_signer::id(), "Free ownership require signer."),
-            (velas::burn_fee::id(), "Burn fee during transaction execution."),
-            (velas::clear_logs_on_error::id(), "Clear logs from receipt if transaction is failed or reverted."),
-            (velas::disable_durable_nonce::id(), "Disable durable nonce."),
-            (velas::evm_new_precompiles::id(), "Evm new precomplies pack."),
-            (velas::evm_instruction_borsh_serialization::id(), "Support for Borsh serialization for EVM instructions."),
-            (velas::accept_zero_gas_price_with_native_fee::id(), "Accept evm transactions with native fee and zero gas price."),
-            (velas::clear_logs_on_native_error::id(), "Clear evm logs from receipt if native transaction is failed."),
+            // Sino features
+            (sino::hardfork_pack::id(), "EVMblockhashes sysvar history, roothashes calculation. Apply old (reconfigure_native_token, unlock_switch_vote)."),
+            (sino::evm_cross_execution::id(), "EVM cross execution."),
+            (sino::native_swap_in_evm_history::id(), "Native swap in evm history."),
+            (sino::evm_new_error_handling::id(), "EVM new error handling."),
+            (sino::unsigned_tx_fix::id(), "Authorized transaction hash fixed."),
+            (sino::ignore_reset_on_cleared::id(), "Don't reset evm_swap address balance, when it already swapped, to avoid empty blocks."),
+            (sino::free_ownership_require_signer::id(), "Free ownership require signer."),
+            (sino::burn_fee::id(), "Burn fee during transaction execution."),
+            (sino::clear_logs_on_error::id(), "Clear logs from receipt if transaction is failed or reverted."),
+            (sino::disable_durable_nonce::id(), "Disable durable nonce."),
+            (sino::evm_new_precompiles::id(), "Evm new precomplies pack."),
+            (sino::evm_instruction_borsh_serialization::id(), "Support for Borsh serialization for EVM instructions."),
+            (sino::accept_zero_gas_price_with_native_fee::id(), "Accept evm transactions with native fee and zero gas price."),
+            (sino::clear_logs_on_native_error::id(), "Clear evm logs from receipt if native transaction is failed."),
             /*************** ADD NEW FEATURES HERE ***************/
         ]
     ).collect();
@@ -620,8 +620,8 @@ impl FeatureSet {
             })
             .collect::<HashSet<_>>();
 
-        if self.is_active(&full_inflation::devnet_and_testnet_velas_mainnet::id()) {
-            hash_set.insert(full_inflation::devnet_and_testnet_velas_mainnet::id());
+        if self.is_active(&full_inflation::devnet_and_testnet_sino_mainnet::id()) {
+            hash_set.insert(full_inflation::devnet_and_testnet_sino_mainnet::id());
         }
         hash_set
     }
@@ -657,10 +657,10 @@ mod test {
         assert!(feature_set.full_inflation_features_enabled().is_empty());
         feature_set
             .active
-            .insert(full_inflation::devnet_and_testnet_velas_mainnet::id(), 42);
+            .insert(full_inflation::devnet_and_testnet_sino_mainnet::id(), 42);
         assert_eq!(
             feature_set.full_inflation_features_enabled(),
-            [full_inflation::devnet_and_testnet_velas_mainnet::id()]
+            [full_inflation::devnet_and_testnet_sino_mainnet::id()]
                 .iter()
                 .cloned()
                 .collect()

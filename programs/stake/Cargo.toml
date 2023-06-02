@@ -1,12 +1,12 @@
 [package]
 name = "stake-program"
 version = "1.9.29"
-description = "sino Stake program"
-authors = ["Solana Maintainers <maintainers@solana.foundation>"]
-repository = "https://github.com/solana-labs/solana"
+description = "Stake program"
+authors = [""]
+repository = ""
 license = "Apache-2.0"
-homepage = "https://solana.com/"
-documentation = "https://docs.rs/solana-stake-program"
+homepage = ""
+documentation = ""
 edition = "2021"
 
 [dependencies]
@@ -16,9 +16,9 @@ num-derive = "0.3"
 num-traits = "0.2"
 serde = "1.0.130"
 serde_derive = "1.0.103"
-#sino-frozen-abi = { path = "../../frozen-abi", version = "=1.9.29" }
-#sino-frozen-abi-macro = { path = "../../frozen-abi/macro", version = "=1.9.29" }
-#solana-metrics = { path = "../../metrics", version = "=1.9.29" }
+frozen-abi = { path = "../../frozen-abi", version = "=1.9.29" }
+frozen-abi-macro = { path = "../../frozen-abi/macro", version = "=1.9.29" }
+metrics = { path = "../../metrics", version = "=1.9.29" }
 program-runtime = { path = "../../program-runtime", version = "=1.9.29" }
 sdk = { path = "../../sdk", version = "=1.9.29" }
 vote-program = { path = "../vote", version = "=1.9.29" }

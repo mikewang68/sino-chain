@@ -3,7 +3,7 @@
 use sdk::genesis_config::GenesisConfig;
 #[deprecated(
     since = "1.8.0",
-    note = "Please use `solana_sdk::stake::program::id` or `solana_program::stake::program::id` instead"
+    note = "Please use `sdk::stake::program::id` or `program::stake::program::id` instead"
 )]
 pub use sdk::stake::program::{check_id, id};
 
