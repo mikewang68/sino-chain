@@ -8,6 +8,7 @@ license = "Apache-2.0"
 homepage = ""
 documentation = ""
 edition = "2021"
+
 [dependencies]
 base64 = "0.12.3"
 clap = "2.33.1"
@@ -21,7 +22,7 @@ ledger = { path = "../ledger", version = "=1.9.29" }
 logger = { path = "../logger", version = "=1.9.29" }
 runtime = { path = "../runtime", version = "=1.9.29" }
 sdk = { path = "../sdk", version = "=1.9.29" }
-#stake-program = { path = "../programs/stake", version = "=1.9.29" }
+stake-program = { path = "../programs/stake", version = "=1.9.29" }
 version = { path = "../version", version = "=0.6.3" }
 vote-program = { path = "../programs/vote", version = "=1.9.29" }
 
@@ -34,7 +35,7 @@ once_cell = "1.7.2"
 log = "0.4"
 
 [[bin]]
-name = "genesis"
+name = "sino-genesis"
 path = "src/main.rs"
 
 [lib]

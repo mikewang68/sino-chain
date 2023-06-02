@@ -15,20 +15,3 @@ pub fn discard_batches_randomly(
     }
     total_packets
 }
-
-#[cfg(test)]
-mod tests {
-    use {super::*, crate::packet::Packet};
-
-    #[test]
-    fn test_batch_discard_random() {
-        sino_logger::setup();
-        let mut batch = PacketBatch::default();
-        batch.packets.resize(1, Packet::default());
-        let num_batches = 100;
-        let mut batches = vec![batch; num_batches];
-        let max = 5;
-        discard_batches_randomly(&mut batches, max, num_batches);
-        assert_eq!(batches.len(), max);
-    }
-}

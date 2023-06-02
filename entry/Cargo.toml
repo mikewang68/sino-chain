@@ -16,7 +16,7 @@ rand = "0.7.0"
 rayon = "1.5.1"
 serde = "1.0.130"
 measure = { path = "../measure", version = "=1.9.29" }
-#merkle-tree = { path = "../merkle-tree", version = "=1.9.29" }
+merkle-tree = { path = "../merkle-tree", version = "=1.9.29" }
 metrics = { path = "../metrics", version = "=1.9.29" }
 perf = { path = "../perf", version = "=1.9.29" }
 rayon-threadlimit = { path = "../rayon-threadlimit", version = "=1.9.29" }

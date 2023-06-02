@@ -688,6 +688,7 @@ pub fn signer_from_path(
     keypair_name: &str,
     wallet_manager: &mut Option<Arc<RemoteWalletManager>>,
 ) -> Result<Box<dyn Signer>, Box<dyn error::Error>> {
+    println!("signer_from_path");
     let config = SignerFromPathConfig::default();
     signer_from_path_with_config(matches, path, keypair_name, wallet_manager, &config)
 }
@@ -756,6 +757,7 @@ pub fn signer_from_path_with_config(
     wallet_manager: &mut Option<Arc<RemoteWalletManager>>,
     config: &SignerFromPathConfig,
 ) -> Result<Box<dyn Signer>, Box<dyn error::Error>> {
+    println!("signer_from_path_with_config");
     let SignerSource {
         kind,
         derivation_path,
@@ -763,6 +765,7 @@ pub fn signer_from_path_with_config(
     } = parse_signer_source(path)?;
     match kind {
         SignerSourceKind::Prompt => {
+            println!("SignerSourceKind::Prompt");
             let skip_validation = matches.is_present(SKIP_SEED_PHRASE_VALIDATION_ARG.name);
             Ok(Box::new(keypair_from_seed_phrase(
                 keypair_name,
@@ -781,10 +784,12 @@ pub fn signer_from_path_with_config(
             Ok(file) => Ok(Box::new(file)),
         },
         SignerSourceKind::Stdin => {
+            println!("SignerSourceKind::Stdin");
             let mut stdin = std::io::stdin();
             Ok(Box::new(read_keypair(&mut stdin)?))
         }
         SignerSourceKind::Usb(locator) => {
+            println!("SignerSourceKind::Usb");
             if wallet_manager.is_none() {
                 *wallet_manager = maybe_wallet_manager()?;
             }
@@ -801,6 +806,7 @@ pub fn signer_from_path_with_config(
             }
         }
         SignerSourceKind::Pubkey(pubkey) => {
+            println!("SignerSourceKind::Pubkey");
             let presigner = pubkeys_sigs_of(matches, SIGNER_ARG.name)
                 .as_ref()
                 .and_then(|presigners| presigner_from_pubkey_sigs(&pubkey, presigners));

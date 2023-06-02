@@ -1,5 +1,6 @@
 [workspace]
 members = [
+    "account-decoder",
     "bloom",
     "clap-utils",
     "cli-config",
@@ -13,15 +14,20 @@ members = [
     "keygen",
     "logger",
     "measure",
+    "merkle-tree",
     "metrics",
     "perf",
     "programs/vote",
+    "programs/config",
+    "programs/stake",
     "program-runtime",
     "rayon-threadlimit",
     "remote-wallet",
     "runtime",
     "sdk",
+    "storage-proto",
     "version",
+    "transaction-status"
     
 ]
 

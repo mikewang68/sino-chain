@@ -55,6 +55,12 @@ pub mod transaction;
 pub mod transport;
 pub mod wasm;
 
+pub mod config {
+    pub mod program {
+        crate::declare_id!("Config1111111111111111111111111111111111111");
+    }
+}
+
 /// Same as `declare_id` except report that this id has been deprecated
 pub use sdk_macro::declare_deprecated_id;
 /// Convenience macro to declare a static public key and functions to interact with it

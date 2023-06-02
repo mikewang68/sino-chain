@@ -122,19 +122,19 @@ pub fn write_keypair<W: Write>(
     let serialized = serde_json::to_string(&keypair_bytes.to_vec())?;
     // println!("输出serialized:{:?}\n长度:{}",serialized,serialized.len());
     writer.write_all(&serialized.clone().into_bytes())?;
-    println!("输出publickey:{:?}\n输出publickey.to_bytes:{:?}\n长度:{}\n输出publickey.as_ref:{:?}\n长度:{}\npubkey:{:?}",
-        keypair.0.public,
-        keypair.0.public.to_bytes(),
-        keypair.0.public.to_bytes().len(),
-        keypair.0.public.as_ref(),
-        keypair.0.public.as_ref().len(),
-        keypair.pubkey()
-    );
-    println!("{:?}",<[u8; 32]>::try_from(<&[u8]>::clone(&keypair.0.public.as_ref())));
-    println!("{:?}",Pubkey::new(keypair.0.public.as_ref()));
-    println!("{:?}\n{}",bs58::encode(keypair.0.to_bytes()).into_string(),bs58::encode(keypair.0.to_bytes()).into_string().len());
-    println!("{:?}\n{}",bs58::encode(keypair.0.public.as_ref()).into_string(),bs58::encode(keypair.0.public.as_ref()).into_string().len());
-    println!("{:?}\n{}",keypair.0.public.to_bytes().to_vec(),keypair.0.public.to_bytes().to_vec().len());
+    // println!("输出publickey:{:?}\n输出publickey.to_bytes:{:?}\n长度:{}\n输出publickey.as_ref:{:?}\n长度:{}\npubkey:{:?}",
+    //     keypair.0.public,
+    //     keypair.0.public.to_bytes(),
+    //     keypair.0.public.to_bytes().len(),
+    //     keypair.0.public.as_ref(),
+    //     keypair.0.public.as_ref().len(),
+    //     keypair.pubkey()
+    // );
+    // println!("{:?}",<[u8; 32]>::try_from(<&[u8]>::clone(&keypair.0.public.as_ref())));
+    // println!("{:?}",Pubkey::new(keypair.0.public.as_ref()));
+    // println!("{:?}\n{}",bs58::encode(keypair.0.to_bytes()).into_string(),bs58::encode(keypair.0.to_bytes()).into_string().len());
+    // println!("{:?}\n{}",bs58::encode(keypair.0.public.as_ref()).into_string(),bs58::encode(keypair.0.public.as_ref()).into_string().len());
+    // println!("{:?}\n{}",keypair.0.public.to_bytes().to_vec(),keypair.0.public.to_bytes().to_vec().len());
     
     Ok(serialized)
 }

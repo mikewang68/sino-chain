@@ -1,0 +1,34 @@
+[package]
+name = "storage-proto"
+version = "1.9.29"
+description = "Solana Storage Protobuf Definitions"
+authors = ["Solana Maintainers <maintainers@solana.com>"]
+repository = "https://github.com/solana-labs/solana"
+license = "Apache-2.0"
+homepage = "https://solana.com/"
+documentation = "https://docs.rs/solana-storage-proto"
+edition = "2021"
+
+[dependencies]
+bincode = "1.3.3"
+bs58 = "0.4.0"
+prost = "0.11.0"
+serde = "1.0.130"
+account-decoder = { path = "../account-decoder", version = "=1.9.29" }
+sdk = { path = "../sdk", version = "=1.9.29" }
+transaction-status = { path = "../transaction-status", version = "=1.9.29" }
+
+rlp = "0.5.0"
+evm-state = { path = "../evm-utils/evm-state" }
+[dev-dependencies]
+enum-iterator = "0.7.0"
+
+[lib]
+crate-type = ["lib"]
+name = "storage_proto"
+
+[package.metadata.docs.rs]
+targets = ["x86_64-unknown-linux-gnu"]
+
+[build-dependencies]
+tonic-build = "0.8.0"
