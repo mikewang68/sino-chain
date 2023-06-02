@@ -4986,8 +4986,11 @@ version = "1.9.29"
 dependencies = [
  "bincode",
  "config-program",
+ "frozen-abi",
+ "frozen-abi-macro",
  "log 0.4.18",
  "logger",
+ "metrics",
  "num-derive",
  "num-traits",
  "program-runtime",
