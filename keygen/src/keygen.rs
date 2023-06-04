@@ -593,18 +593,33 @@ fn do_main(matches: &ArgMatches<'_>) -> Result<(), Box<dyn error::Error>> {
         }
         ("seckey", Some(matches)) => {
             let mut path = dirs_next::home_dir().expect("home directory");
-            let outfile = if matches.is_present("keypair") {
-                matches.value_of("keypair")
+            // let outfile = if matches.is_present("keypair") {
+            //     matches.value_of("keypair")
+            // } else if !config.keypair_path.is_empty() {
+            //     &config.keypair_path
+            // }else {
+            //     path.extend([".config", "sino", "id.json"]);
+            //     Some(String::from(path.to_str().unwrap()))
+            // };
+            let path = if matches.is_present("keypair") {
+                let path = matches.value_of("keypair").unwrap();
+                path
+            } else if !config.keypair_path.is_empty() && Path::new(&config.keypair_path).exists() {
+                let path = &config.keypair_path;
+                println!("No matches 'keypair'.");
+                path
             } else {
                 path.extend([".config", "sino", "id.json"]);
-                Some(path.to_str().unwrap())
+                let path = path.to_str().unwrap();
+                println!("No matches 'keypair', and can't find file from config file.");
+                path
             };
-            let data = read_keypair_file(&outfile.unwrap());
+            let data = read_keypair_file(&path);
             let keypair = data.unwrap();
             let seckey = keypair.secret().as_bytes();
             let hex = to_hex(seckey);
             let divider = String::from_utf8(vec![b'='; hex.len()+10]).unwrap();
-            println!("Reading from path: {}",outfile.unwrap());
+            println!("Reading from path: {}",path);
             println!("{}\nSeckey: {}\n{}\nSeckey len: {}",divider,hex,divider,hex.len());
         }
         ("new", Some(matches)) => {
