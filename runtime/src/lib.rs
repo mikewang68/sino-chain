@@ -18,6 +18,9 @@ pub mod stake_history;
 pub mod vote_account;
 pub mod builtins;
 pub mod cost_tracker;
+mod pubkey_bins;
+pub mod in_mem_accounts_index;
+pub mod bucket_map_holder;
 
 #[macro_use]
 extern crate metrics;
