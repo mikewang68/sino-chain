@@ -1,14 +1,14 @@
 use {
     crate::{
-        // accounts_index_storage::AccountsIndexStorage,
+        accounts_index_storage::AccountsIndexStorage,
         // ancestors::Ancestors,
-        // bucket_map_holder::{Age, BucketMapHolder},
+        bucket_map_holder::{Age, BucketMapHolder},
         // contains::Contains,
         in_mem_accounts_index::{InMemAccountsIndex, InsertNewEntryResults},
         // inline_spl_token::{self, GenericTokenAccount},
         // inline_spl_token_2022,
         pubkey_bins::PubkeyBinCalculator24,
-        // secondary_index::*,
+        secondary_index::*,
     },
     bv::BitVec,
     log::*,
@@ -38,6 +38,25 @@ use {
 
 // use velas_account_program::{VAccountStorage, VelasAccountType};
 // use velas_relying_party_program::RelyingPartyData;
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum AccountIndex {
+    ProgramId,
+    SplTokenMint,
+    SplTokenOwner,
+    VelasAccountStorage,
+    VelasAccountOwner,
+    VelasAccountOperational,
+    VelasRelyingOwner,
+}
+
+pub trait IsCached {
+    fn is_cached(&self) -> bool;
+}
+
+pub trait ZeroLamport {
+    fn is_zero_lamport(&self) -> bool;
+}
 
 pub trait IndexValue:
     'static + IsCached + Clone + Debug + PartialEq + ZeroLamport + Copy + Default + Sync + Send
@@ -303,11 +322,38 @@ pub struct AccountMapEntryInner<T> {
     pub slot_list: RwLock<SlotList<T>>,
     pub meta: AccountMapEntryMeta,
 }
+impl<T: IndexValue> AccountMapEntryInner<T> {
+    /// set dirty to false, return true if was dirty
+    pub fn clear_dirty(&self) -> bool {
+        self.meta
+            .dirty
+            .compare_exchange(true, false, Ordering::AcqRel, Ordering::Relaxed)
+            .is_ok()
+    }
+}
 
 #[derive(Debug, Default)]
 pub struct AccountMapEntryMeta {
     pub dirty: AtomicBool,
     pub age: AtomicU8,
+}
+
+
+#[derive(Debug)]
+pub struct RootsTracker {
+    roots: RollingBitField,
+    max_root: Slot,
+    uncleaned_roots: HashSet<Slot>,
+    previous_uncleaned_roots: HashSet<Slot>,
+}
+
+impl Default for RootsTracker {
+    fn default() -> Self {
+        // we expect to keep a rolling set of 400k slots around at a time
+        // 4M gives us plenty of extra(?!) room to handle a width 10x what we should need.
+        // cost is 4M bits of memory, which is .5MB
+        RootsTracker::new(4194304)
+    }
 }
 
 #[derive(Debug)]
@@ -341,3 +387,42 @@ pub struct AccountsIndex<T: IndexValue> {
     /// when a scan's accumulated data exceeds this limit, abort the scan
     pub scan_results_limit_bytes: Option<usize>,
 }
+
+
+#[derive(Debug, Default, Clone)]
+pub struct AccountsIndexConfig {
+    pub bins: Option<usize>,
+    pub flush_threads: Option<usize>,
+    pub drives: Option<Vec<PathBuf>>,
+    pub index_limit_mb: Option<usize>,
+    pub ages_to_stay_in_cache: Option<Age>,
+    pub scan_results_limit_bytes: Option<usize>,
+}
+
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub struct AccountSecondaryIndexesIncludeExclude {
+    pub exclude: bool,
+    pub keys: HashSet<Pubkey>,
+}
+
+#[derive(Debug, Default, Clone)]
+pub struct AccountSecondaryIndexes {
+    pub keys: Option<AccountSecondaryIndexesIncludeExclude>,
+    pub indexes: HashSet<AccountIndex>,
+}
+
+impl AccountSecondaryIndexes {
+    pub fn is_empty(&self) -> bool {
+        self.indexes.is_empty()
+    }
+    pub fn contains(&self, index: &AccountIndex) -> bool {
+        self.indexes.contains(index)
+    }
+    pub fn include_key(&self, key: &Pubkey) -> bool {
+        match &self.keys {
+            Some(options) => options.exclude ^ options.keys.contains(key),
+            None => true, // include all keys
+        }
+    }
+}
+

@@ -19,53 +19,92 @@
 //! commit for each slot entry would be indexed.
 
 #[cfg(test)]
+use std::{thread::sleep, time::Duration};
 use {
     crate::{
         // accounts_background_service::{DroppedSlotsSender, SendDroppedBankCallback},
-        // accounts_cache::{AccountsCache, CachedAccount, SlotCache},
+        accounts_cache::{
+            AccountsCache, 
+            CachedAccount, 
+            // SlotCache
+        },
         // accounts_hash::{AccountsHash, CalculateHashIntermediate, HashStats, PreviousPass},
         accounts_index::{
+            // AccountIndexGetResult, 
             AccountSecondaryIndexes, AccountsIndex, 
+            // AccountsIndexConfig,
+            // AccountsIndexRootsStats, IndexKey, 
+            IndexValue, 
+            IsCached, 
+            // RefCount, ScanConfig,
+            // ScanResult, SlotList, SlotSlice, 
+            ZeroLamport, 
+            // ACCOUNTS_INDEX_CONFIG_FOR_BENCHMARKS,
+            // ACCOUNTS_INDEX_CONFIG_FOR_TESTING,
         },
-        // accounts_update_notifier_interface::AccountsUpdateNotifier,
- 
-        // append_vec::{AppendVec, StoredAccountMeta, StoredMeta, StoredMetaWriteVersion},
+        accounts_update_notifier_interface::AccountsUpdateNotifier,
+        ancestors::Ancestors,
+        append_vec::{AppendVec, 
+            // StoredAccountMeta, StoredMeta, StoredMetaWriteVersion
+        },
         // cache_hash_data::CacheHashData,
         // contains::Contains,
-        // pubkey_bins::PubkeyBinCalculator24,
-        // read_only_accounts_cache::ReadOnlyAccountsCache,
-
+        pubkey_bins::PubkeyBinCalculator24,
+        read_only_accounts_cache::ReadOnlyAccountsCache,
+        rent_collector::RentCollector,
         // sorted_storages::SortedStorages,
     },
-
-    crossbeam_channel::{Sender},
+    blake3::traits::digest::Digest,
+    crossbeam_channel::{unbounded, Receiver, Sender},
     dashmap::{
+        mapref::entry::Entry::{Occupied, Vacant},
         DashMap, DashSet,
     },
-    rayon::{ThreadPool},
+    log::*,
+    rand::{prelude::SliceRandom, thread_rng, Rng},
+    rayon::{prelude::*, ThreadPool},
     serde::{Deserialize, Serialize},
+    measure::measure::Measure,
+    rayon_threadlimit::get_thread_count,
     sdk::{
-        account::{ReadableAccount},
-        clock::{Slot,},
-        genesis_config::{ClusterType},
+        account::{AccountSharedData, ReadableAccount},
+        clock::{BankId, Epoch, Slot, SlotCount},
+        epoch_schedule::EpochSchedule,
+        genesis_config::{ClusterType, GenesisConfig},
         hash::Hash,
         pubkey::Pubkey,
         timing::AtomicInterval,
     },
+    vote_program::vote_state::MAX_LOCKOUT_HISTORY,
     std::{
-        collections::{HashMap, HashSet},
+        borrow::{Borrow, Cow},
+        boxed::Box,
+        collections::{hash_map::Entry, BTreeSet, HashMap, HashSet},
+        convert::TryFrom,
         hash::{Hash as StdHash, Hasher as StdHasher},
-        path::{PathBuf},
+        io::{Error as IoError, Result as IoResult},
+        ops::{Range, RangeBounds},
+        path::{Path, PathBuf},
+        str::FromStr,
         sync::{
-            atomic::{AtomicBool, AtomicU64, AtomicUsize},
-            Arc, Condvar, Mutex, RwLock,
+            atomic::{AtomicBool, AtomicU64, AtomicUsize, Ordering},
+            Arc, Condvar, Mutex, MutexGuard, RwLock,
         },
+        thread::Builder,
         time::Instant,
     },
     tempfile::TempDir,
 };
 
-type AccountInfoAccountsIndex = AccountsIndex<AccountInfo>;
+
+// A specially reserved storage id just for entries in the cache, so that
+// operations that take a storage entry can maintain a common interface
+// when interacting with cached accounts. This id is "virtual" in that it
+// doesn't actually refer to an actual storage entry.
+const CACHE_VIRTUAL_STORAGE_ID: usize = AppendVecId::MAX;
+
+
+// type AccountInfoAccountsIndex = AccountsIndex<AccountInfo>;
 type ShrinkCandidates = HashMap<Slot, HashMap<AppendVecId, Arc<AccountStorageEntry>>>;
 
 /// An offset into the AccountsDb::storage vector
@@ -73,6 +112,13 @@ pub type AppendVecId = usize;
 
 // Each slot has a set of storage entries.
 pub(crate) type SlotStores = Arc<RwLock<HashMap<usize, Arc<AccountStorageEntry>>>>;
+
+#[derive(Debug, Eq, PartialEq, Copy, Clone, Deserialize, Serialize, AbiExample, AbiEnumVisitor)]
+pub enum AccountStorageStatus {
+    Available = 0,
+    Full = 1,
+    Candidate = 2,
+}
 
 
 #[derive(Default, Debug, PartialEq, Clone, Copy)]
@@ -91,6 +137,18 @@ pub struct AccountInfo {
     /// purposes to remove accounts with zero balance.
     lamports: u64,
 }
+
+impl ZeroLamport for AccountInfo {
+    fn is_zero_lamport(&self) -> bool {
+        self.lamports == 0
+    }
+}
+impl IsCached for AccountInfo {
+    fn is_cached(&self) -> bool {
+        self.store_id == CACHE_VIRTUAL_STORAGE_ID
+    }
+}
+impl IndexValue for AccountInfo {}
 
 #[derive(Clone, Default, Debug)]
 pub struct AccountStorage(pub DashMap<Slot, SlotStores>);
@@ -259,13 +317,8 @@ pub enum AccountShrinkThreshold {
     IndividalStore { shrink_ratio: f64 },
 }
 
-#[derive(Debug, Eq, PartialEq, Copy, Clone, Deserialize, Serialize, AbiExample, AbiEnumVisitor)]
-pub enum AccountStorageStatus {
-    Available = 0,
-    Full = 1,
-    Candidate = 2,
-}
 
+type AccountInfoAccountsIndex = AccountsIndex<AccountInfo>;
 // This structure handles the load/store of the accounts
 #[derive(Debug)]
 pub struct AccountsDb {

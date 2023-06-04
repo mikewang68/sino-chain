@@ -43,7 +43,7 @@ frozen-abi-macro = { path = "../frozen-abi/macro", version = "=1.9.29" }
 logger = { path = "../logger", version = "=1.9.29" }
 measure = { path = "../measure", version = "=1.9.29" }
 metrics = { path = "../metrics", version = "=1.9.29" }
-#bucket-map = { path = "../bucket_map", version = "=1.9.29" }
+bucket-map = { path = "../bucket_map", version = "=1.9.29" }
 program-runtime = { path = "../program-runtime", version = "=1.9.29" }
 rayon-threadlimit = { path = "../rayon-threadlimit", version = "=1.9.29" }
 sdk = { path = "../sdk", version = "=1.9.29" }
