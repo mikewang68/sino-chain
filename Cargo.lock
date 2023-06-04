@@ -462,6 +462,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "bucket-map"
+version = "1.9.29"
+dependencies = [
+ "fs_extra",
+ "log 0.4.18",
+ "logger",
+ "measure",
+ "memmap2",
+ "rand 0.7.3",
+ "rayon",
+ "sdk",
+ "tempfile",
+]
+
+[[package]]
 name = "bumpalo"
 version = "3.13.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
