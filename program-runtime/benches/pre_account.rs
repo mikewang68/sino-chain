@@ -11,7 +11,7 @@ use {
 
 #[bench]
 fn bench_verify_account_changes_data(bencher: &mut Bencher) {
-    logger::setup();
+    sino_logger::setup();
 
     let owner = pubkey::new_rand();
     let non_owner = pubkey::new_rand();

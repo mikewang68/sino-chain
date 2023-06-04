@@ -281,7 +281,7 @@ fn quote_for_test(
 
             #[test]
             fn test_abi_digest() {
-                ::logger::setup();
+                ::sino_logger::setup();
                 let mut digester = ::frozen_abi::abi_digester::AbiDigester::create();
                 let example = <#type_name>::example();
                 let result = <_>::visit_for_abi(&&example, &mut digester);

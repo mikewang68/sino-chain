@@ -412,7 +412,7 @@ fn main() -> Result<(), Box<dyn error::Error>> {
     }
     .get_matches();
 
-    logger::setup_with("info");
+    sino_logger::setup_with("info");
 
     let ledger_path = PathBuf::from(matches.value_of("ledger_path").unwrap());
 
