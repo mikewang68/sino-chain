@@ -4,10 +4,10 @@ use {
         // ancestors::Ancestors,
         // bucket_map_holder::{Age, BucketMapHolder},
         // contains::Contains,
-        // in_mem_accounts_index::{InMemAccountsIndex, InsertNewEntryResults},
+        in_mem_accounts_index::{InMemAccountsIndex, InsertNewEntryResults},
         // inline_spl_token::{self, GenericTokenAccount},
         // inline_spl_token_2022,
-        // pubkey_bins::PubkeyBinCalculator24,
+        pubkey_bins::PubkeyBinCalculator24,
         // secondary_index::*,
     },
     bv::BitVec,
@@ -293,6 +293,23 @@ impl PartialEq<RollingBitField> for RollingBitField {
 pub type AccountMap<V> = Arc<InMemAccountsIndex<V>>;
 type MapType<T> = AccountMap<T>;
 type LockMapType<T> = Vec<RwLock<MapType<T>>>;
+
+pub(crate) type AccountMapEntry<T> = Arc<AccountMapEntryInner<T>>;
+pub type SlotList<T> = Vec<(Slot, T)>;
+
+#[derive(Debug, Default)]
+pub struct AccountMapEntryInner<T> {
+    ref_count: AtomicU64,
+    pub slot_list: RwLock<SlotList<T>>,
+    pub meta: AccountMapEntryMeta,
+}
+
+#[derive(Debug, Default)]
+pub struct AccountMapEntryMeta {
+    pub dirty: AtomicBool,
+    pub age: AtomicU8,
+}
+
 #[derive(Debug)]
 pub struct AccountsIndex<T: IndexValue> {
     pub account_maps: LockMapType<T>,

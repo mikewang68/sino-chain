@@ -2,6 +2,7 @@
 members = [
     "account-decoder",
     "bloom",
+    "bucket_map",
     "clap-utils",
     "cli-config",
     "entry",
