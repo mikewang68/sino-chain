@@ -644,7 +644,7 @@ impl EvmProcessor {
         }
 
         write!(
-            crate::solana_extension::MultilineLogger::new(invoke_context.get_log_collector()),
+            crate::extension::MultilineLogger::new(invoke_context.get_log_collector()),
             "{}",
             result
         )

@@ -2,16 +2,19 @@ use {
     crate::{
         accounts_index::{
             AccountMapEntry, 
+            AccountMapEntryInner,
             IndexValue,
         },
         bucket_map_holder::{Age, BucketMapHolder},
         bucket_map_holder_stats::BucketMapHolderStats,
     },
+    rand::{thread_rng,Rng},
     measure::measure::Measure,
     bucket_map::bucket_api::BucketApi,
     sdk::{clock::Slot, pubkey::Pubkey},
     std::{
         collections::{
+            hash_map::{Entry},
             HashMap,
         },
         fmt::Debug,
@@ -189,6 +192,10 @@ impl<T: IndexValue> InMemAccountsIndex<T> {
         last_age_flushed != age
     }
 
+    fn last_age_flushed(&self) -> Age {
+        self.last_age_flushed.load(Ordering::Relaxed)
+    }
+
     fn map(&self) -> &RwLock<HashMap<Pubkey, AccountMapEntry<T>>> {
         &self.map_internal
     }
@@ -231,4 +238,97 @@ impl<T: IndexValue> InMemAccountsIndex<T> {
         thread_rng().gen_range(0, N) == 0
     }
 
+    pub fn update_time_stat(stat: &AtomicU64, mut m: Measure) {
+        m.stop();
+        let value = m.as_us();
+        Self::update_stat(stat, value);
+    }
+
+    pub fn stats(&self) -> &BucketMapHolderStats {
+        &self.storage.stats
+    }
+
+    fn update_stat(stat: &AtomicU64, value: u64) {
+        if value != 0 {
+            stat.fetch_add(value, Ordering::Relaxed);
+        }
+    }
+
+    // remove keys in 'removes' from in-mem cache due to age
+    // return true if the removal was completed
+    fn flush_remove_from_cache(
+        &self,
+        removes: Vec<Pubkey>,
+        current_age: Age,
+        startup: bool,
+        randomly_evicted: bool,
+    ) -> bool {
+        let mut completed_scan = true;
+        if removes.is_empty() {
+            return completed_scan; // completed, don't need to get lock or do other work
+        }
+
+        let ranges = self.cache_ranges_held.read().unwrap().clone();
+        if ranges.iter().any(|range| range.is_none()) {
+            return false; // range said to hold 'all', so not completed
+        }
+
+        let mut removed = 0;
+        // consider chunking these so we don't hold the write lock too long
+        let mut map = self.map().write().unwrap();
+        for k in removes {
+            if let Entry::Occupied(occupied) = map.entry(k) {
+                let v = occupied.get();
+                if Arc::strong_count(v) > 1 {
+                    // someone is holding the value arc's ref count and could modify it, so do not remove this from in-mem cache
+                    completed_scan = false;
+                    continue;
+                }
+
+                if v.dirty()
+                    || (!randomly_evicted
+                        && !self.should_remove_from_mem(current_age, v, startup, false))
+                {
+                    // marked dirty or bumped in age after we looked above
+                    // these will be handled in later passes
+                    // but, at startup, everything is ready to age out if it isn't dirty
+                    continue;
+                }
+
+                if ranges.iter().any(|range| {
+                    range
+                        .as_ref()
+                        .map(|range| range.contains(&k))
+                        .unwrap_or(true) // None means 'full range', so true
+                }) {
+                    // this item is held in mem by range, so don't remove
+                    completed_scan = false;
+                    continue;
+                }
+
+                if self.get_stop_flush() {
+                    return false; // did NOT complete, told to stop
+                }
+
+                // all conditions for removing succeeded, so really remove item from in-mem cache
+                removed += 1;
+                occupied.remove();
+            }
+        }
+        self.stats()
+            .insert_or_delete_mem_count(false, self.bin, removed);
+        Self::update_stat(&self.stats().flush_entries_removed_from_mem, removed as u64);
+
+        completed_scan
+    }
+
+    /// called after flush scans this bucket at the current age
+    fn set_has_aged(&self, age: Age) {
+        self.last_age_flushed.store(age, Ordering::Relaxed);
+        self.storage.bucket_flushed_at_current_age();
+    }
+
+    fn get_stop_flush(&self) -> bool {
+        self.stop_flush.load(Ordering::Relaxed) > 0
+    }
 }

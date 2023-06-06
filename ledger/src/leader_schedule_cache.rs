@@ -2,14 +2,14 @@ use {
     crate::{
         blockstore::Blockstore,
         leader_schedule::{FixedSchedule, LeaderSchedule},
-        // leader_schedule_utils,
+        leader_schedule_utils,
     },
     // log::*,
     runtime::bank::Bank,
     sdk::{
         clock::{Epoch, Slot},
         epoch_schedule::EpochSchedule,
-        // pubkey::Pubkey,
+        pubkey::Pubkey,
     },
     std::{
         collections::{hash_map::Entry, HashMap, VecDeque},
@@ -37,7 +37,7 @@ pub struct LeaderScheduleCache {
     fixed_schedule: Option<Arc<FixedSchedule>>,
 }
 
-// impl LeaderScheduleCache {
+impl LeaderScheduleCache {
 //     pub fn new_from_bank(bank: &Bank) -> Self {
 //         Self::new(*bank.epoch_schedule(), bank)
 //     }
@@ -69,9 +69,9 @@ pub struct LeaderScheduleCache {
 //         }
 //     }
 
-//     pub fn max_schedules(&self) -> usize {
-//         self.max_schedules.0
-//     }
+    pub fn max_schedules(&self) -> usize {
+        self.max_schedules.0
+    }
 
 //     pub fn set_root(&self, root_bank: &Bank) {
 //         let new_max_epoch = self
@@ -161,40 +161,40 @@ pub struct LeaderScheduleCache {
 //         self.fixed_schedule = fixed_schedule.map(Arc::new);
 //     }
 
-//     fn slot_leader_at_no_compute(&self, slot: Slot) -> Option<Pubkey> {
-//         let (epoch, slot_index) = self.epoch_schedule.get_epoch_and_slot_index(slot);
-//         if let Some(ref fixed_schedule) = self.fixed_schedule {
-//             if epoch >= fixed_schedule.start_epoch {
-//                 return Some(fixed_schedule.leader_schedule[slot_index]);
-//             }
-//         }
-//         self.cached_schedules
-//             .read()
-//             .unwrap()
-//             .0
-//             .get(&epoch)
-//             .map(|schedule| schedule[slot_index])
-//     }
+    fn slot_leader_at_no_compute(&self, slot: Slot) -> Option<Pubkey> {
+        let (epoch, slot_index) = self.epoch_schedule.get_epoch_and_slot_index(slot);
+        if let Some(ref fixed_schedule) = self.fixed_schedule {
+            if epoch >= fixed_schedule.start_epoch {
+                return Some(fixed_schedule.leader_schedule[slot_index]);
+            }
+        }
+        self.cached_schedules
+            .read()
+            .unwrap()
+            .0
+            .get(&epoch)
+            .map(|schedule| schedule[slot_index])
+    }
 
-//     fn slot_leader_at_else_compute(&self, slot: Slot, bank: &Bank) -> Option<Pubkey> {
-//         let cache_result = self.slot_leader_at_no_compute(slot);
-//         // Forbid asking for slots in an unconfirmed epoch
-//         let bank_epoch = self.epoch_schedule.get_epoch_and_slot_index(slot).0;
-//         if bank_epoch > *self.max_epoch.read().unwrap() {
-//             debug!(
-//                 "Requested leader in slot: {} of unconfirmed epoch: {}",
-//                 slot, bank_epoch
-//             );
-//             return None;
-//         }
-//         if cache_result.is_some() {
-//             cache_result
-//         } else {
-//             let (epoch, slot_index) = bank.get_epoch_and_slot_index(slot);
-//             self.compute_epoch_schedule(epoch, bank)
-//                 .map(|epoch_schedule| epoch_schedule[slot_index])
-//         }
-//     }
+    fn slot_leader_at_else_compute(&self, slot: Slot, bank: &Bank) -> Option<Pubkey> {
+        let cache_result = self.slot_leader_at_no_compute(slot);
+        // Forbid asking for slots in an unconfirmed epoch
+        let bank_epoch = self.epoch_schedule.get_epoch_and_slot_index(slot).0;
+        if bank_epoch > *self.max_epoch.read().unwrap() {
+            debug!(
+                "Requested leader in slot: {} of unconfirmed epoch: {}",
+                slot, bank_epoch
+            );
+            return None;
+        }
+        if cache_result.is_some() {
+            cache_result
+        } else {
+            let (epoch, slot_index) = bank.get_epoch_and_slot_index(slot);
+            self.compute_epoch_schedule(epoch, bank)
+                .map(|epoch_schedule| epoch_schedule[slot_index])
+        }
+    }
 
 //     pub fn get_epoch_leader_schedule(&self, epoch: Epoch) -> Option<Arc<LeaderSchedule>> {
 //         self.cached_schedules.read().unwrap().0.get(&epoch).cloned()
@@ -218,31 +218,31 @@ pub struct LeaderScheduleCache {
 //         }
 //     }
 
-//     fn compute_epoch_schedule(&self, epoch: Epoch, bank: &Bank) -> Option<Arc<LeaderSchedule>> {
-//         let leader_schedule = leader_schedule_utils::leader_schedule(epoch, bank);
-//         leader_schedule.map(|leader_schedule| {
-//             let leader_schedule = Arc::new(leader_schedule);
-//             let (ref mut cached_schedules, ref mut order) = *self.cached_schedules.write().unwrap();
-//             // Check to see if schedule exists in case somebody already inserted in the time we were
-//             // waiting for the lock
-//             let entry = cached_schedules.entry(epoch);
-//             if let Entry::Vacant(v) = entry {
-//                 v.insert(leader_schedule.clone());
-//                 order.push_back(epoch);
-//                 Self::retain_latest(cached_schedules, order, self.max_schedules());
-//             }
-//             leader_schedule
-//         })
-//     }
+    fn compute_epoch_schedule(&self, epoch: Epoch, bank: &Bank) -> Option<Arc<LeaderSchedule>> {
+        let leader_schedule = leader_schedule_utils::leader_schedule(epoch, bank);
+        leader_schedule.map(|leader_schedule| {
+            let leader_schedule = Arc::new(leader_schedule);
+            let (ref mut cached_schedules, ref mut order) = *self.cached_schedules.write().unwrap();
+            // Check to see if schedule exists in case somebody already inserted in the time we were
+            // waiting for the lock
+            let entry = cached_schedules.entry(epoch);
+            if let Entry::Vacant(v) = entry {
+                v.insert(leader_schedule.clone());
+                order.push_back(epoch);
+                Self::retain_latest(cached_schedules, order, self.max_schedules());
+            }
+            leader_schedule
+        })
+    }
 
-//     fn retain_latest(
-//         schedules: &mut HashMap<Epoch, Arc<LeaderSchedule>>,
-//         order: &mut VecDeque<u64>,
-//         max_schedules: usize,
-//     ) {
-//         while schedules.len() > max_schedules {
-//             let first = order.pop_front().unwrap();
-//             schedules.remove(&first);
-//         }
-//     }
-// }
+    fn retain_latest(
+        schedules: &mut HashMap<Epoch, Arc<LeaderSchedule>>,
+        order: &mut VecDeque<u64>,
+        max_schedules: usize,
+    ) {
+        while schedules.len() > max_schedules {
+            let first = order.pop_front().unwrap();
+            schedules.remove(&first);
+        }
+    }
+}

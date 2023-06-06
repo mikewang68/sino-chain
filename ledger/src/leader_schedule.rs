@@ -21,39 +21,39 @@ pub struct LeaderSchedule {
     index: HashMap<Pubkey, Arc<Vec<usize>>>,
 }
 
-// impl LeaderSchedule {
-//     // Note: passing in zero stakers will cause a panic.
-//     #[allow(clippy::branches_sharing_code)]
-//     pub fn new(ids_and_stakes: &[(Pubkey, u64)], seed: [u8; 32], len: u64, repeat: u64) -> Self {
-//         let (ids, stakes): (Vec<_>, Vec<_>) = ids_and_stakes.iter().cloned().unzip();
-//         let rng = &mut ChaChaRng::from_seed(seed);
-//         let weighted_index = WeightedIndex::new(stakes).unwrap();
-//         let mut current_node = Pubkey::default();
-//         let slot_leaders = (0..len)
-//             .map(|i| {
-//                 if i % repeat == 0 {
-//                     current_node = ids[weighted_index.sample(rng)];
-//                 }
-//                 current_node
-//             })
-//             .collect();
-//         Self::new_from_schedule(slot_leaders)
-//     }
+impl LeaderSchedule {
+    // Note: passing in zero stakers will cause a panic.
+    #[allow(clippy::branches_sharing_code)]
+    pub fn new(ids_and_stakes: &[(Pubkey, u64)], seed: [u8; 32], len: u64, repeat: u64) -> Self {
+        let (ids, stakes): (Vec<_>, Vec<_>) = ids_and_stakes.iter().cloned().unzip();
+        let rng = &mut ChaChaRng::from_seed(seed);
+        let weighted_index = WeightedIndex::new(stakes).unwrap();
+        let mut current_node = Pubkey::default();
+        let slot_leaders = (0..len)
+            .map(|i| {
+                if i % repeat == 0 {
+                    current_node = ids[weighted_index.sample(rng)];
+                }
+                current_node
+            })
+            .collect();
+        Self::new_from_schedule(slot_leaders)
+    }
 
-//     pub fn new_from_schedule(slot_leaders: Vec<Pubkey>) -> Self {
-//         let index = slot_leaders
-//             .iter()
-//             .enumerate()
-//             .map(|(i, pk)| (*pk, i))
-//             .into_group_map()
-//             .into_iter()
-//             .map(|(k, v)| (k, Arc::new(v)))
-//             .collect();
-//         Self {
-//             slot_leaders,
-//             index,
-//         }
-//     }
+    pub fn new_from_schedule(slot_leaders: Vec<Pubkey>) -> Self {
+        let index = slot_leaders
+            .iter()
+            .enumerate()
+            .map(|(i, pk)| (*pk, i))
+            .into_group_map()
+            .into_iter()
+            .map(|(k, v)| (k, Arc::new(v)))
+            .collect();
+        Self {
+            slot_leaders,
+            index,
+        }
+    }
 
 //     pub fn get_slot_leaders(&self) -> &[Pubkey] {
 //         &self.slot_leaders
@@ -89,12 +89,12 @@ pub struct LeaderSchedule {
 //         // times the schedule is repeated.
 //         range.map(move |k| index[k % size] + k / size * num_slots)
 //     }
-// }
+}
 
-// impl Index<u64> for LeaderSchedule {
-//     type Output = Pubkey;
-//     fn index(&self, index: u64) -> &Pubkey {
-//         let index = index as usize;
-//         &self.slot_leaders[index % self.slot_leaders.len()]
-//     }
-// }
+impl Index<u64> for LeaderSchedule {
+    type Output = Pubkey;
+    fn index(&self, index: u64) -> &Pubkey {
+        let index = index as usize;
+        &self.slot_leaders[index % self.slot_leaders.len()]
+    }
+}

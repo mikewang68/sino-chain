@@ -11,6 +11,7 @@ pub mod shred;
 pub mod erasure;
 pub mod leader_schedule_cache;
 pub mod leader_schedule;
+pub mod leader_schedule_utils;
 
 
 #[macro_use]

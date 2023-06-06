@@ -39,6 +39,8 @@ use {
 // use velas_account_program::{VAccountStorage, VelasAccountType};
 // use velas_relying_party_program::RelyingPartyData;
 
+pub type RefCount = u64;
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum AccountIndex {
     ProgramId,
@@ -330,6 +332,22 @@ impl<T: IndexValue> AccountMapEntryInner<T> {
             .compare_exchange(true, false, Ordering::AcqRel, Ordering::Relaxed)
             .is_ok()
     }
+
+    pub fn set_dirty(&self, value: bool) {
+        self.meta.dirty.store(value, Ordering::Release)
+    }
+
+    pub fn ref_count(&self) -> RefCount {
+        self.ref_count.load(Ordering::Relaxed)
+    }
+
+    pub fn age(&self) -> Age {
+        self.meta.age.load(Ordering::Relaxed)
+    }
+
+    pub fn dirty(&self) -> bool {
+        self.meta.dirty.load(Ordering::Acquire)
+    }
 }
 
 #[derive(Debug, Default)]
@@ -354,6 +372,20 @@ impl Default for RootsTracker {
         // cost is 4M bits of memory, which is .5MB
         RootsTracker::new(4194304)
     }
+}
+impl RootsTracker {
+    pub fn new(max_width: u64) -> Self {
+        Self {
+            roots: RollingBitField::new(max_width),
+            max_root: 0,
+            uncleaned_roots: HashSet::new(),
+            previous_uncleaned_roots: HashSet::new(),
+        }
+    }
+
+    // pub fn min_root(&self) -> Option<Slot> {
+    //     self.roots.min()
+    // }
 }
 
 #[derive(Debug)]

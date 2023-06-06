@@ -7,7 +7,7 @@ pub mod error;
 pub mod instructions;
 pub mod precompiles;
 pub mod processor;
-pub mod solana_extension;
+pub mod extension;
 
 pub static ID: sdk::pubkey::Pubkey = sdk::evm_loader::ID;
 

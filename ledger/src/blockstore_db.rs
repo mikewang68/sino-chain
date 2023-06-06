@@ -330,7 +330,7 @@ impl Rocks {
 
         // Use default database options
         if matches!(access_type, AccessType::PrimaryOnlyForMaintenance) {
-            warn!("Disabling rocksdb's auto compaction for maintenance bulk ledger update...");
+            warn!("Disabling rocksdb's auto compaction for maintenance bulk ledger update...");// 禁用 rocksdb 的自动压缩以维护大容量分类帐更新
         }
         let mut db_options = get_db_options(&access_type);
         if let Some(recovery_mode) = recovery_mode {
@@ -488,7 +488,7 @@ impl Rocks {
                 match DB::open_cf_descriptors(&db_options, path, cfs.into_iter().map(|c| c.1)) {
                     Ok(db) => Rocks(db, ActualAccessType::Primary, oldest_slot, oldest_block_num),
                     Err(err) => {
-                        let secondary_path = path.join("solana-secondary");
+                        let secondary_path = path.join("sino-secondary");
 
                         warn!("Error when opening as primary: {}", err);
                         warn!("Trying as secondary at : {:?}", secondary_path);
@@ -515,8 +515,7 @@ impl Rocks {
         // this is only needed for LedgerCleanupService. so guard with PrimaryOnly (i.e. running velas-validator)
         if matches!(access_type, AccessType::PrimaryOnly) {
             for cf_name in cf_names {
-                // these special column families must be excluded from LedgerCleanupService's rocksdb
-                // compactions
+                // these special column families must be excluded from LedgerCleanupService's rocksdb compactions
                 if excludes_from_compaction(cf_name) {
                     continue;
                 }
@@ -1773,7 +1772,7 @@ fn get_db_options(access_type: &AccessType) -> Options {
     // A good value for this is the number of cores on the machine
     options.increase_parallelism(num_cpus::get() as i32);
 
-    let mut env = rocksdb::Env::new().unwrap();
+    let mut env = rocksdb::Env::new().unwrap(); // 创建一个默认的env
 
     // While a compaction is ongoing, all the background threads
     // could be used by the compaction. This can stall writes which

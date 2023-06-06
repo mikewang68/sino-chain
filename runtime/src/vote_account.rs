@@ -1,6 +1,7 @@
 use vote_program::vote_state::Vote;
 
 use {
+    itertools::Itertools,
     serde::{
         ser::{Serialize,Serializer},
         de::{Deserialize, Deserializer},
@@ -33,6 +34,11 @@ impl VoteAccount {
             *inner.vote_state.write().unwrap() = vote_state;
         });
         inner.vote_state.read().unwrap()
+    }
+
+    /// VoteState.node_pubkey of this vote-account.
+    fn node_pubkey(&self) -> Option<Pubkey> {
+        Some(self.vote_state().as_ref().ok()?.node_pubkey)
     }
 
 }
@@ -117,6 +123,25 @@ impl VoteAccounts{
     pub fn get(&self, pubkey: &Pubkey) -> Option<&(/*stake:*/ u64, VoteAccount)> {
         self.vote_accounts.get(pubkey)
     }
+
+    pub fn staked_nodes(&self) -> Arc<HashMap<Pubkey, u64>> {
+        self.staked_nodes_once.call_once(|| {
+            let staked_nodes = self
+                .vote_accounts
+                .values()
+                .filter(|(stake, _)| *stake != 0)
+                .filter_map(|(stake, vote_account)| {
+                    let node_pubkey = vote_account.node_pubkey()?;
+                    Some((node_pubkey, stake))
+                })
+                .into_grouping_map()
+                .aggregate(|acc, _node_pubkey, stake| Some(acc.unwrap_or_default() + stake));
+            *self.staked_nodes.write().unwrap() = Arc::new(staked_nodes)
+        });
+        self.staked_nodes.read().unwrap().clone()
+    }
+
+
 }
 
 impl Default for VoteAccounts {

@@ -532,6 +532,7 @@ fn main() -> Result<(), Box<dyn error::Error>> {
         }
     };
 
+    // 创建 genesis config
     let mut genesis_config = GenesisConfig {
         native_instruction_processors: vec![],
         ticks_per_slot,
@@ -544,12 +545,14 @@ fn main() -> Result<(), Box<dyn error::Error>> {
         ..GenesisConfig::default()
     };
 
+    // ----------------------- evm 根 ----------------------------------
+    // 将evm根hash配置到evm config中
     if cfg!(feature = "with_evm") {
         let root = value_t!(matches, "evm-root", String);
         match root {
             Ok(root) => {
-                let root_hash = evm_rpc::Hex::<evm_state::H256>::from_hex(&root).unwrap();
-                genesis_config.set_evm_root_hash(root_hash.0)
+                let root_hash = evm_rpc::Hex::<evm_state::H256>::from_hex(&root).unwrap(); // 取 evm 根 hash
+                genesis_config.set_evm_root_hash(root_hash.0)  // 将 evm 根 hash 配置到 genesis config 中
             }
             Err(e) => {
                 error!(
@@ -560,6 +563,10 @@ fn main() -> Result<(), Box<dyn error::Error>> {
         }
     }
 
+    // ------------------genesis json----------------------------
+    // 从命令参数中获取 evm-state-file 和 evm-state-format
+    // 其中 evm-state-file 代表路径 evm-state-format 代表客户端类型
+    // 通过 evm-state-file 和  evm-state-format 配置evm state json
     let evm_state_file = matches.value_of("evm-state-file");
     let evm_state_format = matches.value_of("evm-state-format");
     let evm_state_json = match (evm_state_file, evm_state_format) {
@@ -577,6 +584,7 @@ fn main() -> Result<(), Box<dyn error::Error>> {
         }
     };
 
+    // ------------------- 通货膨胀 ------------------------------
     if let Ok(raw_inflation) = value_t!(matches, "inflation", String) {
         let inflation = match raw_inflation.as_str() {
             "pico" => Inflation::pico(),
@@ -587,8 +595,10 @@ fn main() -> Result<(), Box<dyn error::Error>> {
         genesis_config.inflation = inflation;
     }
 
+    // ------------------ commission ----------------------------
     let commission = value_t_or_exit!(matches, "vote_commission_percentage", u8);
 
+    // ------------------- 创建账户 -------------------
     let mut bootstrap_validator_pubkeys_iter = bootstrap_validator_pubkeys.iter();
     loop {
         let identity_pubkey = match bootstrap_validator_pubkeys_iter.next() {
@@ -627,10 +637,12 @@ fn main() -> Result<(), Box<dyn error::Error>> {
         genesis_config.add_account(*vote_pubkey, vote_account);
     }
 
+    // --------------------------- 创建时间 ----------------------------
     if let Some(creation_time) = unix_timestamp_from_rfc3339_datetime(&matches, "creation_time") {
         genesis_config.creation_time = creation_time;
     }
 
+    // --------------------------- 水龙头 ----------------------------
     if let Some(faucet_pubkey) = faucet_pubkey {
         genesis_config.add_account(
             faucet_pubkey,
@@ -638,8 +650,11 @@ fn main() -> Result<(), Box<dyn error::Error>> {
         );
     }
 
+    // ------------------------- 质押合约 --------------------------
     stake_program::add_genesis_accounts(&mut genesis_config);
 
+    // ------------------------ 集群类型 --------------------------
+    // dev 激活所有功能，其他情况激活部分功能
     if matches!(
         genesis_config.cluster_type,
         ClusterType::Development | ClusterType::Devnet
@@ -649,15 +664,19 @@ fn main() -> Result<(), Box<dyn error::Error>> {
         runtime::genesis_utils::activate_velas_features_on_prod(&mut genesis_config);
     }
 
+    // ----------------- 从原始账户中获取账户信息 ----------------------
     if let Some(files) = matches.values_of("primordial_accounts_file") {
         for file in files {
             load_genesis_accounts(file, &mut genesis_config)?;
         }
     }
 
+    // ------------------- 最大创世纪档案解压大小 ---------------------
     let max_genesis_archive_unpacked_size =
         value_t_or_exit!(matches, "max_genesis_archive_unpacked_size", u64);
 
+    // -------------------- evm 状态余额 ----------------------
+    // evm两种客户端转储文件中读取的账户余额添加到evm state余额，并将Gwei转lamport
     let mut evm_state_balance = U256::zero();
 
     match evm_state_json {
@@ -700,6 +719,7 @@ fn main() -> Result<(), Box<dyn error::Error>> {
         evm_state_lamports += 1;
     }
 
+    // 将state账户添加到genesis config中
     genesis_config.add_account(
         sdk::evm_state::ID,
         evm_loader_program::create_state_account(evm_state_lamports),
@@ -718,7 +738,7 @@ fn main() -> Result<(), Box<dyn error::Error>> {
 
     // TODO: add_genesis_accounts for evm.
     // add_genesis_accounts(&mut genesis_config, issued_lamports - faucet_lamports);
-
+    // -------------------- bpf 合约中账户添加到genesis config中---------------------
     if let Some(values) = matches.values_of("bpf_program") {
         let values: Vec<&str> = values.collect::<Vec<_>>();
         for address_loader_program in values.chunks(3) {

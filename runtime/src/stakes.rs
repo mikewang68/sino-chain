@@ -8,9 +8,11 @@ use {
     },
     sdk::{
         clock::{Epoch},
+        pubkey::Pubkey,
     },
     std::{
-        sync::{RwLock},
+        collections::HashMap,
+        sync::{Arc,RwLock},
     },
 };
 
@@ -36,6 +38,10 @@ pub struct Stakes {
 impl Stakes {
     pub fn vote_accounts(&self) -> &VoteAccounts {
         &self.vote_accounts
+    }
+
+    pub fn staked_nodes(&self) -> Arc<HashMap<Pubkey, u64>> {
+        self.vote_accounts.staked_nodes()
     }
 }
 

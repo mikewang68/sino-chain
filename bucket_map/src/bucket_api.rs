@@ -50,4 +50,28 @@ impl<T: Clone + Copy> BucketApi<T> {
         }
         bucket
     }
+
+    pub fn new(
+        drives: Arc<Vec<PathBuf>>,
+        max_search: MaxSearch,
+        stats: Arc<BucketMapStats>,
+        count: Arc<AtomicU64>,
+    ) -> Self {
+        Self {
+            drives,
+            max_search,
+            stats,
+            bucket: RwLock::default(),
+            count,
+        }
+    }
+
+    pub fn grow(&self, err: BucketMapError) {
+        // grows are special - they get a read lock and modify 'reallocated'
+        // the grown changes are applied the next time there is a write lock taken
+        if let Some(bucket) = self.bucket.read().unwrap().as_ref() {
+            bucket.grow(err)
+        }
+    }
+
 }

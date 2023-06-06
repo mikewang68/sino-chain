@@ -58,7 +58,7 @@ use {
     },
     sdk::{
         clock::{
-            BankId, Epoch, Slot, UnixTimestamp,
+            BankId, Epoch, Slot, UnixTimestamp,SlotIndex,
         },
         epoch_schedule::EpochSchedule,
         feature_set::{
@@ -415,6 +415,26 @@ pub struct Bank {
     pub fee_structure: FeeStructure,
 }
 
+impl Bank {
+    /// given a slot, return the epoch and offset into the epoch this slot falls
+    /// e.g. with a fixed number for slots_per_epoch, the calculation is simply:
+    ///
+    ///  ( slot/slots_per_epoch, slot % slots_per_epoch )
+    ///
+    pub fn get_epoch_and_slot_index(&self, slot: Slot) -> (Epoch, SlotIndex) {
+        self.epoch_schedule.get_epoch_and_slot_index(slot)
+    }
+
+    pub fn epoch_staked_nodes(&self, epoch: Epoch) -> Option<Arc<HashMap<Pubkey, u64>>> {
+        Some(self.epoch_stakes.get(&epoch)?.stakes().staked_nodes())
+    }
+
+    /// Return the number of slots per epoch for the given epoch
+    pub fn get_slots_in_epoch(&self, epoch: Epoch) -> u64 {
+        self.epoch_schedule.get_slots_in_epoch(epoch)
+    }
+
+}
 
 #[derive(Debug)]
 pub struct BankRc {
