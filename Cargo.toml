@@ -9,6 +9,7 @@ members = [
     "evm-utils/programs/evm_loader",
     "evm-utils/evm-state",
     "evm-utils/evm-rpc",
+    "evm-utils/evm-bridge",
     "frozen-abi",
     "genesis",
     "ledger",
@@ -31,6 +32,7 @@ members = [
     "storage-proto",
     "version",
     "transaction-status",
+    "client"
     
     
 ]
