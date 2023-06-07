@@ -1,6 +1,6 @@
 use {
     crate::{rpc_request, rpc_response},
-    solana_faucet::faucet::FaucetError,                        // TODO: 添加 sino-faucet
+    faucet::faucet::FaucetError,                        
     sdk::{
         signature::SignerError, transaction::TransactionError, transport::TransportError,
     },

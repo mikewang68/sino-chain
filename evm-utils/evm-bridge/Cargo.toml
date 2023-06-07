@@ -35,6 +35,7 @@ jsonrpc-derive = "18.0.0"
 jsonrpc-http-server = "18.0.0"
 jsonrpc-pubsub = "18.0.0"
 jsonrpc-ws-server = "18.0.0"
+rpc = { path = "../../rpc", version = "1.9.13" }
 snafu = "0.7"
 anyhow = "1.0"
 tokio = "1"

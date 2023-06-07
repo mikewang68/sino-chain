@@ -36,7 +36,7 @@ use transaction_status::{TransactionStatus, UiTransactionEncoding};
 
 use evm_rpc::{BlockId, Hex, RPCBlock, RPCLog, RPCLogFilter, RPCReceipt, RPCTransaction};
 use evm_state::{Address, H256, U256};
-use evm_loader_program::scope::solana;            // TODO： 1.修改 363 432 419 行olana::Transaction  2.修改 253行 solana_core
+use evm_loader_program::scope::solana;            // TODO： 1.修改 363 432 419 行olana::Transaction 
 
 #[derive(Deserialize, Debug)]
 struct RpcErrorObject {

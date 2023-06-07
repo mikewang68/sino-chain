@@ -73,7 +73,7 @@ use tx_filter::TxFilter;
 use rlp::Encodable;
 use secp256k1::Message;
 use std::result::Result as StdResult;
-// use solana_rpc::rpc::{BatchId, BatchStateMap};      // TODO:1.添加sino-rpc   2.修改1070行 solana::Transaction
+use rpc::rpc::{BatchId, BatchStateMap};      // TODO:1.添加sino-rpc   2.修改1070行 solana::Transaction
 
 type EvmResult<T> = StdResult<T, evm_rpc::Error>;
 

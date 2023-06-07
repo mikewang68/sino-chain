@@ -314,15 +314,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "bef38d45163c2f1dde094a7dfd33ccf595c92905c8f8f4fdc18d06fb1037718a"
 
 [[package]]
-name = "bitmaps"
-version = "2.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "031043d04099746d8db04daf1fa424b2bc8bd69d92b25962dcde24da39ab64a2"
-dependencies = [
- "typenum",
-]
-
-[[package]]
 name = "bitvec"
 version = "1.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -773,6 +764,7 @@ dependencies = [
  "derivative",
  "evm-rpc",
  "evm-state",
+ "faucet",
  "indicatif",
  "jsonrpc-core",
  "jsonrpc-http-server",
@@ -1050,7 +1042,6 @@ dependencies = [
  "byteorder",
  "digest 0.9.0",
  "rand_core 0.5.1",
- "serde",
  "subtle",
  "zeroize",
 ]
@@ -1220,7 +1211,7 @@ dependencies = [
  "ed25519",
  "rand 0.7.3",
  "serde",
- "sha2 0.9.9",
+ "sha2",
  "zeroize",
 ]
 
@@ -1234,7 +1225,7 @@ dependencies = [
  "ed25519-dalek",
  "failure",
  "hmac 0.9.0",
- "sha2 0.9.9",
+ "sha2",
 ]
 
 [[package]]
@@ -1510,6 +1501,7 @@ dependencies = [
  "regex",
  "reqwest",
  "rlp",
+ "rpc",
  "runtime",
  "sdk",
  "secp256k1",
@@ -1578,7 +1570,7 @@ dependencies = [
  "ripemd160",
  "sdk",
  "serde",
- "sha2 0.9.9",
+ "sha2",
  "sha3 0.9.1",
  "simple_logger",
  "snafu",
@@ -1712,6 +1704,27 @@ dependencies = [
 ]
 
 [[package]]
+name = "faucet"
+version = "1.9.29"
+dependencies = [
+ "bincode",
+ "byteorder",
+ "clap 2.34.0",
+ "clap-utils",
+ "cli-config",
+ "log 0.4.18",
+ "logger",
+ "metrics",
+ "sdk",
+ "serde",
+ "serde_derive",
+ "spl-memo",
+ "thiserror",
+ "tokio",
+ "version",
+]
+
+[[package]]
 name = "feature-probe"
 version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1812,7 +1825,7 @@ dependencies = [
  "rustc_version 0.4.0",
  "serde",
  "serde_derive",
- "sha2 0.9.9",
+ "sha2",
  "thiserror",
 ]
 
@@ -2034,10 +2047,8 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "c85e1d9ab2eadba7e5040d4e09cbd6d072b76a557ad64e797c2cb9d4da21d7e4"
 dependencies = [
  "cfg-if 1.0.0",
- "js-sys",
  "libc",
  "wasi 0.11.0+wasi-snapshot-preview1",
- "wasm-bindgen",
 ]
 
 [[package]]
@@ -2119,9 +2130,6 @@ name = "hashbrown"
 version = "0.12.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8a9ee70c43aaf417c914396645a0fa852624801b24ebb7ae78fe8272889ac888"
-dependencies = [
- "ahash",
-]
 
 [[package]]
 name = "headers"
@@ -2399,22 +2407,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "9007da9cacbd3e6343da136e98b0d2df013f553d35bdec8b518f07bea768e19c"
 
 [[package]]
-name = "im"
-version = "15.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d0acd33ff0285af998aaf9b57342af478078f53492322fafc47450e09397e0e9"
-dependencies = [
- "bitmaps",
- "rand_core 0.6.4",
- "rand_xoshiro",
- "rayon",
- "serde",
- "sized-chunks",
- "typenum",
- "version_check 0.9.4",
-]
-
-[[package]]
 name = "impl-borsh"
 version = "0.1.0"
 source = "git+https://github.com/lqj9908/parity-common-primitive-types-v0.11-with-borsh-support-nostd#1573a1c135af9939417199b4f439456961c53ae7"
@@ -2595,7 +2587,9 @@ dependencies = [
  "futures 0.3.28",
  "jsonrpc-core",
  "jsonrpc-pubsub 18.0.0 (git+https://github.com/paritytech/jsonrpc?rev=e724d087defc0af35bc1c844049d1611588d8466)",
+ "jsonrpc-server-utils 18.0.0 (git+https://github.com/paritytech/jsonrpc?rev=e724d087defc0af35bc1c844049d1611588d8466)",
  "log 0.4.18",
+ "parity-tokio-ipc",
  "serde",
  "serde_json",
  "tokio",
@@ -2646,7 +2640,7 @@ dependencies = [
  "futures 0.3.28",
  "hyper 0.14.26",
  "jsonrpc-core",
- "jsonrpc-server-utils",
+ "jsonrpc-server-utils 18.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "log 0.4.18",
  "net2",
  "parking_lot 0.11.2",
@@ -2701,6 +2695,23 @@ dependencies = [
 ]
 
 [[package]]
+name = "jsonrpc-server-utils"
+version = "18.0.0"
+source = "git+https://github.com/paritytech/jsonrpc?rev=e724d087defc0af35bc1c844049d1611588d8466#e724d087defc0af35bc1c844049d1611588d8466"
+dependencies = [
+ "bytes 1.4.0",
+ "futures 0.3.28",
+ "globset",
+ "jsonrpc-core",
+ "lazy_static",
+ "log 0.4.18",
+ "tokio",
+ "tokio-stream",
+ "tokio-util 0.6.10",
+ "unicase 2.6.0",
+]
+
+[[package]]
 name = "jsonrpc-ws-server"
 version = "18.0.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2708,7 +2719,7 @@ checksum = "f892c7d766369475ab7b0669f417906302d7c0fb521285c0a0c92e52e7c8e946"
 dependencies = [
  "futures 0.3.28",
  "jsonrpc-core",
- "jsonrpc-server-utils",
+ "jsonrpc-server-utils 18.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "log 0.4.18",
  "parity-ws",
  "parking_lot 0.11.2",
@@ -2834,7 +2845,7 @@ dependencies = [
  "sdk",
  "serde",
  "serde_bytes",
- "sha2 0.9.9",
+ "sha2",
  "storage-proto",
  "tempfile",
  "thiserror",
@@ -2897,7 +2908,7 @@ dependencies = [
  "libsecp256k1-gen-genmult",
  "rand 0.7.3",
  "serde",
- "sha2 0.9.9",
+ "sha2",
  "typenum",
 ]
 
@@ -3584,6 +3595,20 @@ dependencies = [
  "proc-macro2 1.0.59",
  "quote 1.0.28",
  "syn 1.0.109",
+]
+
+[[package]]
+name = "parity-tokio-ipc"
+version = "0.9.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "9981e32fb75e004cc148f5fb70342f393830e0a4aa62e3cc93b50976218d42b6"
+dependencies = [
+ "futures 0.3.28",
+ "libc",
+ "log 0.4.18",
+ "rand 0.7.3",
+ "tokio",
+ "winapi 0.3.9",
 ]
 
 [[package]]
@@ -4298,15 +4323,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "rand_xoshiro"
-version = "0.6.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "6f97cdb2a36ed4183de61b2f824cc45c9f1037f28afe0a322e9fff4c108b5aaa"
-dependencies = [
- "rand_core 0.6.4",
-]
-
-[[package]]
 name = "rayon"
 version = "1.7.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -4533,6 +4549,66 @@ checksum = "ffc936cf8a7ea60c58f030fd36a612a48f440610214dc54bc36431f9ea0c3efb"
 dependencies = [
  "libc",
  "winapi 0.3.9",
+]
+
+[[package]]
+name = "rpc"
+version = "1.9.29"
+dependencies = [
+ "account-decoder",
+ "base64 0.12.3",
+ "bincode",
+ "bs58",
+ "client",
+ "crossbeam-channel",
+ "dashmap",
+ "entry",
+ "evm-loader-program",
+ "evm-rpc",
+ "evm-state",
+ "faucet",
+ "itertools",
+ "jsonrpc-core",
+ "jsonrpc-core-client",
+ "jsonrpc-derive",
+ "jsonrpc-http-server",
+ "jsonrpc-pubsub 18.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
+ "jsonrpc-ws-server",
+ "ledger",
+ "libc",
+ "log 0.4.18",
+ "measure",
+ "metrics",
+ "opentelemetry",
+ "opentelemetry-jaeger",
+ "perf",
+ "rand 0.7.3",
+ "rayon",
+ "rayon-threadlimit",
+ "regex",
+ "runtime",
+ "sdk",
+ "serde",
+ "serde_derive",
+ "serde_json",
+ "serial_test",
+ "sha3 0.10.8",
+ "snafu",
+ "soketto",
+ "spl-token",
+ "stake-program",
+ "stream-cancel",
+ "symlink",
+ "thiserror",
+ "tokio",
+ "tokio-util 0.6.10",
+ "tracing",
+ "tracing-attributes",
+ "tracing-opentelemetry",
+ "tracing-subscriber",
+ "transaction-status",
+ "version",
+ "vote-program",
 ]
 
 [[package]]
@@ -4830,7 +4906,7 @@ dependencies = [
  "serde_bytes",
  "serde_derive",
  "serde_json",
- "sha2 0.9.9",
+ "sha2",
  "sha3 0.9.1",
  "sino-program",
  "tempfile",
@@ -5051,17 +5127,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "sha2"
-version = "0.10.6"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "82e6b795fe2e3b1e845bafcb27aa35405c4d47cdfc92af5fc8d3002f76cebdc0"
-dependencies = [
- "cfg-if 1.0.0",
- "cpufeatures",
- "digest 0.10.7",
-]
-
-[[package]]
 name = "sha3"
 version = "0.9.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5164,21 +5229,11 @@ dependencies = [
  "serde_bytes",
  "serde_derive",
  "serde_json",
- "sha2 0.9.9",
+ "sha2",
  "sha3 0.9.1",
  "static_assertions",
  "thiserror",
  "wasm-bindgen",
-]
-
-[[package]]
-name = "sized-chunks"
-version = "0.6.5"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "16d69225bde7a69b235da73377861095455d298f2b970996eec25ddbb42b3d1e"
-dependencies = [
- "bitmaps",
- "typenum",
 ]
 
 [[package]]
@@ -5238,44 +5293,45 @@ dependencies = [
 ]
 
 [[package]]
-name = "solana-frozen-abi"
-version = "1.14.18"
+name = "soketto"
+version = "0.7.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "dc7245b88e5bcedc9096d7c7ffd8cf6769987b151e381e8a3561939898d9e495"
+checksum = "41d1c5305e39e09653383c2c7244f2f78b3bcae37cf50c64cb4789c9f5096ec2"
 dependencies = [
- "ahash",
- "blake3",
- "block-buffer 0.9.0",
+ "base64 0.13.1",
+ "bytes 1.4.0",
+ "futures 0.3.28",
+ "httparse",
+ "log 0.4.18",
+ "rand 0.8.5",
+ "sha-1 0.9.8",
+]
+
+[[package]]
+name = "solana-frozen-abi"
+version = "1.9.29"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2d4fcb89eb3d0f30bd4b4a31ad1825c9d95cd638509acead00969d7601713288"
+dependencies = [
  "bs58",
  "bv",
- "byteorder",
- "cc",
- "either",
  "generic-array 0.14.7",
- "getrandom 0.1.16",
- "hashbrown 0.12.3",
- "im",
- "lazy_static",
  "log 0.4.18",
  "memmap2",
- "once_cell",
- "rand_core 0.6.4",
  "rustc_version 0.4.0",
  "serde",
- "serde_bytes",
  "serde_derive",
- "serde_json",
- "sha2 0.10.6",
+ "sha2",
  "solana-frozen-abi-macro",
- "subtle",
+ "solana-logger",
  "thiserror",
 ]
 
 [[package]]
 name = "solana-frozen-abi-macro"
-version = "1.14.18"
+version = "1.9.29"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "546f204604da1d6958e412f4d3bc8cad34de6a81dc379fac07e53a29e224bcf0"
+checksum = "d63ab101db88ecccd8da34065b9097b88367e0744fdfd05cb7de87b4ede3717f"
 dependencies = [
  "proc-macro2 1.0.59",
  "quote 1.0.28",
@@ -5284,10 +5340,21 @@ dependencies = [
 ]
 
 [[package]]
-name = "solana-program"
-version = "1.14.18"
+name = "solana-logger"
+version = "1.9.29"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c3e7df881407995597cf32299df06cc8ac3d7fc4cd53e69e95964832beca48c3"
+checksum = "9ce1805d52fc8277a84c4803c7850c8f41471b57fb0dec7750338955ad6e43e2"
+dependencies = [
+ "env_logger 0.9.3",
+ "lazy_static",
+ "log 0.4.18",
+]
+
+[[package]]
+name = "solana-program"
+version = "1.9.29"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f5deafc4902425d40197f74166640300dd20b078e4ffd518c1bb56ceb7e01680"
 dependencies = [
  "base64 0.13.1",
  "bincode",
@@ -5298,45 +5365,39 @@ dependencies = [
  "bs58",
  "bv",
  "bytemuck",
- "cc",
  "console_error_panic_hook",
  "console_log",
  "curve25519-dalek",
- "getrandom 0.2.9",
+ "getrandom 0.1.16",
  "itertools",
  "js-sys",
  "lazy_static",
- "libc",
  "libsecp256k1",
  "log 0.4.18",
- "memoffset 0.6.5",
  "num-derive",
  "num-traits",
- "parking_lot 0.12.1",
+ "parking_lot 0.11.2",
  "rand 0.7.3",
- "rand_chacha 0.2.2",
  "rustc_version 0.4.0",
  "rustversion",
  "serde",
  "serde_bytes",
  "serde_derive",
- "serde_json",
- "sha2 0.10.6",
- "sha3 0.10.8",
+ "sha2",
+ "sha3 0.9.1",
  "solana-frozen-abi",
  "solana-frozen-abi-macro",
+ "solana-logger",
  "solana-sdk-macro",
  "thiserror",
- "tiny-bip39",
  "wasm-bindgen",
- "zeroize",
 ]
 
 [[package]]
 name = "solana-sdk-macro"
-version = "1.14.18"
+version = "1.9.29"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "43cff60ba1f94594f1de7baf649bf781383e806e834e26607ff8857a9452cd3c"
+checksum = "3db4c93bd43c91290ad54fe6ff86179a859954f196507c4789a4876d38a62f17"
 dependencies = [
  "bs58",
  "proc-macro2 1.0.59",
@@ -5356,6 +5417,13 @@ name = "spin"
 version = "0.9.8"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6980e8d7511241f8acf4aebddbb1ff938df5eebe98691418c4468d0b72a96a67"
+
+[[package]]
+name = "spl-memo"
+version = "3.0.1"
+dependencies = [
+ "solana-program",
+]
 
 [[package]]
 name = "spl-token"
@@ -5421,6 +5489,17 @@ dependencies = [
  "serde",
  "tonic-build",
  "transaction-status",
+]
+
+[[package]]
+name = "stream-cancel"
+version = "0.8.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7b0a9eb2715209fb8cc0d942fcdff45674bfc9f0090a0d897e85a22955ad159b"
+dependencies = [
+ "futures-core",
+ "pin-project",
+ "tokio",
 ]
 
 [[package]]
@@ -5687,7 +5766,7 @@ dependencies = [
  "pbkdf2 0.4.0",
  "rand 0.7.3",
  "rustc-hash",
- "sha2 0.9.9",
+ "sha2",
  "thiserror",
  "unicode-normalization",
  "wasm-bindgen",
@@ -5874,6 +5953,7 @@ checksum = "36943ee01a6d67977dd3f84a5a1d2efeb4ada3a1ae771cadfaa535d9d9fc6507"
 dependencies = [
  "bytes 1.4.0",
  "futures-core",
+ "futures-io",
  "futures-sink",
  "log 0.4.18",
  "pin-project-lite",
@@ -6843,7 +6923,3 @@ dependencies = [
  "cc",
  "libc",
 ]
-
-[[patch.unused]]
-name = "spl-memo"
-version = "3.0.1"

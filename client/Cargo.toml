@@ -25,6 +25,7 @@ serde_derive = "1.0.103"
 serde_json = "1.0.72"
 account-decoder = { path = "../account-decoder", version = "=1.9.29" }
 clap-utils = { path = "../clap-utils", version = "=1.9.29" }
+faucet = { path = "../faucet", version = "=1.9.29" }
 sdk = { path = "../sdk", version = "=1.9.29" }
 transaction-status = { path = "../transaction-status", version = "=1.9.29" }
 version = { path = "../version", version = "=0.6.3" }
