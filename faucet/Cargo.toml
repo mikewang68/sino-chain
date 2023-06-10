@@ -2,11 +2,11 @@
 name = "faucet"
 version = "1.9.29"
 description = "Faucet"
-authors = ["Solana Maintainers <maintainers@solana.foundation>"]
-repository = "https://github.com/solana-labs/solana"
+authors = [""]
+repository = ""
 license = "Apache-2.0"
-homepage = "https://solana.com/"
-documentation = "https://docs.rs/solana-faucet"
+homepage = ""
+documentation = ""
 edition = "2021"
 
 [dependencies]

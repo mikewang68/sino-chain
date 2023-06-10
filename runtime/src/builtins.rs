@@ -1,5 +1,5 @@
 #[cfg(RUSTC_WITH_SPECIALIZATION)]
-use solana_frozen_abi::abi_example::AbiExample;
+use frozen_abi::abi_example::AbiExample;
 #[cfg(debug_assertions)]
 #[allow(deprecated)]
 
