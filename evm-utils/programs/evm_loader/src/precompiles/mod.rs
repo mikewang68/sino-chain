@@ -11,7 +11,7 @@ mod builtins;
 mod compatibility;
 mod errors;
 pub use abi_parse::*;
-pub use builtins::{ETH_TO_VLX_ADDR, ETH_TO_VLX_CODE};
+pub use builtins::{ETH_TO_SOR_ADDR, ETH_TO_SOR_CODE};
 pub use compatibility::build_precompile_map;
 pub use errors::PrecompileErrors;
 
@@ -78,13 +78,13 @@ pub static NATIVE_CONTRACTS: Lazy<HashMap<H160, (NativeBuiltinEval, NativePromis
         let mut native_contracts = HashMap::new();
 
         let eth_to_sol: NativeBuiltinEval =
-            &|function_abi_input, cx| (*ETH_TO_VLX_CODE).eval(function_abi_input, cx);
+            &|function_abi_input, cx| (*ETH_TO_SOR_CODE).eval(function_abi_input, cx);
 
         let handle_log: NativePromiseHandler = &|accounts, _topics: Vec<H256>, data| {
-            (*ETH_TO_VLX_CODE).process_promise(accounts, data)
+            (*ETH_TO_SOR_CODE).process_promise(accounts, data)
         };
         assert!(native_contracts
-            .insert(*ETH_TO_VLX_ADDR, (eth_to_sol, handle_log))
+            .insert(*ETH_TO_SOR_ADDR, (eth_to_sol, handle_log))
             .is_none());
         native_contracts
     });

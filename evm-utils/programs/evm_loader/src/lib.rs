@@ -21,17 +21,17 @@ pub mod scope {
         pub use evm_state::*;
         pub use primitive_types::H160 as Address;
 
-        pub const LAMPORTS_TO_GWEI_PRICE: u64 = 1_000_000_000; // Lamports is 1/10^9 of SOLs while GWEI is 1/10^18
+        pub const WENS_TO_GWEI_PRICE: u64 = 1_000_000_000; // wens is 1/10^9 of SOLs while GWEI is 1/10^18
 
         // Convert lamports to gwei
         pub fn lamports_to_gwei(lamports: u64) -> U256 {
-            U256::from(lamports) * U256::from(LAMPORTS_TO_GWEI_PRICE)
+            U256::from(lamports) * U256::from(WENS_TO_GWEI_PRICE)
         }
 
         // Convert gweis back to lamports, return change as second element.
         pub fn gweis_to_lamports(gweis: U256) -> (u64, U256) {
-            let lamports = gweis / U256::from(LAMPORTS_TO_GWEI_PRICE);
-            let gweis = gweis % U256::from(LAMPORTS_TO_GWEI_PRICE);
+            let lamports = gweis / U256::from(WENS_TO_GWEI_PRICE);
+            let gweis = gweis % U256::from(WENS_TO_GWEI_PRICE);
             (lamports.as_u64(), gweis)
         }
     }

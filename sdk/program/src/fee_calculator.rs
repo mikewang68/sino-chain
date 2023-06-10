@@ -67,7 +67,7 @@ pub struct FeeRateGovernor {
     pub burn_percent: u8,
 }
 
-pub const DEFAULT_TARGET_LAMPORTS_PER_SIGNATURE: u64 = 10_000;
+pub const DEFAULT_TARGET_WENS_PER_SIGNATURE: u64 = 10_000;
 pub const DEFAULT_TARGET_SIGNATURES_PER_SLOT: u64 = 50 * DEFAULT_MS_PER_SLOT;
 
 // Percentage of tx fees to burn
@@ -77,7 +77,7 @@ impl Default for FeeRateGovernor {
     fn default() -> Self {
         Self {
             lamports_per_signature: 0,
-            target_lamports_per_signature: DEFAULT_TARGET_LAMPORTS_PER_SIGNATURE,
+            target_lamports_per_signature: DEFAULT_TARGET_WENS_PER_SIGNATURE,
             target_signatures_per_slot: DEFAULT_TARGET_SIGNATURES_PER_SLOT,
             min_lamports_per_signature: 0,
             max_lamports_per_signature: 0,
@@ -260,7 +260,7 @@ mod tests {
         );
         assert_eq!(
             f0.target_lamports_per_signature,
-            DEFAULT_TARGET_LAMPORTS_PER_SIGNATURE
+            DEFAULT_TARGET_WENS_PER_SIGNATURE
         );
         assert_eq!(f0.lamports_per_signature, 0);
 
@@ -271,11 +271,11 @@ mod tests {
         );
         assert_eq!(
             f1.target_lamports_per_signature,
-            DEFAULT_TARGET_LAMPORTS_PER_SIGNATURE
+            DEFAULT_TARGET_WENS_PER_SIGNATURE
         );
         assert_eq!(
             f1.lamports_per_signature,
-            DEFAULT_TARGET_LAMPORTS_PER_SIGNATURE / 2
+            DEFAULT_TARGET_WENS_PER_SIGNATURE / 2
         ); // min
     }
 

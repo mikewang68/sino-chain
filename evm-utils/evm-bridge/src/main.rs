@@ -34,7 +34,7 @@ use evm_loader_program::instructions::FeePayerType;
 use evm_loader_program::scope::*;
 use sdk::{
     clock::MS_PER_TICK,
-    fee_calculator::DEFAULT_TARGET_LAMPORTS_PER_SIGNATURE,
+    fee_calculator::DEFAULT_TARGET_WENS_PER_SIGNATURE,
     instruction::{AccountMeta, Instruction},
     pubkey::Pubkey,
     signer::Signer,
@@ -915,8 +915,8 @@ impl Args {
         let gwei: U256 = 1_000_000_000.into();
         fn min_gas_price() -> U256 {
             //TODO: Add gas logic
-            (21000 * evm_loader_program::scope::evm::LAMPORTS_TO_GWEI_PRICE
-                / DEFAULT_TARGET_LAMPORTS_PER_SIGNATURE)
+            (21000 * evm_loader_program::scope::evm::WENS_TO_GWEI_PRICE
+                / DEFAULT_TARGET_WENS_PER_SIGNATURE)
                 .into() // 21000 is smallest call in evm
         }
 

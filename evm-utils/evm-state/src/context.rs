@@ -27,13 +27,13 @@ impl TransactionContext {
         }
     }
 
-    pub fn new_with_coinbase(gas_price: u64, origin: H160, coinbase: H160) -> TransactionContext {
-        Self {
-            gas_price,
-            origin,
-            coinbase,
-        }
-    }
+    // pub fn new_with_coinbase(gas_price: u64, origin: H160, coinbase: H160) -> TransactionContext {
+    //     Self {
+    //         gas_price,
+    //         origin,
+    //         coinbase,
+    //     }
+    // }
 }
 
 /// Choose of EVM hardfork configuration.
