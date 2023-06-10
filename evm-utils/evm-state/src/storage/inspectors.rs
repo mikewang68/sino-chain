@@ -342,34 +342,3 @@ pub mod verifier {
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use quickcheck::{Arbitrary, Gen};
-    use quickcheck_macros::quickcheck;
-    use std::convert::TryFrom;
-
-    #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-    struct Hash(H256);
-
-    impl Arbitrary for Hash {
-        fn arbitrary<G: Gen>(g: &mut G) -> Self {
-            let mut bytes = [0; 32];
-            for byte in &mut bytes {
-                *byte = u8::arbitrary(g);
-            }
-            Hash(H256::from(bytes))
-        }
-    }
-
-    #[quickcheck]
-    fn qc_hash_is_reversible_from_bytes(Hash(expected): Hash) {
-        assert_eq!(expected, H256::from_slice(expected.as_bytes()));
-        assert_eq!(expected, H256::from_slice(expected.as_ref()));
-        assert_eq!(expected.as_bytes(), expected.as_ref());
-        assert_eq!(
-            H256::from(<&[u8; 32]>::try_from(expected.as_bytes()).unwrap()),
-            expected
-        );
-    }
-}

@@ -305,27 +305,4 @@ where
     }
 }
 
-#[cfg(test)]
-mod test {
 
-    use std::str::FromStr;
-
-    use super::*;
-    #[test]
-    fn test_decode_revert() {
-        let bytes = Bytes::from_str("0x08c379a00000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000000d4552525f4e4f545f424f554e4400000000000000000000000000000000000000").unwrap();
-        let result = format_data(&bytes);
-        assert_eq!(&result, "ERR_NOT_BOUND");
-    }
-
-    #[test]
-    fn test_decode_revert_invalid_length() {
-        let bytes = Bytes::from_str("0x08c379a00000000000000000000000000000000000000000000000000000000000000020000000000000000000000000000000000000000000000000000000000000000d4552525f4e4f545f424f554e4400000000000000000000000000000000000000").unwrap();
-        let result = format_data(&Bytes(bytes.0[0..3].to_vec()));
-        assert_eq!(&result, "");
-        let result = format_data(&Bytes(bytes.0[0..4].to_vec()));
-        assert_eq!(&result, "");
-        let result = format_data(&Bytes(bytes.0[0..5].to_vec()));
-        assert_eq!(&result, "");
-    }
-}

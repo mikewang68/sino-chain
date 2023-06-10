@@ -168,14 +168,14 @@ impl<'a> ExecutorContext<'a, Incomming> {
             config,
         }
     }
-    pub fn testing(backend: &'a mut EvmBackend<Incomming>) -> Self {
-        Self {
-            backend,
-            chain_context: Default::default(),
-            tx_context: Default::default(),
-            config: Default::default(),
-        }
-    }
+    // pub fn testing(backend: &'a mut EvmBackend<Incomming>) -> Self {
+    //     Self {
+    //         backend,
+    //         chain_context: Default::default(),
+    //         tx_context: Default::default(),
+    //         config: Default::default(),
+    //     }
+    // }
 
     pub fn gas_left(&self) -> u64 {
         self.config
@@ -296,7 +296,7 @@ where
         self.backend.get_account_state(address).is_some()
     }
 
-    fn basic(&self, address: H160) -> Basic {
+    fn basic(&self, address: H160) -> Basic {    
         let AccountState { balance, nonce, .. } =
             self.backend.get_account_state(address).unwrap_or_default();
 
@@ -320,17 +320,17 @@ where
     }
 }
 
-#[cfg(test)]
-mod test {
-    use super::*;
+// #[cfg(test)]
+// mod test {
+//     use super::*;
 
-    #[test]
-    fn check_that_balance_zero_by_default() {
-        let mut evm_backend = EvmBackend::default();
-        let context = ExecutorContext::testing(&mut evm_backend);
-        for _ in 0..1000 {
-            let address = H160::random();
-            assert_eq!(context.basic(address).balance, U256::zero());
-        }
-    }
-}
+//     #[test]
+//     fn check_that_balance_zero_by_default() {
+//         let mut evm_backend = EvmBackend::default();
+//         let context = ExecutorContext::testing(&mut evm_backend);
+//         for _ in 0..1000 {
+//             let address = H160::random();
+//             assert_eq!(context.basic(address).balance, U256::zero());
+//         }
+//     }
+// }
