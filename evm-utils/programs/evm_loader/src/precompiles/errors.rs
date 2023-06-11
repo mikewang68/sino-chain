@@ -45,9 +45,9 @@ pub enum PrecompileErrors {
 
     #[snafu(display(
         "No enough tokens, on EVM state account, to credit request = {}",
-        lamports
+        wens
     ))]
-    InsufficientFunds { lamports: u64 },
+    InsufficientFunds { wens: u64 },
 
     #[snafu(display("Native chain Instruction error source = {}", source))]
     #[snafu(context(suffix(Error)))]

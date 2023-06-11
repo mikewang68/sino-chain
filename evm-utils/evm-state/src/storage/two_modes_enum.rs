@@ -1,6 +1,6 @@
 use std::path::PathBuf;
 
-use super::{Error, Storage as Primary, StorageSecondary, H256};
+use super::{Error, Storage as Primary, StorageSecondary/* , H256*/};
 
 #[derive(Clone)]
 pub enum Storage {
