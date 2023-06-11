@@ -228,7 +228,7 @@ pub static ETH_TO_SOR_CODE: Lazy<NativeContract<EthToVlxImp, Pubkey>> = Lazy::ne
         }
 
         // TODO: return change back
-        let (lamports, _change) =
+        let (wens, _change) =
             gweis_to_lamports(cx.precompile_context.evm_context.apparent_value);
         // TODO: remove native context in handle after majority update
         if cx.keep_old_errors {
@@ -249,8 +249,8 @@ pub static ETH_TO_SOR_CODE: Lazy<NativeContract<EthToVlxImp, Pubkey>> = Lazy::ne
                 .try_account_ref_mut()
                 .with_context(|_| NativeChainInstructionError {})?;
 
-            if lamports > evm_account.lamports() {
-                return InsufficientFunds { lamports }.fail();
+            if wens > evm_account.lamports() {
+                return InsufficientFunds { wens }.fail();
             }
         }
 
@@ -264,7 +264,7 @@ pub static ETH_TO_SOR_CODE: Lazy<NativeContract<EthToVlxImp, Pubkey>> = Lazy::ne
                 // Vec::new(), // Only support empty topics for now
                 EthToVlxResult {
                     pubkey,
-                    amount: lamports,
+                    amount: wens,
                 },
             ],
         ))
@@ -272,7 +272,7 @@ pub static ETH_TO_SOR_CODE: Lazy<NativeContract<EthToVlxImp, Pubkey>> = Lazy::ne
 
     fn handle_promise(accounts: AccountStructure, promise: EthToVlxResult) -> Result<()> {
         log::trace!("Promise handle ETH_TO_VLX {:?}", promise);
-        let lamports = promise.amount;
+        let wens = promise.amount;
         let pubkey = promise.pubkey;
         let user = if let Some(account) = accounts.find_user(&pubkey) {
             account
@@ -289,13 +289,13 @@ pub static ETH_TO_SOR_CODE: Lazy<NativeContract<EthToVlxImp, Pubkey>> = Lazy::ne
             .try_account_ref_mut()
             .with_context(|_| NativeChainInstructionError {})?;
 
-        if lamports > evm_account.lamports() {
-            return InsufficientFunds { lamports }.fail();
+        if wens > evm_account.lamports() {
+            return InsufficientFunds { wens }.fail();
         }
-        let evm_account_lamports = evm_account.lamports().saturating_sub(lamports);
-        let user_account_lamports = user_account.lamports().saturating_add(lamports);
-        evm_account.set_lamports(evm_account_lamports);
-        user_account.set_lamports(user_account_lamports);
+        let evm_account_wens = evm_account.lamports().saturating_sub(wens);
+        let user_account_wens = user_account.lamports().saturating_add(wens);
+        evm_account.set_lamports(evm_account_wens);
+        user_account.set_lamports(user_account_wens);
         Ok(())
     }
 

@@ -119,13 +119,13 @@ impl EvmProcessor {
                 free_ownership_require_signer,
             ),
             EvmInstruction::SwapNativeToEther {
-                lamports,
+                wens,
                 evm_address,
             } => self.process_swap_to_evm(
                 executor,
                 invoke_context,
                 accounts,
-                lamports,
+                wens,
                 evm_address,
                 register_swap_tx_in_evm,
             ),
@@ -347,11 +347,11 @@ impl EvmProcessor {
         executor: &mut Executor,
         invoke_context: &InvokeContext,
         accounts: AccountStructure,
-        lamports: u64,
+        wens: u64,
         evm_address: evm::Address,
         register_swap_tx_in_evm: bool,
     ) -> Result<(), EvmError> {
-        let gweis = evm::lamports_to_gwei(lamports);
+        let gweis = evm::lamports_to_gwei(wens);
         let user = accounts.first().ok_or_else(|| {
             ic_msg!(
                 invoke_context,
@@ -367,7 +367,7 @@ impl EvmProcessor {
             evm_address
         );
 
-        if lamports == 0 {
+        if wens == 0 {
             return Ok(());
         }
 
@@ -379,25 +379,25 @@ impl EvmProcessor {
         let mut user_account = user
             .try_account_ref_mut()
             .map_err(|_| EvmError::BorrowingFailed)?;
-        if lamports > user_account.lamports() {
+        if wens > user_account.lamports() {
             ic_msg!(
                 invoke_context,
-                "SwapNativeToEther: insufficient lamports ({}, need {})",
+                "SwapNativeToEther: insufficient wens ({}, need {})",
                 user_account.lamports(),
-                lamports
+                wens
             );
             return Err(EvmError::SwapInsufficient);
         }
 
-        let user_account_lamports = user_account.lamports().saturating_sub(lamports);
-        user_account.set_lamports(user_account_lamports);
+        let user_account_wens = user_account.lamports().saturating_sub(wens);
+        user_account.set_lamports(user_account_wens);
         let mut evm_account = accounts
             .evm
             .try_account_ref_mut()
             .map_err(|_| EvmError::BorrowingFailed)?;
 
-        let evm_account_lamports = evm_account.lamports().saturating_add(lamports);
-        evm_account.set_lamports(evm_account_lamports);
+        let evm_account_wens = evm_account.lamports().saturating_add(wens);
+        evm_account.set_lamports(evm_account_wens);
         executor.deposit(evm_address, gweis);
         if register_swap_tx_in_evm {
             executor.register_swap_tx_in_evm(*precompiles::ETH_TO_SOR_ADDR, evm_address, gweis)
@@ -464,8 +464,8 @@ impl EvmProcessor {
         let mut user_acc = user
             .try_account_ref_mut()
             .map_err(|_| EvmError::BorrowingFailed)?;
-        let user_acc_lamports = user_acc.lamports().saturating_add(balance);
-        user_acc.set_lamports(user_acc_lamports);
+        let user_acc_wens = user_acc.lamports().saturating_add(balance);
+        user_acc.set_lamports(user_acc_wens);
 
         ic_msg!(
             invoke_context,
@@ -586,20 +586,20 @@ impl EvmProcessor {
             let mut account_data = native_account
                 .try_account_ref_mut()
                 .map_err(|_| EvmError::BorrowingFailed)?;
-            let new_lamports = account_data
+            let new_wens = account_data
                 .lamports()
                 .checked_sub(fee)
                 .ok_or(EvmError::NativeAccountInsufficientFunds)?;
-            account_data.set_lamports(new_lamports);
+            account_data.set_lamports(new_wens);
 
             let mut evm_account = evm_account
                 .try_account_ref_mut()
                 .map_err(|_| EvmError::BorrowingFailed)?;
-            let new_evm_lamports = evm_account
+            let new_evm_wens = evm_account
                 .lamports()
                 .checked_add(fee)
                 .ok_or(EvmError::OverflowInRefund)?;
-            evm_account.set_lamports(new_evm_lamports);
+            evm_account.set_lamports(new_evm_wens);
         }
         Ok(())
     }

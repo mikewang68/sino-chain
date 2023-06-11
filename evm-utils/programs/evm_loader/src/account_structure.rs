@@ -7,8 +7,8 @@ use sdk::{
 use crate::error::EvmError;
 use std::cell::RefMut;
 
-/// Helper structure that wrap all solana accounts, that is needed for evm loader.
-/// It will restrict and provide access to needed solana accounts in:
+/// Helper structure that wrap all sino accounts, that is needed for evm loader.
+/// It will restrict and provide access to needed sino accounts in:
 /// 1. Instruction handlers (ExecuteTx, SwapToEvm, FreeOwnership) - full access to evm state.
 /// 2. Builtin contracts (SwapToNative) - Full access to evm state.
 /// 3. User written evm2native callbacks (SwapERCToSol, CallSolMethod) - Full access to specific users account,
@@ -77,41 +77,41 @@ impl<'a> AccountStructure<'a> {
             })
     }
 
-    /// Create AccountStructure for testing purposes, with random accounts.
-    #[cfg(test)]
-    pub(crate) fn testing<F, U>(num_keys: usize, func: F) -> U
-    where
-        F: for<'r> Fn(AccountStructure<'r>) -> U,
-    {
-        use sdk::account::Account;
-        use std::cell::RefCell;
+    // /// Create AccountStructure for testing purposes, with random accounts.
+    // #[cfg(test)]
+    // pub(crate) fn testing<F, U>(num_keys: usize, func: F) -> U
+    // where
+    //     F: for<'r> Fn(AccountStructure<'r>) -> U,
+    // {
+    //     use sdk::account::Account;
+    //     use std::cell::RefCell;
 
-        let evm_key = Pubkey::new_unique();
-        let evm_account = RefCell::new(crate::create_state_account(0));
-        let evm_state = KeyedAccount::new(&evm_key, false, &evm_account);
+    //     let evm_key = Pubkey::new_unique();
+    //     let evm_account = RefCell::new(crate::create_state_account(0));
+    //     let evm_state = KeyedAccount::new(&evm_key, false, &evm_account);
 
-        let keys: Vec<_> = std::iter::repeat_with(|| {
-            let user_key = Pubkey::new_unique();
-            let user_account = RefCell::new(
-                Account {
-                    lamports: 1000,
-                    data: vec![],
-                    owner: crate::ID,
-                    executable: false,
-                    rent_epoch: 0,
-                }
-                .into(),
-            );
-            (user_key, user_account)
-        })
-        .take(num_keys + 1)
-        .collect();
-        let keyed_accounts: Vec<_> = keys
-            .iter()
-            .map(|(user_key, user_account)| KeyedAccount::new(user_key, false, user_account))
-            .collect();
-        let borrowed_keys: &[_] = &keyed_accounts;
-        let structure = AccountStructure::new(&evm_state, borrowed_keys);
-        func(structure)
-    }
+    //     let keys: Vec<_> = std::iter::repeat_with(|| {
+    //         let user_key = Pubkey::new_unique();
+    //         let user_account = RefCell::new(
+    //             Account {
+    //                 lamports: 1000,
+    //                 data: vec![],
+    //                 owner: crate::ID,
+    //                 executable: false,
+    //                 rent_epoch: 0,
+    //             }
+    //             .into(),
+    //         );
+    //         (user_key, user_account)
+    //     })
+    //     .take(num_keys + 1)
+    //     .collect();
+    //     let keyed_accounts: Vec<_> = keys
+    //         .iter()
+    //         .map(|(user_key, user_account)| KeyedAccount::new(user_key, false, user_account))
+    //         .collect();
+    //     let borrowed_keys: &[_] = &keyed_accounts;
+    //     let structure = AccountStructure::new(&evm_state, borrowed_keys);
+    //     func(structure)
+    // }
 }

@@ -14,7 +14,7 @@ pub static ID: sdk::pubkey::Pubkey = sdk::evm_loader::ID;
 pub use account_structure::AccountStructure;
 pub use processor::EvmProcessor;
 
-/// Public API for intermediate eth <-> solana transfers
+/// Public API for intermediate eth <-> sino transfers
 pub mod scope {
     pub mod evm {
         pub use evm_state::transactions::*;
@@ -23,16 +23,16 @@ pub mod scope {
 
         pub const WENS_TO_GWEI_PRICE: u64 = 1_000_000_000; // wens is 1/10^9 of SOLs while GWEI is 1/10^18
 
-        // Convert lamports to gwei
-        pub fn lamports_to_gwei(lamports: u64) -> U256 {
-            U256::from(lamports) * U256::from(WENS_TO_GWEI_PRICE)
+        // Convert wens to gwei
+        pub fn lamports_to_gwei(wens: u64) -> U256 {
+            U256::from(wens) * U256::from(WENS_TO_GWEI_PRICE)
         }
 
-        // Convert gweis back to lamports, return change as second element.
+        // Convert gweis back to wens, return change as second element.
         pub fn gweis_to_lamports(gweis: U256) -> (u64, U256) {
-            let lamports = gweis / U256::from(WENS_TO_GWEI_PRICE);
+            let wens = gweis / U256::from(WENS_TO_GWEI_PRICE);
             let gweis = gweis % U256::from(WENS_TO_GWEI_PRICE);
-            (lamports.as_u64(), gweis)
+            (wens.as_u64(), gweis)
         }
     }
     pub mod solana {
@@ -120,7 +120,7 @@ pub fn authorized_tx(
 
 pub(crate) fn transfer_native_to_evm(
     owner: solana::Address,
-    lamports: u64,
+    wens: u64,
     evm_address: evm::Address,
 ) -> solana::Instruction {
     let account_metas = vec![
@@ -131,7 +131,7 @@ pub(crate) fn transfer_native_to_evm(
     create_evm_instruction_with_borsh(
         crate::ID,
         &EvmInstruction::SwapNativeToEther {
-            lamports,
+            wens,
             evm_address,
         },
         account_metas,
@@ -230,17 +230,17 @@ pub fn big_tx_execute_authorized(
 
 pub fn transfer_native_to_evm_ixs(
     owner: solana::Address,
-    lamports: u64,
+    wens: u64,
     ether_address: evm::Address,
 ) -> Vec<solana::Instruction> {
     vec![
         sdk::system_instruction::assign(&owner, &crate::ID),
-        transfer_native_to_evm(owner, lamports, ether_address),
+        transfer_native_to_evm(owner, wens, ether_address),
         free_ownership(owner),
     ]
 }
 
-/// Create an account that represent evm locked lamports count.
+/// Create an account that represent evm locked wens count.
 pub fn create_state_account(lamports: u64) -> sdk::account::AccountSharedData {
     sdk::account::Account {
         lamports: lamports + 1,
@@ -253,7 +253,7 @@ pub fn create_state_account(lamports: u64) -> sdk::account::AccountSharedData {
 }
 
 ///
-/// Calculate evm::Address for solana::Pubkey, that can be used to call transaction from solana::bpf scope, into evm scope.
+/// Calculate evm::Address for sino::Pubkey, that can be used to call transaction from sino::bpf scope, into evm scope.
 /// Native chain address is hashed and prefixed with [0xac, 0xc0] bytes.
 ///
 pub fn evm_address_for_program(program_account: solana::Address) -> evm::Address {
