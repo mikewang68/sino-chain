@@ -52,9 +52,9 @@ resolver = "2"
 split-debuginfo = "unpacked"
 
 [patch.crates-io]
-primitive-types = { git = "https://github.com/lqj9908/parity-common-primitive-types-v0.11-with-borsh-support-nostd" }
-rlp = { git = "https://github.com/lqj9908/parity-common-primitive-types-v0.11-with-borsh-support-nostd" }
-uint = { git = "https://github.com/lqj9908/parity-common-primitive-types-v0.11-with-borsh-support-nostd"  }
+primitive-types = { git = "https://github.com/mikewang68/parity-common" }
+rlp = { git = "https://github.com/mikewang68/parity-common" }
+uint = { git = "https://github.com/mikewang68/parity-common"  }
 spl-memo = { path = "spl-memo" }
 # TODO: remove once jsonrpc-core-client 18.0.1 is released
 jsonrpc-core = { git = "https://github.com/paritytech/jsonrpc", rev = "e724d087defc0af35bc1c844049d1611588d8466", version = "18.0.0" }
