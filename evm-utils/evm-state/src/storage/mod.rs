@@ -711,6 +711,10 @@ impl Storage<OptimisticTransactionDB> {
         Ok(backup_dir)
     }
 
+    /// 将输入的evm转储文件中包含的账户循环取出，
+    /// 取出nonce，balance和code，存为AccountState，
+    /// 将AccountState和storage对应存储在state_updates（HashMap）中，
+    /// 将状态更改应用到数据库中，并返回哈希值
     pub fn set_initial(
         &mut self,
         accounts: impl IntoIterator<Item = (H256, evm::backend::MemoryAccount)>,
@@ -728,12 +732,14 @@ impl Storage<OptimisticTransactionDB> {
             },
         ) in accounts
         {
+            // 取出nonce，balance和code，存为AccountState
             let account_state = AccountState {
                 nonce,
                 balance,
                 code: code.into(),
             };
 
+            // 将AccountState和storage对应存储在state_updates（HashMap）中
             state_updates
                 .entry(address)
                 .or_insert((Maybe::Nothing, HashMap::new()))
@@ -745,6 +751,7 @@ impl Storage<OptimisticTransactionDB> {
                 .1.extend(storage);
         }
 
+        // 将状态更改应用到数据库中，并返回哈希值
         self.flush_changes_hashed(state_root, state_updates)
     }
 }

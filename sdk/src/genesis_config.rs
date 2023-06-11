@@ -225,7 +225,10 @@ impl GenesisConfig {
     pub fn generate_evm_state_empty(&self, ledger_path: &Path) -> Result<(), std::io::Error> {
         self.generate_evm_state(ledger_path, None::<evm_genesis::NoDumpExtractor>)
     }
-
+    
+    /// 将evm账户添加到数据库中，并返回更改后的根哈希，该hash与genesisconfig中的evm根哈希相等
+    /// 根据evm根哈希创建一个Incomming类型的evm_state
+    /// 创建第一个slot和本地块哈希，并备份evm_state
     pub fn generate_evm_state_from_dump(
         &self,
         ledger_path: &Path,
@@ -234,6 +237,9 @@ impl GenesisConfig {
         self.generate_evm_state(ledger_path, Some(dump_extractor))
     }
 
+    /// 将evm账户添加到数据库中，并返回更改后的根哈希，该hash与genesisconfig中的evm根哈希相等
+    /// 根据evm根哈希创建一个Incomming类型的evm_state
+    /// 创建第一个slot和本地块哈希，并备份evm_state
     fn generate_evm_state(
         &self,
         ledger_path: &Path,
@@ -271,6 +277,7 @@ impl GenesisConfig {
             let mut storage = Storage::open_persistent(ledger_path, true).unwrap();
             let mut state_root = evm_state::empty_trie_hash();
 
+            // 将evm账户添加到数据库中，并返回更改后的根哈希，该hash与genesisconfig中的evm根哈希相等
             let mut total_written = 0;
             for chunk in chunks {
                 let chunk = chunk?;
@@ -297,6 +304,7 @@ impl GenesisConfig {
             }
         };
 
+        // 根据evm根哈希创建一个Incomming类型的evm_state
         let evm_state = {
             let incomming = evm_state::Incomming::genesis_from_state(self.evm_root_hash);
             let evm_state = evm_state::EvmState::load_from(ledger_path, incomming, true)
@@ -310,6 +318,7 @@ impl GenesisConfig {
         };
 
         // create zero block
+        // 创建第一个slot和本地块哈希，并备份evm_state
         let committed = evm_state.commit_block(0, H256::zero());
         let mut evm_backup = ledger_path.to_path_buf();
         evm_backup.push(EVM_GENESIS);

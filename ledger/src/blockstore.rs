@@ -140,6 +140,7 @@ pub fn create_new_ledger(
 ) -> Result<Hash> {
     Blockstore::destroy(ledger_path)?;
 
+    // 将evm账户存入数据库，并创建evm state包含第一个slot和块哈希
     match evm_state_json {
         EvmStateJson::OpenEthereum(path) => {
             let extractor = OpenEthereumAccountExtractor::open_dump(path).unwrap();
@@ -159,10 +160,11 @@ pub fn create_new_ledger(
     let blockstore = Blockstore::open_with_access_type(ledger_path, access_type, None, false)?;
     let ticks_per_slot = genesis_config.ticks_per_slot;
     let hashes_per_tick = genesis_config.poh_config.hashes_per_tick.unwrap_or(0);
+    // 将 slot 0 填充
     let entries = create_ticks(ticks_per_slot, hashes_per_tick, genesis_config.hash());
     let last_hash = entries.last().unwrap().hash;
     let version = sdk::shred_version::version_from_hash(&last_hash);
-
+    // 将 slot 0 切片
     let shredder = Shredder::new(0, 0, 0, version).unwrap();
     let shreds = shredder
         .entries_to_shreds(
