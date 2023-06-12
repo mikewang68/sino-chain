@@ -34,7 +34,8 @@ members = [
     "storage-proto",
     "version",
     "transaction-status",
-    "client"
+    "client",
+    "txpool"
     
     
 ]
