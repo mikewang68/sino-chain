@@ -21,21 +21,21 @@ pub mod scope {
         pub use evm_state::*;
         pub use primitive_types::H160 as Address;
 
-        pub const WENS_TO_GWEI_PRICE: u64 = 1_000_000_000; // wens is 1/10^9 of SOLs while GWEI is 1/10^18
+        pub const WENS_TO_GWEI_PRICE: u64 = 1_000_000_000; // wens is 1/10^9 of SORs while GWEI is 1/10^18
 
         // Convert wens to gwei
-        pub fn lamports_to_gwei(wens: u64) -> U256 {
+        pub fn wens_to_gwei(wens: u64) -> U256 {
             U256::from(wens) * U256::from(WENS_TO_GWEI_PRICE)
         }
 
         // Convert gweis back to wens, return change as second element.
-        pub fn gweis_to_lamports(gweis: U256) -> (u64, U256) {
+        pub fn gweis_to_wens(gweis: U256) -> (u64, U256) {
             let wens = gweis / U256::from(WENS_TO_GWEI_PRICE);
             let gweis = gweis % U256::from(WENS_TO_GWEI_PRICE);
             (wens.as_u64(), gweis)
         }
     }
-    pub mod solana {
+    pub mod sino {
         pub use sdk::{
             evm_state, instruction::Instruction, pubkey::Pubkey as Address,
             transaction::Transaction,
@@ -55,7 +55,7 @@ pub fn create_evm_instruction_with_borsh(
     program_id: sdk::pubkey::Pubkey,
     data: &EvmInstruction,
     accounts: Vec<AccountMeta>,
-) -> solana::Instruction {
+) -> sino::Instruction {
     let mut res = Instruction::new_with_borsh(program_id, data, accounts);
     res.data.insert(0, EVM_INSTRUCTION_BORSH_PREFIX);
     res
@@ -66,18 +66,18 @@ pub fn create_evm_instruction_with_bincode(
     program_id: sdk::pubkey::Pubkey,
     data: &v0::EvmInstruction,
     accounts: Vec<AccountMeta>,
-) -> solana::Instruction {
+) -> sino::Instruction {
     Instruction::new_with_bincode(program_id, data, accounts)
 }
 
 pub fn send_raw_tx(
-    signer: solana::Address,
+    signer: sino::Address,
     evm_tx: evm::Transaction,
-    gas_collector: Option<solana::Address>,
+    gas_collector: Option<sino::Address>,
     fee_type: FeePayerType,
-) -> solana::Instruction {
+) -> sino::Instruction {
     let mut account_metas = vec![
-        AccountMeta::new(solana::evm_state::ID, false),
+        AccountMeta::new(sino::evm_state::ID, false),
         AccountMeta::new(signer, true),
     ];
     if let Some(gas_collector) = gas_collector {
@@ -95,12 +95,12 @@ pub fn send_raw_tx(
 }
 
 pub fn authorized_tx(
-    sender: solana::Address,
+    sender: sino::Address,
     unsigned_tx: evm::UnsignedTransaction,
     fee_type: FeePayerType,
-) -> solana::Instruction {
+) -> sino::Instruction {
     let account_metas = vec![
-        AccountMeta::new(solana::evm_state::ID, false),
+        AccountMeta::new(sino::evm_state::ID, false),
         AccountMeta::new(sender, true),
     ];
 
@@ -119,12 +119,12 @@ pub fn authorized_tx(
 }
 
 pub(crate) fn transfer_native_to_evm(
-    owner: solana::Address,
+    owner: sino::Address,
     wens: u64,
     evm_address: evm::Address,
-) -> solana::Instruction {
+) -> sino::Instruction {
     let account_metas = vec![
-        AccountMeta::new(solana::evm_state::ID, false),
+        AccountMeta::new(sino::evm_state::ID, false),
         AccountMeta::new(owner, true),
     ];
 
@@ -138,18 +138,18 @@ pub(crate) fn transfer_native_to_evm(
     )
 }
 
-pub fn free_ownership(owner: solana::Address) -> solana::Instruction {
+pub fn free_ownership(owner: sino::Address) -> sino::Instruction {
     let account_metas = vec![
-        AccountMeta::new(solana::evm_state::ID, false),
+        AccountMeta::new(sino::evm_state::ID, false),
         AccountMeta::new(owner, true),
     ];
 
     create_evm_instruction_with_borsh(crate::ID, &EvmInstruction::FreeOwnership {}, account_metas)
 }
 
-pub fn big_tx_allocate(storage: solana::Address, size: usize) -> solana::Instruction {
+pub fn big_tx_allocate(storage: sino::Address, size: usize) -> sino::Instruction {
     let account_metas = vec![
-        AccountMeta::new(solana::evm_state::ID, false),
+        AccountMeta::new(sino::evm_state::ID, false),
         AccountMeta::new(storage, true),
     ];
 
@@ -162,9 +162,9 @@ pub fn big_tx_allocate(storage: solana::Address, size: usize) -> solana::Instruc
     )
 }
 
-pub fn big_tx_write(storage: solana::Address, offset: u64, chunk: Vec<u8>) -> solana::Instruction {
+pub fn big_tx_write(storage: sino::Address, offset: u64, chunk: Vec<u8>) -> sino::Instruction {
     let account_metas = vec![
-        AccountMeta::new(solana::evm_state::ID, false),
+        AccountMeta::new(sino::evm_state::ID, false),
         AccountMeta::new(storage, true),
     ];
 
@@ -181,12 +181,12 @@ pub fn big_tx_write(storage: solana::Address, offset: u64, chunk: Vec<u8>) -> so
 }
 
 pub fn big_tx_execute(
-    storage: solana::Address,
-    gas_collector: Option<&solana::Address>,
+    storage: sino::Address,
+    gas_collector: Option<&sino::Address>,
     fee_type: FeePayerType,
-) -> solana::Instruction {
+) -> sino::Instruction {
     let mut account_metas = vec![
-        AccountMeta::new(solana::evm_state::ID, false),
+        AccountMeta::new(sino::evm_state::ID, false),
         AccountMeta::new(storage, true),
     ];
 
@@ -204,13 +204,13 @@ pub fn big_tx_execute(
     )
 }
 pub fn big_tx_execute_authorized(
-    storage: solana::Address,
+    storage: sino::Address,
     from: evm::Address,
-    gas_collector: solana::Address,
+    gas_collector: sino::Address,
     fee_type: FeePayerType,
-) -> solana::Instruction {
+) -> sino::Instruction {
     let mut account_metas = vec![
-        AccountMeta::new(solana::evm_state::ID, false),
+        AccountMeta::new(sino::evm_state::ID, false),
         AccountMeta::new(storage, true),
     ];
 
@@ -229,10 +229,10 @@ pub fn big_tx_execute_authorized(
 }
 
 pub fn transfer_native_to_evm_ixs(
-    owner: solana::Address,
+    owner: sino::Address,
     wens: u64,
     ether_address: evm::Address,
-) -> Vec<solana::Instruction> {
+) -> Vec<sino::Instruction> {
     vec![
         sdk::system_instruction::assign(&owner, &crate::ID),
         transfer_native_to_evm(owner, wens, ether_address),
@@ -241,9 +241,9 @@ pub fn transfer_native_to_evm_ixs(
 }
 
 /// Create an account that represent evm locked wens count.
-pub fn create_state_account(lamports: u64) -> sdk::account::AccountSharedData {
+pub fn create_state_account(wens: u64) -> sdk::account::AccountSharedData {
     sdk::account::Account {
-        lamports: lamports + 1,
+        lamports: wens + 1,
         owner: crate::ID,
         data: b"Evm state".to_vec(),
         executable: false,
@@ -256,7 +256,7 @@ pub fn create_state_account(lamports: u64) -> sdk::account::AccountSharedData {
 /// Calculate evm::Address for sino::Pubkey, that can be used to call transaction from sino::bpf scope, into evm scope.
 /// Native chain address is hashed and prefixed with [0xac, 0xc0] bytes.
 ///
-pub fn evm_address_for_program(program_account: solana::Address) -> evm::Address {
+pub fn evm_address_for_program(program_account: sino::Address) -> evm::Address {
     use primitive_types::{H160, H256};
     use sha3::{Digest, Keccak256};
 
@@ -291,12 +291,12 @@ pub fn evm_transfer(
 // old instructions for emv bridge
 
 pub fn send_raw_tx_old(
-    signer: solana::Address,
+    signer: sino::Address,
     evm_tx: evm::Transaction,
-    gas_collector: Option<solana::Address>,
-) -> solana::Instruction {
+    gas_collector: Option<sino::Address>,
+) -> sino::Instruction {
     let mut account_metas = vec![
-        AccountMeta::new(solana::evm_state::ID, false),
+        AccountMeta::new(sino::evm_state::ID, false),
         AccountMeta::new(signer, true),
     ];
     if let Some(gas_collector) = gas_collector {
@@ -310,9 +310,9 @@ pub fn send_raw_tx_old(
     )
 }
 
-pub fn big_tx_allocate_old(storage: solana::Address, size: usize) -> solana::Instruction {
+pub fn big_tx_allocate_old(storage: sino::Address, size: usize) -> sino::Instruction {
     let account_metas = vec![
-        AccountMeta::new(solana::evm_state::ID, false),
+        AccountMeta::new(sino::evm_state::ID, false),
         AccountMeta::new(storage, true),
     ];
 
@@ -326,12 +326,12 @@ pub fn big_tx_allocate_old(storage: solana::Address, size: usize) -> solana::Ins
 }
 
 pub fn big_tx_write_old(
-    storage: solana::Address,
+    storage: sino::Address,
     offset: u64,
     chunk: Vec<u8>,
-) -> solana::Instruction {
+) -> sino::Instruction {
     let account_metas = vec![
-        AccountMeta::new(solana::evm_state::ID, false),
+        AccountMeta::new(sino::evm_state::ID, false),
         AccountMeta::new(storage, true),
     ];
 
@@ -348,11 +348,11 @@ pub fn big_tx_write_old(
 }
 
 pub fn big_tx_execute_old(
-    storage: solana::Address,
-    gas_collector: Option<&solana::Address>,
-) -> solana::Instruction {
+    storage: sino::Address,
+    gas_collector: Option<&sino::Address>,
+) -> sino::Instruction {
     let mut account_metas = vec![
-        AccountMeta::new(solana::evm_state::ID, false),
+        AccountMeta::new(sino::evm_state::ID, false),
         AccountMeta::new(storage, true),
     ];
 

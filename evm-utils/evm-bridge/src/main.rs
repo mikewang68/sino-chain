@@ -73,7 +73,7 @@ use tx_filter::TxFilter;
 use rlp::Encodable;
 use secp256k1::Message;
 use std::result::Result as StdResult;
-use rpc::rpc::{BatchId, BatchStateMap};      // TODO:1.添加sino-rpc   2.修改1070行 solana::Transaction
+use rpc::rpc::{BatchId, BatchStateMap};     
 
 type EvmResult<T> = StdResult<T, evm_rpc::Error>;
 
@@ -1067,7 +1067,7 @@ async fn main(args: Args) -> StdResult<(), Box<dyn std::error::Error>> {
 
 async fn send_and_confirm_transactions<T: Signers>(
     rpc_client: &AsyncRpcClient,
-    mut transactions: Vec<solana::Transaction>,            
+    mut transactions: Vec<sino::Transaction>,            
     signer_keys: &T,
 ) -> StdResult<(), anyhow::Error> {
     const SEND_RETRIES: usize = 5;

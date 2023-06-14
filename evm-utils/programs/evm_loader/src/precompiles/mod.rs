@@ -77,14 +77,14 @@ pub static NATIVE_CONTRACTS: Lazy<HashMap<H160, (NativeBuiltinEval, NativePromis
     Lazy::new(|| {
         let mut native_contracts = HashMap::new();
 
-        let eth_to_sol: NativeBuiltinEval =
+        let eth_to_sor: NativeBuiltinEval =
             &|function_abi_input, cx| (*ETH_TO_SOR_CODE).eval(function_abi_input, cx);
 
         let handle_log: NativePromiseHandler = &|accounts, _topics: Vec<H256>, data| {
             (*ETH_TO_SOR_CODE).process_promise(accounts, data)
         };
         assert!(native_contracts
-            .insert(*ETH_TO_SOR_ADDR, (eth_to_sol, handle_log))
+            .insert(*ETH_TO_SOR_ADDR, (eth_to_sor, handle_log))
             .is_none());
         native_contracts
     });

@@ -13,7 +13,7 @@ use evm_state::U256;
 use log::*;
 
 use borsh::BorshDeserialize;
-use evm::{gweis_to_lamports, Executor, ExitReason};
+use evm::{gweis_to_wens, Executor, ExitReason};
 use evm_state::ExecutionResult;
 use serde::de::DeserializeOwned;
 use program_runtime::ic_msg;
@@ -331,7 +331,7 @@ impl EvmProcessor {
             .try_account_ref_mut()
             .map_err(|_| EvmError::BorrowingFailed)?;
 
-        if *user.owner() != crate::ID || *user_pk == solana::evm_state::ID {
+        if *user.owner() != crate::ID || *user_pk == sino::evm_state::ID {
             ic_msg!(
                 invoke_context,
                 "FreeOwnership: Incorrect account provided, maybe this account is not owned by evm."
@@ -351,7 +351,7 @@ impl EvmProcessor {
         evm_address: evm::Address,
         register_swap_tx_in_evm: bool,
     ) -> Result<(), EvmError> {
-        let gweis = evm::lamports_to_gwei(wens);
+        let gweis = evm::wens_to_gwei(wens);
         let user = accounts.first().ok_or_else(|| {
             ic_msg!(
                 invoke_context,
@@ -379,24 +379,24 @@ impl EvmProcessor {
         let mut user_account = user
             .try_account_ref_mut()
             .map_err(|_| EvmError::BorrowingFailed)?;
-        if wens > user_account.lamports() {
+        if wens > user_account.wens() {
             ic_msg!(
                 invoke_context,
                 "SwapNativeToEther: insufficient wens ({}, need {})",
-                user_account.lamports(),
+                user_account.wens(),
                 wens
             );
             return Err(EvmError::SwapInsufficient);
         }
 
-        let user_account_wens = user_account.lamports().saturating_sub(wens);
+        let user_account_wens = user_account.wens().saturating_sub(wens);
         user_account.set_lamports(user_account_wens);
         let mut evm_account = accounts
             .evm
             .try_account_ref_mut()
             .map_err(|_| EvmError::BorrowingFailed)?;
 
-        let evm_account_wens = evm_account.lamports().saturating_add(wens);
+        let evm_account_wens = evm_account.wens().saturating_add(wens);
         evm_account.set_lamports(evm_account_wens);
         executor.deposit(evm_address, gweis);
         if register_swap_tx_in_evm {
@@ -457,14 +457,14 @@ impl EvmProcessor {
         mut storage_ref: RefMut<AccountSharedData>,
         user: &'a KeyedAccount<'a>,
     ) -> Result<(), EvmError> {
-        let balance = storage_ref.lamports();
+        let balance = storage_ref.wens();
 
         storage_ref.set_lamports(0);
 
         let mut user_acc = user
             .try_account_ref_mut()
             .map_err(|_| EvmError::BorrowingFailed)?;
-        let user_acc_wens = user_acc.lamports().saturating_add(balance);
+        let user_acc_wens = user_acc.wens().saturating_add(balance);
         user_acc.set_lamports(user_acc_wens);
 
         ic_msg!(
@@ -580,14 +580,14 @@ impl EvmProcessor {
     ) -> Result<(), EvmError> {
         // Charge only when transaction succeeded
         if matches!(tx_result.exit_reason, ExitReason::Succeed(_)) {
-            let (fee, _) = gweis_to_lamports(fee);
+            let (fee, _) = gweis_to_wens(fee);
 
             trace!("Charging account for fee {}", fee);
             let mut account_data = native_account
                 .try_account_ref_mut()
                 .map_err(|_| EvmError::BorrowingFailed)?;
             let new_wens = account_data
-                .lamports()
+                .wens()
                 .checked_sub(fee)
                 .ok_or(EvmError::NativeAccountInsufficientFunds)?;
             account_data.set_lamports(new_wens);
@@ -596,7 +596,7 @@ impl EvmProcessor {
                 .try_account_ref_mut()
                 .map_err(|_| EvmError::BorrowingFailed)?;
             let new_evm_wens = evm_account
-                .lamports()
+                .wens()
                 .checked_add(fee)
                 .ok_or(EvmError::OverflowInRefund)?;
             evm_account.set_lamports(new_evm_wens);
@@ -675,7 +675,7 @@ impl EvmProcessor {
 
         // refund only remaining part
         let refund_fee = full_fee - burn_fee;
-        let (refund_native_fee, _) = gweis_to_lamports(refund_fee);
+        let (refund_native_fee, _) = gweis_to_wens(refund_fee);
 
         // 1. Fee can be charged from evm account or native. (evm part is done in Executor::transaction_execute* methods.)
         if !withdraw_fee_from_evm {
@@ -723,7 +723,7 @@ impl EvmProcessor {
 
         trace!("first = {:?}", first);
         trace!("all = {:?}", keyed_accounts);
-        if first.unsigned_key() != &solana::evm_state::id() || !first.is_writable() {
+        if first.unsigned_key() != &sino::evm_state::id() || !first.is_writable() {
             debug!("First account is not evm, or not writable");
             return Err(InstructionError::MissingAccount);
         }

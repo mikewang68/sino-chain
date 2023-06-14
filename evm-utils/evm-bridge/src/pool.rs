@@ -17,7 +17,7 @@ use once_cell::sync::Lazy;
 use serde_json::json;
 use client::{rpc_config::RpcSendTransactionConfig, rpc_request::RpcRequest};
 use evm_loader_program::{
-    scope::{evm, solana},                                                      // TODO: 修改599 700 745 765 792行 solana标识
+    scope::{evm, sino},                                                      
     tx_chunks::TxChunks,
 };
 use sdk::{
@@ -596,7 +596,7 @@ async fn process_tx(
 
     let instructions = bridge.make_send_tx_instructions(&tx, &meta_keys);
     let message = Message::new(&instructions, Some(&bridge.key.pubkey()));
-    let mut send_raw_tx: solana::Transaction = solana::Transaction::new_unsigned(message);
+    let mut send_raw_tx: sino::Transaction = sino::Transaction::new_unsigned(message);
 
     debug!("Getting block hash");
     let (blockhash, _height) = bridge
@@ -697,7 +697,7 @@ async fn deploy_big_tx(
         evm_loader_program::big_tx_allocate_old(storage_pubkey, tx_bytes.len())
     };
 
-    let create_and_allocate_tx = solana::Transaction::new_signed_with_payer(
+    let create_and_allocate_tx = sino::Transaction::new_signed_with_payer(
         &[create_storage_ix, allocate_storage_ix],
         Some(&payer_pubkey),
         &signers,
@@ -742,7 +742,7 @@ async fn deploy_big_tx(
         .await
         .map_err(|e| into_native_error(e, bridge.verbose_errors))?;
 
-    let write_data_txs: Vec<solana::Transaction> = tx_bytes
+    let write_data_txs: Vec<sino::Transaction> = tx_bytes
         // TODO: encapsulate
         .chunks(evm_state::TX_MTU)
         .enumerate()
@@ -762,7 +762,7 @@ async fn deploy_big_tx(
             }
         })
         .map(|instruction| {
-            solana::Transaction::new_signed_with_payer(
+            sino::Transaction::new_signed_with_payer(
                 &[instruction],
                 Some(&payer_pubkey),
                 &signers,
@@ -789,7 +789,7 @@ async fn deploy_big_tx(
         .value;
 
     let instructions = bridge.make_send_big_tx_instructions(tx, storage_pubkey, payer_pubkey);
-    let execute_tx = solana::Transaction::new_signed_with_payer(
+    let execute_tx = sino::Transaction::new_signed_with_payer(
         &instructions,
         Some(&payer_pubkey),
         &signers,

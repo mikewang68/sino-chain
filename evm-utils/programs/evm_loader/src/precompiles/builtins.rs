@@ -11,7 +11,7 @@ use primitive_types::H160;
 use super::abi_parse::ParseTokens;
 use super::{errors::*, CallResult};
 use super::{NativeContext, Result};
-use crate::scope::evm::gweis_to_lamports;
+use crate::scope::evm::gweis_to_wens;
 use crate::AccountStructure;
 use sdk::account::{ReadableAccount, WritableAccount};
 use sdk::pubkey::Pubkey;
@@ -175,20 +175,20 @@ pub static ETH_TO_SOR_ADDR: Lazy<H160> = Lazy::new(|| {
     .expect("Serialization of static data should be determenistic and never fail.")
 });
 
-type EthToVlxImp = PromiseFunc<
-    fn(Pubkey, NativeContext) -> Result<(PrecompileOutput, u64, Vec<EthToVlxResult>)>,
-    fn(AccountStructure, EthToVlxResult) -> Result<()>,
+type EthToSorImp = PromiseFunc<
+    fn(Pubkey, NativeContext) -> Result<(PrecompileOutput, u64, Vec<EthToSorResult>)>,
+    fn(AccountStructure, EthToSorResult) -> Result<()>,
     Pubkey,
-    EthToVlxResult,
+    EthToSorResult,
 >;
 
 #[derive(Serialize, Deserialize, Debug)]
-pub struct EthToVlxResult {
+pub struct EthToSorResult {
     pubkey: Pubkey,
     amount: u64,
 }
 
-pub static ETH_TO_SOR_CODE: Lazy<NativeContract<EthToVlxImp, Pubkey>> = Lazy::new(|| {
+pub static ETH_TO_SOR_CODE: Lazy<NativeContract<EthToSorImp, Pubkey>> = Lazy::new(|| {
     #[allow(deprecated)]
     let abi = Function {
         name: String::from("transferToNative"),
@@ -206,10 +206,10 @@ pub static ETH_TO_SOR_CODE: Lazy<NativeContract<EthToVlxImp, Pubkey>> = Lazy::ne
     fn implementation(
         pubkey: Pubkey,
         cx: NativeContext,
-    ) -> Result<(PrecompileOutput, u64, Vec<EthToVlxResult>)> {
+    ) -> Result<(PrecompileOutput, u64, Vec<EthToSorResult>)> {
         // EVM should ensure that user has enough tokens, before calling this precompile.
 
-        log::trace!("Precompile ETH_TO_VLX");
+        log::trace!("Precompile ETH_TO_SOR");
 
         if !matches!(
             cx.precompile_context.call_scheme,
@@ -229,7 +229,7 @@ pub static ETH_TO_SOR_CODE: Lazy<NativeContract<EthToVlxImp, Pubkey>> = Lazy::ne
 
         // TODO: return change back
         let (wens, _change) =
-            gweis_to_lamports(cx.precompile_context.evm_context.apparent_value);
+            gweis_to_wens(cx.precompile_context.evm_context.apparent_value);
         // TODO: remove native context in handle after majority update
         if cx.keep_old_errors {
             let user = if let Some(account) = cx.accounts.find_user(&pubkey) {
@@ -249,7 +249,7 @@ pub static ETH_TO_SOR_CODE: Lazy<NativeContract<EthToVlxImp, Pubkey>> = Lazy::ne
                 .try_account_ref_mut()
                 .with_context(|_| NativeChainInstructionError {})?;
 
-            if wens > evm_account.lamports() {
+            if wens > evm_account.wens() {
                 return InsufficientFunds { wens }.fail();
             }
         }
@@ -262,7 +262,7 @@ pub static ETH_TO_SOR_CODE: Lazy<NativeContract<EthToVlxImp, Pubkey>> = Lazy::ne
             0,
             vec![
                 // Vec::new(), // Only support empty topics for now
-                EthToVlxResult {
+                EthToSorResult {
                     pubkey,
                     amount: wens,
                 },
@@ -270,8 +270,8 @@ pub static ETH_TO_SOR_CODE: Lazy<NativeContract<EthToVlxImp, Pubkey>> = Lazy::ne
         ))
     }
 
-    fn handle_promise(accounts: AccountStructure, promise: EthToVlxResult) -> Result<()> {
-        log::trace!("Promise handle ETH_TO_VLX {:?}", promise);
+    fn handle_promise(accounts: AccountStructure, promise: EthToSorResult) -> Result<()> {
+        log::trace!("Promise handle ETH_TO_SOR {:?}", promise);
         let wens = promise.amount;
         let pubkey = promise.pubkey;
         let user = if let Some(account) = accounts.find_user(&pubkey) {
@@ -289,11 +289,11 @@ pub static ETH_TO_SOR_CODE: Lazy<NativeContract<EthToVlxImp, Pubkey>> = Lazy::ne
             .try_account_ref_mut()
             .with_context(|_| NativeChainInstructionError {})?;
 
-        if wens > evm_account.lamports() {
+        if wens > evm_account.wens() {
             return InsufficientFunds { wens }.fail();
         }
-        let evm_account_wens = evm_account.lamports().saturating_sub(wens);
-        let user_account_wens = user_account.lamports().saturating_add(wens);
+        let evm_account_wens = evm_account.wens().saturating_sub(wens);
+        let user_account_wens = user_account.wens().saturating_add(wens);
         evm_account.set_lamports(evm_account_wens);
         user_account.set_lamports(user_account_wens);
         Ok(())

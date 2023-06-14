@@ -27,14 +27,14 @@ pub enum EvmInstruction {
     ///
     EvmTransaction { evm_tx: evm::Transaction },
 
-    /// Transfer native lamports to ethereum.
+    /// Transfer native wens to ethereum.
     ///
     /// Outer args:
     /// account_key[0] - `[writable]`. EVM state account, used for lock.
     /// account_key[1] - `[writable, signer]`. Owner account that's allowed to manage withdrawal of his account by transfering ownership.
     ///
     /// Inner args:
-    /// amount - count of lamports to be transfered.
+    /// amount - count of wens to be transfered.
     /// ether_key - recevier etherium address.
     ///
     SwapNativeToEther {

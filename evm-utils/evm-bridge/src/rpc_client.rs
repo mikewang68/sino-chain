@@ -36,7 +36,7 @@ use transaction_status::{TransactionStatus, UiTransactionEncoding};
 
 use evm_rpc::{BlockId, Hex, RPCBlock, RPCLog, RPCLogFilter, RPCReceipt, RPCTransaction};
 use evm_state::{Address, H256, U256};
-use evm_loader_program::scope::solana;            // TODO： 1.修改 363 432 419 行olana::Transaction 
+use evm_loader_program::scope::sino;            
 
 #[derive(Deserialize, Debug)]
 struct RpcErrorObject {
@@ -360,7 +360,7 @@ impl AsyncRpcClient {
 
     pub async fn send_and_confirm_transaction_with_config(
         &self,
-        transaction: &solana::Transaction,
+        transaction: &sino::Transaction,
         config: RpcSendTransactionConfig,
     ) -> ClientResult<Signature> {
         const SEND_RETRIES: usize = 20;
@@ -416,7 +416,7 @@ impl AsyncRpcClient {
 
     pub async fn send_transaction_with_config(
         &self,
-        transaction: &solana::Transaction,
+        transaction: &sino::Transaction,
         config: RpcSendTransactionConfig,
     ) -> ClientResult<Signature> {
         let encoding = config.encoding.unwrap_or(UiTransactionEncoding::Base64);
@@ -429,7 +429,7 @@ impl AsyncRpcClient {
             ..config
         };
         let serialized_encoded =
-            serialize_and_encode::<solana::Transaction>(transaction, encoding)?;
+            serialize_and_encode::<sino::Transaction>(transaction, encoding)?;
         let request = RpcRequest::SendTransaction;
         let response = match self
             .send_request(request, json!([serialized_encoded, config]))

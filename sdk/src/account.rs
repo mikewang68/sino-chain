@@ -53,7 +53,7 @@ pub struct AccountSharedData {
 ///
 /// Returns true if accounts are essentially equivalent as in all fields are equivalent.
 pub fn accounts_equal<T: ReadableAccount, U: ReadableAccount>(me: &T, other: &U) -> bool {
-    me.lamports() == other.lamports()
+    me.wens() == other.wens()
         && me.data() == other.data()
         && me.owner() == other.owner()
         && me.executable() == other.executable()
@@ -89,7 +89,7 @@ pub trait WritableAccount: ReadableAccount {
     fn set_lamports(&mut self, lamports: u64);
     fn checked_add_lamports(&mut self, lamports: u64) -> Result<(), LamportsError> {
         self.set_lamports(
-            self.lamports()
+            self.wens()
                 .checked_add(lamports)
                 .ok_or(LamportsError::ArithmeticOverflow)?,
         );
@@ -97,17 +97,17 @@ pub trait WritableAccount: ReadableAccount {
     }
     fn checked_sub_lamports(&mut self, lamports: u64) -> Result<(), LamportsError> {
         self.set_lamports(
-            self.lamports()
+            self.wens()
                 .checked_sub(lamports)
                 .ok_or(LamportsError::ArithmeticUnderflow)?,
         );
         Ok(())
     }
     fn saturating_add_lamports(&mut self, lamports: u64) {
-        self.set_lamports(self.lamports().saturating_add(lamports))
+        self.set_lamports(self.wens().saturating_add(lamports))
     }
     fn saturating_sub_lamports(&mut self, lamports: u64) {
-        self.set_lamports(self.lamports().saturating_sub(lamports))
+        self.set_lamports(self.wens().saturating_sub(lamports))
     }
     fn data_mut(&mut self) -> &mut Vec<u8>;
     fn data_as_mut_slice(&mut self) -> &mut [u8];
@@ -125,14 +125,14 @@ pub trait WritableAccount: ReadableAccount {
 }
 
 pub trait ReadableAccount: Sized {
-    fn lamports(&self) -> u64;
+    fn wens(&self) -> u64;
     fn data(&self) -> &[u8];
     fn owner(&self) -> &Pubkey;
     fn executable(&self) -> bool;
     fn rent_epoch(&self) -> Epoch;
     fn to_account_shared_data(&self) -> AccountSharedData {
         AccountSharedData::create(
-            self.lamports(),
+            self.wens(),
             self.data().to_vec(),
             *self.owner(),
             self.executable(),
@@ -142,7 +142,7 @@ pub trait ReadableAccount: Sized {
 }
 
 impl ReadableAccount for Account {
-    fn lamports(&self) -> u64 {
+    fn wens(&self) -> u64 {
         self.lamports
     }
     fn data(&self) -> &[u8] {
@@ -238,7 +238,7 @@ impl WritableAccount for AccountSharedData {
 }
 
 impl ReadableAccount for AccountSharedData {
-    fn lamports(&self) -> u64 {
+    fn wens(&self) -> u64 {
         self.lamports
     }
     fn data(&self) -> &[u8] {
@@ -256,7 +256,7 @@ impl ReadableAccount for AccountSharedData {
 }
 
 impl ReadableAccount for Ref<'_, AccountSharedData> {
-    fn lamports(&self) -> u64 {
+    fn wens(&self) -> u64 {
         self.lamports
     }
     fn data(&self) -> &[u8] {
@@ -274,7 +274,7 @@ impl ReadableAccount for Ref<'_, AccountSharedData> {
 }
 
 impl ReadableAccount for Ref<'_, Account> {
-    fn lamports(&self) -> u64 {
+    fn wens(&self) -> u64 {
         self.lamports
     }
     fn data(&self) -> &[u8] {
@@ -294,7 +294,7 @@ impl ReadableAccount for Ref<'_, Account> {
 fn debug_fmt<T: ReadableAccount>(item: &T, f: &mut fmt::Formatter<'_>) -> fmt::Result {
     let mut f = f.debug_struct("Account");
 
-    f.field("lamports", &item.lamports())
+    f.field("lamports", &item.wens())
         .field("data.len", &item.data().len())
         .field("owner", &item.owner())
         .field("executable", &item.executable())
@@ -729,7 +729,7 @@ pub mod tests {
         assert!(accounts_equal(&account1, &account2));
         let account = account1;
         assert_eq!(account.lamports, 1);
-        assert_eq!(account.lamports(), 1);
+        assert_eq!(account.wens(), 1);
         assert_eq!(account.data.len(), 2);
         assert_eq!(account.data().len(), 2);
         assert_eq!(account.owner, key);
@@ -740,7 +740,7 @@ pub mod tests {
         assert_eq!(account.rent_epoch(), 4);
         let account = account2;
         assert_eq!(account.lamports, 1);
-        assert_eq!(account.lamports(), 1);
+        assert_eq!(account.wens(), 1);
         assert_eq!(account.data.len(), 2);
         assert_eq!(account.data().len(), 2);
         assert_eq!(account.owner, key);
@@ -788,11 +788,11 @@ pub mod tests {
         account1.checked_add_lamports(1).unwrap();
         account2.checked_add_lamports(1).unwrap();
         assert!(accounts_equal(&account1, &account2));
-        assert_eq!(account1.lamports(), 2);
+        assert_eq!(account1.wens(), 2);
         account1.checked_sub_lamports(2).unwrap();
         account2.checked_sub_lamports(2).unwrap();
         assert!(accounts_equal(&account1, &account2));
-        assert_eq!(account1.lamports(), 0);
+        assert_eq!(account1.wens(), 0);
     }
 
     #[test]
@@ -835,7 +835,7 @@ pub mod tests {
         let remaining = 22;
         account.set_lamports(u64::MAX - remaining);
         account.saturating_add_lamports(remaining * 2);
-        assert_eq!(account.lamports(), u64::MAX);
+        assert_eq!(account.wens(), u64::MAX);
     }
 
     #[test]
@@ -846,7 +846,7 @@ pub mod tests {
         let remaining = 33;
         account.set_lamports(remaining);
         account.saturating_sub_lamports(remaining * 2);
-        assert_eq!(account.lamports(), 0);
+        assert_eq!(account.wens(), 0);
     }
 
     #[test]
@@ -933,13 +933,13 @@ pub mod tests {
                 if should_be_equal {
                     assert!(accounts_equal(
                         &Account::new_ref(
-                            account_expected.lamports(),
+                            account_expected.wens(),
                             account_expected.data().len(),
                             account_expected.owner()
                         )
                         .borrow(),
                         &AccountSharedData::new_ref(
-                            account_expected.lamports(),
+                            account_expected.wens(),
                             account_expected.data().len(),
                             account_expected.owner()
                         )
@@ -949,13 +949,13 @@ pub mod tests {
                     {
                         // test new_data
                         let account1_with_data = Account::new_data(
-                            account_expected.lamports(),
+                            account_expected.wens(),
                             &account_expected.data()[0],
                             account_expected.owner(),
                         )
                         .unwrap();
                         let account2_with_data = AccountSharedData::new_data(
-                            account_expected.lamports(),
+                            account_expected.wens(),
                             &account_expected.data()[0],
                             account_expected.owner(),
                         )
@@ -971,14 +971,14 @@ pub mod tests {
                     // test new_data_with_space
                     assert!(accounts_equal(
                         &Account::new_data_with_space(
-                            account_expected.lamports(),
+                            account_expected.wens(),
                             &account_expected.data()[0],
                             1,
                             account_expected.owner()
                         )
                         .unwrap(),
                         &AccountSharedData::new_data_with_space(
-                            account_expected.lamports(),
+                            account_expected.wens(),
                             &account_expected.data()[0],
                             1,
                             account_expected.owner()
@@ -989,14 +989,14 @@ pub mod tests {
                     // test new_ref_data
                     assert!(accounts_equal(
                         &Account::new_ref_data(
-                            account_expected.lamports(),
+                            account_expected.wens(),
                             &account_expected.data()[0],
                             account_expected.owner()
                         )
                         .unwrap()
                         .borrow(),
                         &AccountSharedData::new_ref_data(
-                            account_expected.lamports(),
+                            account_expected.wens(),
                             &account_expected.data()[0],
                             account_expected.owner()
                         )
@@ -1007,7 +1007,7 @@ pub mod tests {
                     //new_ref_data_with_space
                     assert!(accounts_equal(
                         &Account::new_ref_data_with_space(
-                            account_expected.lamports(),
+                            account_expected.wens(),
                             &account_expected.data()[0],
                             1,
                             account_expected.owner()
@@ -1015,7 +1015,7 @@ pub mod tests {
                         .unwrap()
                         .borrow(),
                         &AccountSharedData::new_ref_data_with_space(
-                            account_expected.lamports(),
+                            account_expected.wens(),
                             &account_expected.data()[0],
                             1,
                             account_expected.owner()

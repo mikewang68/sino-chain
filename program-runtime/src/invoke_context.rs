@@ -477,7 +477,7 @@ impl<'a> InvokeContext<'a> {
                 .checked_add(u128::from(pre_account.lamports()))
                 .ok_or(InstructionError::UnbalancedInstruction)?;
             post_sum = post_sum
-                .checked_add(u128::from(account.lamports()))
+                .checked_add(u128::from(account.wens()))
                 .ok_or(InstructionError::UnbalancedInstruction)?;
 
             let pre_data_len = pre_account.data().len() as i64;
@@ -562,7 +562,7 @@ impl<'a> InvokeContext<'a> {
                             .checked_add(u128::from(pre_account.lamports()))
                             .ok_or(InstructionError::UnbalancedInstruction)?;
                         post_sum = post_sum
-                            .checked_add(u128::from(account.lamports()))
+                            .checked_add(u128::from(account.wens()))
                             .ok_or(InstructionError::UnbalancedInstruction)?;
                         if is_writable && !pre_account.executable() {
                             pre_account.update(&account);

@@ -11,7 +11,7 @@ use std::cell::RefMut;
 /// It will restrict and provide access to needed sino accounts in:
 /// 1. Instruction handlers (ExecuteTx, SwapToEvm, FreeOwnership) - full access to evm state.
 /// 2. Builtin contracts (SwapToNative) - Full access to evm state.
-/// 3. User written evm2native callbacks (SwapERCToSol, CallSolMethod) - Full access to specific users account,
+/// 3. User written evm2native callbacks (SwapERCToSor, CallSorMethod) - Full access to specific users account,
 ///   call from users account, read/credit access to evm state. (TBD)
 ///
 #[derive(Copy, Clone, Debug)]
@@ -42,21 +42,21 @@ impl<'a> AccountStructure<'a> {
             .try_account_ref_mut()
             .map_err(|_| EvmError::BorrowingFailed)?;
 
-        let evm_acc_lamports = evm_acc
-            .lamports()
+        let evm_acc_wens = evm_acc
+            .wens()
             .checked_sub(fee)
             .ok_or(EvmError::OverflowInRefund)?;
-        evm_acc.set_lamports(evm_acc_lamports);
+        evm_acc.set_lamports(evm_acc_wens);
 
         let mut user_acc = user
             .try_account_ref_mut()
             .map_err(|_| EvmError::BorrowingFailed)?;
 
-        let user_acc_lamports = user_acc
-            .lamports()
+        let user_acc_wens = user_acc
+            .wens()
             .checked_add(fee)
             .ok_or(EvmError::OverflowInRefund)?;
-        user_acc.set_lamports(user_acc_lamports);
+        user_acc.set_lamports(user_acc_wens);
 
         Ok(())
     }
@@ -94,7 +94,7 @@ impl<'a> AccountStructure<'a> {
     //         let user_key = Pubkey::new_unique();
     //         let user_account = RefCell::new(
     //             Account {
-    //                 lamports: 1000,
+    //                 wens: 1000,
     //                 data: vec![],
     //                 owner: crate::ID,
     //                 executable: false,

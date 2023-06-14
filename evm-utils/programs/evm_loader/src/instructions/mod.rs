@@ -35,7 +35,7 @@ impl FeePayerType {
     }
 }
 
-/// Solana blockchain limit amount of data that transaction can have.
+/// Sino blockchain limit amount of data that transaction can have.
 /// To get around this limitation, we use design that is similar to LoaderInstruction in sdk.
 
 #[derive(
@@ -345,18 +345,18 @@ mod test {
     }
 
     // #[quickcheck]
-    // fn test_serialize_swap_native_to_ether_layout(lamports: u64, addr: Generator<evm::Address>) {
-    //     fn custom_serialize(lamports: u64, addr: evm::Address) -> Vec<u8> {
+    // fn test_serialize_swap_native_to_ether_layout(wens: u64, addr: Generator<evm::Address>) {
+    //     fn custom_serialize(wens: u64, addr: evm::Address) -> Vec<u8> {
     //         use byteorder::{LittleEndian, WriteBytesExt};
 
     //         let tag: [u8; 4] = [1, 0, 0, 0];
-    //         let mut lamports_in_bytes: [u8; 8] = [0xff; 8];
+    //         let mut wens_in_bytes: [u8; 8] = [0xff; 8];
     //         let array_len: [u8; 8] = [42, 0, 0, 0, 0, 0, 0, 0];
     //         let mut addr_in_hex_bytes: [u8; 42] = [0; 42];
 
-    //         lamports_in_bytes
+    //         wens_in_bytes
     //             .as_mut()
-    //             .write_u64::<LittleEndian>(lamports)
+    //             .write_u64::<LittleEndian>(wens)
     //             .unwrap();
 
     //         let addr_in_hex = format!("0x{:x}", addr);
@@ -367,7 +367,7 @@ mod test {
 
     //         let mut buffer = vec![];
     //         buffer.extend_from_slice(&tag);
-    //         buffer.extend_from_slice(&lamports_in_bytes);
+    //         buffer.extend_from_slice(&wens_in_bytes);
     //         buffer.extend_from_slice(&array_len);
     //         buffer.extend_from_slice(&addr_in_hex_bytes);
     //         buffer
@@ -380,7 +380,7 @@ mod test {
     //     };
     //     let data = bincode::serialize(&data).unwrap();
 
-    //     let custom_data = custom_serialize(lamports, addr);
+    //     let custom_data = custom_serialize(wens, addr);
     //     assert_eq!(&*data, &*custom_data)
     // }
 

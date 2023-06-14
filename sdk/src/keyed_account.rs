@@ -39,7 +39,7 @@ impl<'a> KeyedAccount<'a> {
     }
 
     pub fn lamports(&self) -> Result<u64, InstructionError> {
-        Ok(self.try_borrow()?.lamports())
+        Ok(self.try_borrow()?.wens())
     }
 
     pub fn data_len(&self) -> Result<usize, InstructionError> {

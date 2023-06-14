@@ -60,13 +60,13 @@ impl PreAccount {
 
         // An account not assigned to the program cannot have its balance decrease.
         if program_id != pre.owner() // line coverage used to get branch coverage
-         && pre.lamports() > post.lamports()
+         && pre.wens() > post.wens()
         {
             return Err(InstructionError::ExternalAccountLamportSpend);
         }
 
         // The balance of read-only and executable accounts may not change
-        let lamports_changed = pre.lamports() != post.lamports();
+        let lamports_changed = pre.wens() != post.wens();
         if lamports_changed {
             if !is_writable {
                 return Err(InstructionError::ReadonlyLamportChange);
@@ -121,7 +121,7 @@ impl PreAccount {
         // executable is one-way (false->true) and only the account owner may set it.
         let executable_changed = pre.executable() != post.executable();
         if executable_changed {
-            if !rent.is_exempt(post.lamports(), post.data().len()) {
+            if !rent.is_exempt(post.wens(), post.data().len()) {
                 return Err(InstructionError::ExecutableAccountNotRentExempt);
             }
             if !is_writable // line coverage used to get branch coverage
@@ -175,7 +175,7 @@ impl PreAccount {
     }
 
     pub fn lamports(&self) -> u64 {
-        self.account.borrow().lamports()
+        self.account.borrow().wens()
     }
 
     pub fn executable(&self) -> bool {

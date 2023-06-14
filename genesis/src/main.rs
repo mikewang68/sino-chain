@@ -97,7 +97,7 @@ pub fn load_genesis_accounts(file: &str, genesis_config: &mut GenesisConfig) -> 
             );
         }
         account.set_executable(account_details.executable);
-        lamports += account.lamports();
+        lamports += account.wens();
         genesis_config.add_account(pubkey, account);
     }
 
@@ -714,7 +714,7 @@ fn main() -> Result<(), Box<dyn error::Error>> {
     }
 
     let (mut evm_state_lamports, change) =
-        evm_loader_program::scope::evm::gweis_to_lamports(evm_state_balance);
+        evm_loader_program::scope::evm::gweis_to_wens(evm_state_balance);
     if change != U256::zero() {
         evm_state_lamports += 1;
     }

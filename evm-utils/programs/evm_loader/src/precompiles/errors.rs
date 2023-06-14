@@ -41,7 +41,7 @@ pub enum PrecompileErrors {
     UnexpectedInput { expected: String, got: String },
 
     #[snafu(display("Failed to find account, account_pk = {}", public_key))]
-    AccountNotFound { public_key: solana::Address },
+    AccountNotFound { public_key: sino::Address },
 
     #[snafu(display(
         "No enough tokens, on EVM state account, to credit request = {}",
