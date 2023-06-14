@@ -17,5 +17,3 @@ pub struct BatchState {
 
 #[derive(Clone, Debug, Default)]
 pub struct BatchStateMap(DashMap<BatchId, BatchState>);
-
-const xxx: u64 = 1;
