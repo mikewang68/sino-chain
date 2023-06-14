@@ -38,7 +38,7 @@ pub fn add_genesis_account(genesis_config: &mut GenesisConfig) -> u64 {
     let mut account = create_config_account(vec![], &Config::default(), 0);
     let lamports = genesis_config.rent.minimum_balance(account.data().len());
 
-    account.set_lamports(lamports.max(1));
+    account.set_wens(lamports.max(1));
 
     genesis_config.add_account(config::id(), account);
 

@@ -86,9 +86,9 @@ impl From<Account> for AccountSharedData {
 }
 
 pub trait WritableAccount: ReadableAccount {
-    fn set_lamports(&mut self, lamports: u64);
+    fn set_wens(&mut self, lamports: u64);
     fn checked_add_lamports(&mut self, lamports: u64) -> Result<(), LamportsError> {
-        self.set_lamports(
+        self.set_wens(
             self.wens()
                 .checked_add(lamports)
                 .ok_or(LamportsError::ArithmeticOverflow)?,
@@ -96,7 +96,7 @@ pub trait WritableAccount: ReadableAccount {
         Ok(())
     }
     fn checked_sub_lamports(&mut self, lamports: u64) -> Result<(), LamportsError> {
-        self.set_lamports(
+        self.set_wens(
             self.wens()
                 .checked_sub(lamports)
                 .ok_or(LamportsError::ArithmeticUnderflow)?,
@@ -104,10 +104,10 @@ pub trait WritableAccount: ReadableAccount {
         Ok(())
     }
     fn saturating_add_lamports(&mut self, lamports: u64) {
-        self.set_lamports(self.wens().saturating_add(lamports))
+        self.set_wens(self.wens().saturating_add(lamports))
     }
     fn saturating_sub_lamports(&mut self, lamports: u64) {
-        self.set_lamports(self.wens().saturating_sub(lamports))
+        self.set_wens(self.wens().saturating_sub(lamports))
     }
     fn data_mut(&mut self) -> &mut Vec<u8>;
     fn data_as_mut_slice(&mut self) -> &mut [u8];
@@ -160,7 +160,7 @@ impl ReadableAccount for Account {
 }
 
 impl WritableAccount for Account {
-    fn set_lamports(&mut self, lamports: u64) {
+    fn set_wens(&mut self, lamports: u64) {
         self.lamports = lamports;
     }
     fn data_mut(&mut self) -> &mut Vec<u8> {
@@ -199,7 +199,7 @@ impl WritableAccount for Account {
 }
 
 impl WritableAccount for AccountSharedData {
-    fn set_lamports(&mut self, lamports: u64) {
+    fn set_wens(&mut self, lamports: u64) {
         self.lamports = lamports;
     }
     fn data_mut(&mut self) -> &mut Vec<u8> {
@@ -833,7 +833,7 @@ pub mod tests {
         let (mut account, _) = make_two_accounts(&key);
 
         let remaining = 22;
-        account.set_lamports(u64::MAX - remaining);
+        account.set_wens(u64::MAX - remaining);
         account.saturating_add_lamports(remaining * 2);
         assert_eq!(account.wens(), u64::MAX);
     }
@@ -844,7 +844,7 @@ pub mod tests {
         let (mut account, _) = make_two_accounts(&key);
 
         let remaining = 33;
-        account.set_lamports(remaining);
+        account.set_wens(remaining);
         account.saturating_sub_lamports(remaining * 2);
         assert_eq!(account.wens(), 0);
     }
@@ -869,9 +869,9 @@ pub mod tests {
                         account1.checked_add_lamports(1).unwrap();
                     } else if pass == 1 {
                         account_expected.checked_add_lamports(1).unwrap();
-                        account2.set_lamports(account2.lamports + 1);
+                        account2.set_wens(account2.lamports + 1);
                     } else if pass == 2 {
-                        account1.set_lamports(account1.lamports + 1);
+                        account1.set_wens(account1.lamports + 1);
                     } else if pass == 3 {
                         account_expected.checked_add_lamports(1).unwrap();
                         account2.checked_add_lamports(1).unwrap();

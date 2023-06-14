@@ -46,7 +46,7 @@ impl<'a> AccountStructure<'a> {
             .wens()
             .checked_sub(fee)
             .ok_or(EvmError::OverflowInRefund)?;
-        evm_acc.set_lamports(evm_acc_wens);
+        evm_acc.set_wens(evm_acc_wens);
 
         let mut user_acc = user
             .try_account_ref_mut()
@@ -56,7 +56,7 @@ impl<'a> AccountStructure<'a> {
             .wens()
             .checked_add(fee)
             .ok_or(EvmError::OverflowInRefund)?;
-        user_acc.set_lamports(user_acc_wens);
+        user_acc.set_wens(user_acc_wens);
 
         Ok(())
     }

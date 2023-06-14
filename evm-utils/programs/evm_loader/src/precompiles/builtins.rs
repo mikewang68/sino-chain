@@ -294,8 +294,8 @@ pub static ETH_TO_SOR_CODE: Lazy<NativeContract<EthToSorImp, Pubkey>> = Lazy::ne
         }
         let evm_account_wens = evm_account.wens().saturating_sub(wens);
         let user_account_wens = user_account.wens().saturating_add(wens);
-        evm_account.set_lamports(evm_account_wens);
-        user_account.set_lamports(user_account_wens);
+        evm_account.set_wens(evm_account_wens);
+        user_account.set_wens(user_account_wens);
         Ok(())
     }
 

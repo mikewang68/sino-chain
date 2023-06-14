@@ -2861,7 +2861,7 @@ mod tests {
         assert_eq!(stake_keyed_account.state(), Ok(StakeState::Uninitialized));
 
         // reset balance
-        stake_account.borrow_mut().set_lamports(stake_lamports);
+        stake_account.borrow_mut().set_wens(stake_lamports);
 
         // lockup
         let stake_keyed_account = KeyedAccount::new(&stake_pubkey, true, &stake_account);
@@ -3211,7 +3211,7 @@ mod tests {
         stake_keyed_account
             .account
             .borrow_mut()
-            .set_lamports(total_lamports);
+            .set_wens(total_lamports);
 
         // lockup has expired
         let to_keyed_account = KeyedAccount::new(&to, false, &to_account);
@@ -4285,7 +4285,7 @@ mod tests {
             split_stake_keyed_account
                 .account
                 .borrow_mut()
-                .set_lamports(10_000_000);
+                .set_wens(10_000_000);
             assert_eq!(
                 stake_keyed_account.split(
                     stake_lamports - (rent_exempt_reserve + 1), // leave rent_exempt_reserve + 1 in original account
@@ -4413,7 +4413,7 @@ mod tests {
             stake_keyed_account
                 .account
                 .borrow_mut()
-                .set_lamports(stake_lamports);
+                .set_wens(stake_lamports);
         }
     }
 
@@ -4814,7 +4814,7 @@ mod tests {
             stake_keyed_account
                 .account
                 .borrow_mut()
-                .set_lamports(stake_lamports);
+                .set_wens(stake_lamports);
         }
     }
 

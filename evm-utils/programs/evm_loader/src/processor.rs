@@ -390,14 +390,14 @@ impl EvmProcessor {
         }
 
         let user_account_wens = user_account.wens().saturating_sub(wens);
-        user_account.set_lamports(user_account_wens);
+        user_account.set_wens(user_account_wens);
         let mut evm_account = accounts
             .evm
             .try_account_ref_mut()
             .map_err(|_| EvmError::BorrowingFailed)?;
 
         let evm_account_wens = evm_account.wens().saturating_add(wens);
-        evm_account.set_lamports(evm_account_wens);
+        evm_account.set_wens(evm_account_wens);
         executor.deposit(evm_address, gweis);
         if register_swap_tx_in_evm {
             executor.register_swap_tx_in_evm(*precompiles::ETH_TO_SOR_ADDR, evm_address, gweis)
@@ -459,13 +459,13 @@ impl EvmProcessor {
     ) -> Result<(), EvmError> {
         let balance = storage_ref.wens();
 
-        storage_ref.set_lamports(0);
+        storage_ref.set_wens(0);
 
         let mut user_acc = user
             .try_account_ref_mut()
             .map_err(|_| EvmError::BorrowingFailed)?;
         let user_acc_wens = user_acc.wens().saturating_add(balance);
-        user_acc.set_lamports(user_acc_wens);
+        user_acc.set_wens(user_acc_wens);
 
         ic_msg!(
             invoke_context,
@@ -590,7 +590,7 @@ impl EvmProcessor {
                 .wens()
                 .checked_sub(fee)
                 .ok_or(EvmError::NativeAccountInsufficientFunds)?;
-            account_data.set_lamports(new_wens);
+            account_data.set_wens(new_wens);
 
             let mut evm_account = evm_account
                 .try_account_ref_mut()
@@ -599,7 +599,7 @@ impl EvmProcessor {
                 .wens()
                 .checked_add(fee)
                 .ok_or(EvmError::OverflowInRefund)?;
-            evm_account.set_lamports(new_evm_wens);
+            evm_account.set_wens(new_evm_wens);
         }
         Ok(())
     }
