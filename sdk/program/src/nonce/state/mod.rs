@@ -133,7 +133,7 @@ mod tests {
             authority: Pubkey::new_unique(),
             durable_nonce,
             fee_calculator: FeeCalculator {
-                lamports_per_signature: 2718,
+                wens_per_signature: 2718,
             },
         };
         let versions = Versions::Legacy(Box::new(State::Initialized(data.clone())));
@@ -212,7 +212,7 @@ mod tests {
             authority: Pubkey::new_unique(),
             durable_nonce,
             fee_calculator: FeeCalculator {
-                lamports_per_signature: 2718,
+                wens_per_signature: 2718,
             },
         };
         let versions = Versions::Legacy(Box::new(State::Initialized(data.clone())));

@@ -42,7 +42,7 @@ impl Data {
     }
 
     pub fn get_lamports_per_signature(&self) -> u64 {
-        self.fee_calculator.lamports_per_signature
+        self.fee_calculator.wens_per_signature
     }
 }
 

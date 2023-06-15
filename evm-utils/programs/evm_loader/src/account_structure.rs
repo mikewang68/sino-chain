@@ -67,15 +67,15 @@ impl<'a> AccountStructure<'a> {
             .map_err(|_| EvmError::BorrowingFailed)
     }
 
-    pub fn user_mut(&self, ix: usize) -> Result<RefMut<AccountSharedData>, EvmError> {
-        self.users
-            .get(ix)
-            .ok_or(EvmError::MissingAccount)
-            .and_then(|u| {
-                u.try_account_ref_mut()
-                    .map_err(|_| EvmError::BorrowingFailed)
-            })
-    }
+    // pub fn user_mut(&self, ix: usize) -> Result<RefMut<AccountSharedData>, EvmError> {
+    //     self.users
+    //         .get(ix)
+    //         .ok_or(EvmError::MissingAccount)
+    //         .and_then(|u| {
+    //             u.try_account_ref_mut()
+    //                 .map_err(|_| EvmError::BorrowingFailed)
+    //         })
+    // }
 
     // /// Create AccountStructure for testing purposes, with random accounts.
     // #[cfg(test)]

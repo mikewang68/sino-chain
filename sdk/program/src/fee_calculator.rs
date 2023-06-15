@@ -9,13 +9,13 @@ use {
 pub struct FeeCalculator {
     // The current cost of a signature  This amount may increase/decrease over time based on
     // cluster processing load.
-    pub lamports_per_signature: u64,
+    pub wens_per_signature: u64,
 }
 
 impl FeeCalculator {
-    pub fn new(lamports_per_signature: u64) -> Self {
+    pub fn new(wens_per_signature: u64) -> Self {
         Self {
-            lamports_per_signature,
+            wens_per_signature,
         }
     }
 
@@ -38,7 +38,7 @@ impl FeeCalculator {
             }
         }
 
-        self.lamports_per_signature
+        self.wens_per_signature
             * (u64::from(message.header.num_required_signatures) + num_signatures)
     }
 }

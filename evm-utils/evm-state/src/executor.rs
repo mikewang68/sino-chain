@@ -208,28 +208,28 @@ impl Executor {
     //         Default::default(),
     //     )
     // }
-    pub fn default_configs(state: EvmBackend<Incomming>) -> Self {
-        Self::with_config(
-            state,
-            Default::default(),
-            Default::default(),
-            Default::default(),
-        )
-    }
+    // pub fn default_configs(state: EvmBackend<Incomming>) -> Self {
+    //     Self::with_config(
+    //         state,
+    //         Default::default(),
+    //         Default::default(),
+    //         Default::default(),
+    //     )
+    // }
 
-    pub fn with_config(
-        evm_backend: EvmBackend<Incomming>,
-        chain_context: ChainContext,
-        config: EvmConfig,
-        feature_set: FeatureSet,
-    ) -> Self {
-        Executor {
-            evm_backend,
-            chain_context,
-            config,
-            feature_set,
-        }
-    }
+    // pub fn with_config(
+    //     evm_backend: EvmBackend<Incomming>,
+    //     chain_context: ChainContext,
+    //     config: EvmConfig,
+    //     feature_set: FeatureSet,
+    // ) -> Self {
+    //     Executor {
+    //         evm_backend,
+    //         chain_context,
+    //         config,
+    //         feature_set,
+    //     }
+    // }
 
     pub fn support_precompile(&self) -> bool {
         self.evm_backend.state.block_version >= BlockVersion::VersionConsistentHashes

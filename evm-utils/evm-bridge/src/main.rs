@@ -603,10 +603,10 @@ impl BridgeERPC for BridgeErpcImpl {
         Box::pin(future)
     }
 
-    #[instrument]
-    fn compilers(&self, _meta: Self::Metadata) -> EvmResult<Vec<String>> {
-        Ok(vec![])
-    }
+    // #[instrument]
+    // fn compilers(&self, _meta: Self::Metadata) -> EvmResult<Vec<String>> {
+    //     Ok(vec![])
+    // }
 }
 
 #[derive(Debug)]

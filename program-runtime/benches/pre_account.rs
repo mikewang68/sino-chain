@@ -3,7 +3,7 @@
 extern crate test;
 
 use {
-    log::*,
+    // log::*,
     program_runtime::{pre_account::PreAccount, timings::ExecuteDetailsTimings},
     sdk::{account::AccountSharedData, pubkey, rent::Rent},
     test::Bencher,
@@ -46,14 +46,14 @@ fn bench_verify_account_changes_data(bencher: &mut Bencher) {
         )
         .unwrap();
     });
-    let summary = bencher.bench(|_bencher| {}).unwrap();
-    info!("data no change by owner: {} ns/iter", summary.median);
+    // let summary = bencher.bench(|_bencher| {}).unwrap();                    //运行基准测试此处会报错,已注释
+    // info!("data no change by owner: {} ns/iter", summary.median);
 
     let pre_data = vec![BUFSIZE];
     let post_data = vec![BUFSIZE];
     bencher.iter(|| pre_data == post_data);
-    let summary = bencher.bench(|_bencher| {}).unwrap();
-    info!("data compare {} ns/iter", summary.median);
+    // let summary = bencher.bench(|_bencher| {}).unwrap();
+    // info!("data compare {} ns/iter", summary.median);
 
     let pre = PreAccount::new(
         &pubkey::new_rand(),
@@ -71,8 +71,8 @@ fn bench_verify_account_changes_data(bencher: &mut Bencher) {
         )
         .unwrap();
     });
-    let summary = bencher.bench(|_bencher| {}).unwrap();
-    info!("data no change by non owner: {} ns/iter", summary.median);
+    // let summary = bencher.bench(|_bencher| {}).unwrap();
+    // info!("data no change by non owner: {} ns/iter", summary.median);
 }
 
 const BUFSIZE: usize = 1024 * 1024 + 127;

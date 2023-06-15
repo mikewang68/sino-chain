@@ -733,29 +733,29 @@ impl EvmProcessor {
     }
 }
 
-const SECRET_KEY_DUMMY: [u8; 32] = [1; 32];
+// const SECRET_KEY_DUMMY: [u8; 32] = [1; 32];
 
-const TEST_CHAIN_ID: u64 = 0xdead;
-#[doc(hidden)]
-pub fn dummy_call(nonce: usize) -> (evm::Transaction, evm::UnsignedTransaction) {
-    let secret_key = evm::SecretKey::from_slice(&SECRET_KEY_DUMMY).unwrap();
-    let dummy_address = evm::addr_from_public_key(&evm::PublicKey::from_secret_key(
-        evm::SECP256K1,
-        &secret_key,
-    ));
+// const TEST_CHAIN_ID: u64 = 0xdead;
+// #[doc(hidden)]
+// pub fn dummy_call(nonce: usize) -> (evm::Transaction, evm::UnsignedTransaction) {
+//     let secret_key = evm::SecretKey::from_slice(&SECRET_KEY_DUMMY).unwrap();
+//     let dummy_address = evm::addr_from_public_key(&evm::PublicKey::from_secret_key(
+//         evm::SECP256K1,
+//         &secret_key,
+//     ));
 
-    let tx_call = evm::UnsignedTransaction {
-        nonce: nonce.into(),
-        gas_price: 1u32.into(),
-        gas_limit: 300000u32.into(),
-        action: evm::TransactionAction::Call(dummy_address),
-        value: 0u32.into(),
-        input: vec![],
-    };
+//     let tx_call = evm::UnsignedTransaction {
+//         nonce: nonce.into(),
+//         gas_price: 1u32.into(),
+//         gas_limit: 300000u32.into(),
+//         action: evm::TransactionAction::Call(dummy_address),
+//         value: 0u32.into(),
+//         input: vec![],
+//     };
 
-    (
-        tx_call.clone().sign(&secret_key, Some(TEST_CHAIN_ID)),
-        tx_call,
-    )
-}
+//     (
+//         tx_call.clone().sign(&secret_key, Some(TEST_CHAIN_ID)),
+//         tx_call,
+//     )
+// }
 

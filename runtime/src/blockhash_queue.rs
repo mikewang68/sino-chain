@@ -55,7 +55,7 @@ impl BlockhashQueue {
     pub fn get_lamports_per_signature(&self, hash: &Hash) -> Option<u64> {
         self.ages
             .get(hash)
-            .map(|hash_age| hash_age.fee_calculator.lamports_per_signature)
+            .map(|hash_age| hash_age.fee_calculator.wens_per_signature)
     }
 
     /// Check if the age of the hash is within the max_age
@@ -135,7 +135,7 @@ impl BlockhashQueue {
     #[allow(deprecated)]
     pub fn get_recent_blockhashes(&self) -> impl Iterator<Item = recent_blockhashes::IterItem> {
         self.ages.iter().map(|(k, v)| {
-            recent_blockhashes::IterItem(v.hash_height, k, v.fee_calculator.lamports_per_signature)
+            recent_blockhashes::IterItem(v.hash_height, k, v.fee_calculator.wens_per_signature)
         })
     }
 

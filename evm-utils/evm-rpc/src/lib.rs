@@ -716,44 +716,44 @@ pub mod chain {
             block: Option<BlockId>,
         ) -> BoxFuture<Result<Hex<U256>, Error>>;
 
-        #[rpc(meta, name = "eth_getStorageAt")]
-        fn storage_at(
-            &self,
-            meta: Self::Metadata,
-            address: Hex<Address>,
-            data: Hex<U256>,
-            block: Option<BlockId>,
-        ) -> BoxFuture<Result<Hex<H256>, Error>>;
+        // #[rpc(meta, name = "eth_getStorageAt")]
+        // fn storage_at(
+        //     &self,
+        //     meta: Self::Metadata,
+        //     address: Hex<Address>,
+        //     data: Hex<U256>,
+        //     block: Option<BlockId>,
+        // ) -> BoxFuture<Result<Hex<H256>, Error>>;
 
-        #[rpc(meta, name = "eth_getTransactionCount")]
-        fn transaction_count(
-            &self,
-            meta: Self::Metadata,
-            address: Hex<Address>,
-            block: Option<BlockId>,
-        ) -> BoxFuture<Result<Hex<U256>, Error>>;
+        // #[rpc(meta, name = "eth_getTransactionCount")]
+        // fn transaction_count(
+        //     &self,
+        //     meta: Self::Metadata,
+        //     address: Hex<Address>,
+        //     block: Option<BlockId>,
+        // ) -> BoxFuture<Result<Hex<U256>, Error>>;
 
-        #[rpc(meta, name = "eth_getBlockTransactionCountByHash")]
-        fn block_transaction_count_by_hash(
-            &self,
-            meta: Self::Metadata,
-            block_hash: Hex<H256>,
-        ) -> BoxFuture<Result<Hex<usize>, Error>>;
+        // #[rpc(meta, name = "eth_getBlockTransactionCountByHash")]
+        // fn block_transaction_count_by_hash(
+        //     &self,
+        //     meta: Self::Metadata,
+        //     block_hash: Hex<H256>,
+        // ) -> BoxFuture<Result<Hex<usize>, Error>>;
 
-        #[rpc(meta, name = "eth_getBlockTransactionCountByNumber")]
-        fn block_transaction_count_by_number(
-            &self,
-            meta: Self::Metadata,
-            block: BlockId,
-        ) -> BoxFuture<Result<Hex<usize>, Error>>;
+        // #[rpc(meta, name = "eth_getBlockTransactionCountByNumber")]
+        // fn block_transaction_count_by_number(
+        //     &self,
+        //     meta: Self::Metadata,
+        //     block: BlockId,
+        // ) -> BoxFuture<Result<Hex<usize>, Error>>;
 
-        #[rpc(meta, name = "eth_getCode")]
-        fn code(
-            &self,
-            meta: Self::Metadata,
-            address: Hex<Address>,
-            block: Option<BlockId>,
-        ) -> BoxFuture<Result<Bytes, Error>>;
+        // #[rpc(meta, name = "eth_getCode")]
+        // fn code(
+        //     &self,
+        //     meta: Self::Metadata,
+        //     address: Hex<Address>,
+        //     block: Option<BlockId>,
+        // ) -> BoxFuture<Result<Bytes, Error>>;
 
         #[rpc(meta, name = "eth_getBlockByHash")]
         fn block_by_hash(
@@ -778,46 +778,46 @@ pub mod chain {
             tx_hash: Hex<H256>,
         ) -> BoxFuture<Result<Option<RPCTransaction>, Error>>;
 
-        #[rpc(meta, name = "eth_getTransactionByBlockHashAndIndex")]
-        fn transaction_by_block_hash_and_index(
-            &self,
-            meta: Self::Metadata,
-            block_hash: Hex<H256>,
-            tx_id: Hex<usize>,
-        ) -> BoxFuture<Result<Option<RPCTransaction>, Error>>;
+        // #[rpc(meta, name = "eth_getTransactionByBlockHashAndIndex")]
+        // fn transaction_by_block_hash_and_index(
+        //     &self,
+        //     meta: Self::Metadata,
+        //     block_hash: Hex<H256>,
+        //     tx_id: Hex<usize>,
+        // ) -> BoxFuture<Result<Option<RPCTransaction>, Error>>;
 
-        #[rpc(meta, name = "eth_getTransactionByBlockNumberAndIndex")]
-        fn transaction_by_block_number_and_index(
-            &self,
-            meta: Self::Metadata,
-            block: BlockId,
-            tx_id: Hex<usize>,
-        ) -> BoxFuture<Result<Option<RPCTransaction>, Error>>;
+        // #[rpc(meta, name = "eth_getTransactionByBlockNumberAndIndex")]
+        // fn transaction_by_block_number_and_index(
+        //     &self,
+        //     meta: Self::Metadata,
+        //     block: BlockId,
+        //     tx_id: Hex<usize>,
+        // ) -> BoxFuture<Result<Option<RPCTransaction>, Error>>;
 
-        #[rpc(meta, name = "eth_getTransactionReceipt")]
-        fn transaction_receipt(
-            &self,
-            meta: Self::Metadata,
-            tx_hash: Hex<H256>,
-        ) -> BoxFuture<Result<Option<RPCReceipt>, Error>>;
+        // #[rpc(meta, name = "eth_getTransactionReceipt")]
+        // fn transaction_receipt(
+        //     &self,
+        //     meta: Self::Metadata,
+        //     tx_hash: Hex<H256>,
+        // ) -> BoxFuture<Result<Option<RPCReceipt>, Error>>;
 
-        #[rpc(meta, name = "eth_call")]
-        fn call(
-            &self,
-            meta: Self::Metadata,
-            tx: RPCTransaction,
-            block: Option<BlockId>,
-            meta_keys: Option<Vec<String>>,
-        ) -> BoxFuture<Result<Bytes, Error>>;
+        // #[rpc(meta, name = "eth_call")]
+        // fn call(
+        //     &self,
+        //     meta: Self::Metadata,
+        //     tx: RPCTransaction,
+        //     block: Option<BlockId>,
+        //     meta_keys: Option<Vec<String>>,
+        // ) -> BoxFuture<Result<Bytes, Error>>;
 
-        #[rpc(meta, name = "eth_estimateGas")]
-        fn estimate_gas(
-            &self,
-            meta: Self::Metadata,
-            tx: RPCTransaction,
-            block: Option<BlockId>,
-            meta_keys: Option<Vec<String>>,
-        ) -> BoxFuture<Result<Hex<Gas>, Error>>;
+        // #[rpc(meta, name = "eth_estimateGas")]
+        // fn estimate_gas(
+        //     &self,
+        //     meta: Self::Metadata,
+        //     tx: RPCTransaction,
+        //     block: Option<BlockId>,
+        //     meta_keys: Option<Vec<String>>,
+        // ) -> BoxFuture<Result<Hex<Gas>, Error>>;
 
         #[rpc(meta, name = "eth_getLogs")]
         fn logs(
@@ -826,35 +826,35 @@ pub mod chain {
             log_filter: RPCLogFilter,
         ) -> BoxFuture<Result<Vec<RPCLog>, Error>>;
 
-        #[rpc(meta, name = "eth_getUncleByBlockHashAndIndex")]
-        fn uncle_by_block_hash_and_index(
-            &self,
-            meta: Self::Metadata,
-            block_hash: Hex<H256>,
-            uncle_id: Hex<U256>,
-        ) -> Result<Option<RPCBlock>, Error>;
+        // #[rpc(meta, name = "eth_getUncleByBlockHashAndIndex")]
+        // fn uncle_by_block_hash_and_index(
+        //     &self,
+        //     meta: Self::Metadata,
+        //     block_hash: Hex<H256>,
+        //     uncle_id: Hex<U256>,
+        // ) -> Result<Option<RPCBlock>, Error>;
 
-        #[rpc(meta, name = "eth_getUncleByBlockNumberAndIndex")]
-        fn uncle_by_block_number_and_index(
-            &self,
-            meta: Self::Metadata,
-            block: String,
-            uncle_id: Hex<U256>,
-        ) -> Result<Option<RPCBlock>, Error>;
+        // #[rpc(meta, name = "eth_getUncleByBlockNumberAndIndex")]
+        // fn uncle_by_block_number_and_index(
+        //     &self,
+        //     meta: Self::Metadata,
+        //     block: String,
+        //     uncle_id: Hex<U256>,
+        // ) -> Result<Option<RPCBlock>, Error>;
 
-        #[rpc(meta, name = "eth_getUncleCountByBlockHash")]
-        fn block_uncles_count_by_hash(
-            &self,
-            meta: Self::Metadata,
-            block_hash: Hex<H256>,
-        ) -> Result<Hex<usize>, Error>;
+        // #[rpc(meta, name = "eth_getUncleCountByBlockHash")]
+        // fn block_uncles_count_by_hash(
+        //     &self,
+        //     meta: Self::Metadata,
+        //     block_hash: Hex<H256>,
+        // ) -> Result<Hex<usize>, Error>;
 
-        #[rpc(meta, name = "eth_getUncleCountByBlockNumber")]
-        fn block_uncles_count_by_number(
-            &self,
-            meta: Self::Metadata,
-            block: String,
-        ) -> Result<Hex<usize>, Error>;
+        // #[rpc(meta, name = "eth_getUncleCountByBlockNumber")]
+        // fn block_uncles_count_by_number(
+        //     &self,
+        //     meta: Self::Metadata,
+        //     block: String,
+        // ) -> Result<Hex<usize>, Error>;
     }
 }
 
@@ -899,8 +899,8 @@ pub mod bridge {
             meta_keys: Option<Vec<String>>,
         ) -> BoxFuture<Result<Hex<H256>, Error>>;
 
-        #[rpc(meta, name = "eth_getCompilers")]
-        fn compilers(&self, meta: Self::Metadata) -> Result<Vec<String>, Error>;
+        // #[rpc(meta, name = "eth_getCompilers")]
+        // fn compilers(&self, meta: Self::Metadata) -> Result<Vec<String>, Error>;
     }
 }
 

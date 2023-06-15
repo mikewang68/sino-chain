@@ -294,7 +294,7 @@ impl AsyncRpcClient {
                 .value
                 .ok_or_else(|| ClientErrorKind::Custom("Invalid blockhash".to_string()))?;
             Ok(fee_calculator
-                .lamports_per_signature
+                .wens_per_signature
                 .saturating_mul(message.header.num_required_signatures as u64))
         } else {
             let serialized_encoded =
