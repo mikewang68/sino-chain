@@ -58,5 +58,5 @@ rlp = { git = "https://github.com/mikewang68/parity-common" }
 uint = { git = "https://github.com/mikewang68/parity-common"  }
 spl-memo = { path = "spl-memo" }
 # TODO: remove once jsonrpc-core-client 18.0.1 is released
-jsonrpc-core = { git = "https://github.com/paritytech/jsonrpc", rev = "e724d087defc0af35bc1c844049d1611588d8466", version = "18.0.0" }
-jsonrpc-core-client = { git = "https://github.com/paritytech/jsonrpc", rev = "e724d087defc0af35bc1c844049d1611588d8466", version = "18.0.0" }
+jsonrpc-core = { git = "https://github.com/mikewang68/jsonrpc", version = "18.0.0" }
+jsonrpc-core-client = { git = "https://github.com/mikewang68/jsonrpc", version = "18.0.0" }
