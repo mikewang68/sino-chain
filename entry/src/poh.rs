@@ -107,6 +107,7 @@ pub fn compute_hash_time_ns(hashes_sample_size: u64) -> u64 {
     start.elapsed().as_nanos() as u64
 }
 //计算每个tick要生产的Hash数
+/// duration * hashes sample size / （做 hashes_sample_size 次哈希所需毫秒数/（1000 * 1000））
 pub fn compute_hashes_per_tick(duration: Duration, hashes_sample_size: u64) -> u64 {
     let elapsed = compute_hash_time_ns(hashes_sample_size) / (1000 * 1000);
     duration.as_millis() as u64 * hashes_sample_size / elapsed

@@ -166,7 +166,7 @@ pub fn create_new_ledger(
     let version = sdk::shred_version::version_from_hash(&last_hash);
     // 将 slot 0 切片
     let shredder = Shredder::new(0, 0, 0, version).unwrap();
-    let shreds = shredder
+    let shreds: Vec<Shred> = shredder
         .entries_to_shreds(
             &Keypair::new(),
             &entries,
@@ -535,8 +535,8 @@ impl Blockstore {
         self.insert_shreds_handle_duplicate(
             shreds,
             vec![false; shreds_len],
-            leader_schedule,
-            is_trusted,
+            leader_schedule, //none
+            is_trusted, //f
             None,    // retransmit-sender
             &|_| {}, // handle-duplicates
             &mut BlockstoreInsertionMetrics::default(),
@@ -564,6 +564,7 @@ impl Blockstore {
         metrics.insert_lock_elapsed += start.as_us();
 
         let db = &*self.db;
+        // 获取表头？？
         let mut write_batch = db.batch()?;
 
         let mut just_inserted_shreds = HashMap::with_capacity(shreds.len());
@@ -703,16 +704,19 @@ impl Blockstore {
         metrics.chaining_elapsed += start.as_us();
 
         let mut start = Measure::start("Commit Working Sets");
+        // 检查是否有任何元数据被更改，如果有，将更新的元数据送入write batch
         let (should_signal, newly_completed_slots) = commit_slot_meta_working_set(
             &slot_meta_working_set,
             &self.completed_slots_senders,
             &mut write_batch,
         )?;
 
+        // 擦除错误coding信息
         for (erasure_set, erasure_meta) in erasure_metas {
             write_batch.put::<cf::ErasureMeta>(erasure_set.store_key(), &erasure_meta)?;
         }
 
+        // 索引相关
         for (&slot, index_working_set_entry) in index_working_set.iter() {
             if index_working_set_entry.did_insert_occur {
                 write_batch.put::<cf::Index>(slot, &index_working_set_entry.index)?;
@@ -785,6 +789,7 @@ impl Blockstore {
             get_index_meta_entry(&self.db, slot, index_working_set, index_meta_time);
 
         let index_meta = &mut index_meta_working_set_entry.index;
+        // 检查是否已经将这个分片的slot元数据插入到数据库中，取没插入数据库中的数据
         let slot_meta_entry = get_slot_meta_entry(
             &self.db,
             slot_meta_working_set,
@@ -828,7 +833,9 @@ impl Blockstore {
             }
         }
 
+        // 擦除slot偏移
         let erasure_set = shred.erasure_set();
+        // 获取需要插入的切片数据
         let newly_completed_data_sets = self.insert_data_shred(
             slot_meta,
             index_meta.data_mut(),
@@ -1550,6 +1557,7 @@ fn handle_chaining(
     Ok(())
 }
 
+/// 检查是否有任何元数据被更改，如果有，将更新的元数据送入write batch
 fn commit_slot_meta_working_set(
     slot_meta_working_set: &HashMap<u64, SlotMetaWorkingSetEntry>,
     completed_slots_senders: &[SyncSender<Vec<u64>>],
@@ -1636,6 +1644,7 @@ fn get_index_meta_entry<'a>(
     res
 }
 
+/// 检查是否已经将这个分片的slot元数据插入到数据库中，取没插入数据库中的数据
 fn get_slot_meta_entry<'a>(
     db: &Database,
     slot_meta_working_set: &'a mut HashMap<u64, SlotMetaWorkingSetEntry>,

@@ -32,7 +32,7 @@ impl Default for PohConfig {
     fn default() -> Self {
         Self::new_sleep(Duration::from_micros(unchecked_div_by_const!(
             1000 * 1000,
-            DEFAULT_TICKS_PER_SECOND
+            DEFAULT_TICKS_PER_SECOND //160
         )))
     }
 }
