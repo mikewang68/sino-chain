@@ -1635,6 +1635,7 @@ fn get_index_meta_entry<'a>(
     index_working_set: &'a mut HashMap<u64, IndexMetaWorkingSetEntry>, // 输入的空hashmap
     index_meta_time: &mut u64, // 0 
 ) -> &'a mut IndexMetaWorkingSetEntry {
+    // 读取Index列
     let index_cf = db.column::<cf::Index>();
     let mut total_start = Measure::start("Total elapsed");
     let res = index_working_set.entry(slot).or_insert_with(|| {
@@ -1659,21 +1660,26 @@ fn get_slot_meta_entry<'a>(
     slot: Slot,
     parent_slot: Slot,
 ) -> &'a mut SlotMetaWorkingSetEntry {
+    // 取数据库中SlotMeta列数据
     let meta_cf = db.column::<cf::SlotMeta>();
 
     // Check if we've already inserted the slot metadata for this shred's slot
     slot_meta_working_set.entry(slot).or_insert_with(|| {
         // Store a 2-tuple of the metadata (working copy, backup copy)
+        // 从数据库中获取slot键值对应的数据
         if let Some(mut meta) = meta_cf.get(slot).expect("Expect database get to succeed") {
+            // 复制数据，作为备份
             let backup = Some(meta.clone());
             // If parent_slot == None, then this is one of the orphans inserted
             // during the chaining process, see the function find_slot_meta_in_cached_state()
             // for details. Slots that are orphans are missing a parent_slot, so we should
             // fill in the parent now that we know it.
+            
+            // 如果meta数据没有父slot，将输入的父slot赋给meta数据
             if is_orphan(&meta) {
                 meta.parent_slot = Some(parent_slot);
             }
-
+            // 建立SlotMetaWorkingSetEntry
             SlotMetaWorkingSetEntry::new(Rc::new(RefCell::new(meta)), backup)
         } else {
             SlotMetaWorkingSetEntry::new(
