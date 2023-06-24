@@ -240,7 +240,7 @@ impl ShredId {
     }
 }
 
-/// Tuple which identifies erasure coding set that the shred belongs to.
+// Tuple which identifies erasure coding set that the shred belongs to.
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub(crate) struct ErasureSetId(Slot, /*fec_set_index:*/ u32);
 

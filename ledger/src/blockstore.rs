@@ -768,12 +768,12 @@ impl Blockstore {
     fn check_insert_data_shred<F>(
         &self,
         shred: Shred,
-        erasure_metas: &mut HashMap<ErasureSetId, ErasureMeta>,
-        index_working_set: &mut HashMap<u64, IndexMetaWorkingSetEntry>,
-        slot_meta_working_set: &mut HashMap<u64, SlotMetaWorkingSetEntry>,
+        erasure_metas: &mut HashMap<ErasureSetId, ErasureMeta>, // 输入的空hashmap
+        index_working_set: &mut HashMap<u64, IndexMetaWorkingSetEntry>, // 输入的空hashmap
+        slot_meta_working_set: &mut HashMap<u64, SlotMetaWorkingSetEntry>, // 输入的空hashmap
         write_batch: &mut WriteBatch,
-        just_inserted_shreds: &mut HashMap<ShredId, Shred>,
-        index_meta_time: &mut u64,
+        just_inserted_shreds: &mut HashMap<ShredId, Shred>, // 输入的空hashmap
+        index_meta_time: &mut u64, // 0
         is_trusted: bool,
         handle_duplicate: &F,
         leader_schedule: Option<&LeaderScheduleCache>,
@@ -781,14 +781,19 @@ impl Blockstore {
     ) -> std::result::Result<Vec<CompletedDataSetInfo>, InsertDataShredError>
     where
         F: Fn(Shred),
-    {
+    {   
+        // 获取ShredCommonHeader中的slot
         let slot = shred.slot();
+        // 获取ShredCommonHeader中的index
         let shred_index = u64::from(shred.index());
 
+        // 获取index_working_set 中 ShredCommonHeader里的slot对应的IndexMetaWorkingSetEntry， 
+        // 如果没有则从数据库中获取；若数据库中没有，则在该slot处新建一个默认的IndexMetaWorkingSetEntry
         let index_meta_working_set_entry =
             get_index_meta_entry(&self.db, slot, index_working_set, index_meta_time);
 
         let index_meta = &mut index_meta_working_set_entry.index;
+        
         // 检查是否已经将这个分片的slot元数据插入到数据库中，取没插入数据库中的数据
         let slot_meta_entry = get_slot_meta_entry(
             &self.db,
@@ -846,6 +851,7 @@ impl Blockstore {
         just_inserted_shreds.insert(shred.id(), shred);
         index_meta_working_set_entry.did_insert_occur = true;
         slot_meta_entry.did_insert_occur = true;
+        // 检查erasure_metas中是否存在erasure_set键的条目，如果不存在，则将blockstore中的erasure_meta插入到这个键的位置上。
         if let HashMapEntry::Vacant(entry) = erasure_metas.entry(erasure_set) {
             if let Some(meta) = self.erasure_meta(erasure_set).unwrap() {
                 entry.insert(meta);
@@ -1621,11 +1627,13 @@ fn send_signals(
     }
 }
 
+/// 获取index_working_set 中 ShredCommonHeader中的slot对应的IndexMetaWorkingSetEntry，
+/// 如果没有则从数据库中获取；若数据库中没有，则在该slot处新建一个默认的IndexMetaWorkingSetEntry
 fn get_index_meta_entry<'a>(
     db: &Database,
-    slot: Slot,
-    index_working_set: &'a mut HashMap<u64, IndexMetaWorkingSetEntry>,
-    index_meta_time: &mut u64,
+    slot: Slot, // ShredCommonHeader中的slot
+    index_working_set: &'a mut HashMap<u64, IndexMetaWorkingSetEntry>, // 输入的空hashmap
+    index_meta_time: &mut u64, // 0 
 ) -> &'a mut IndexMetaWorkingSetEntry {
     let index_cf = db.column::<cf::Index>();
     let mut total_start = Measure::start("Total elapsed");
