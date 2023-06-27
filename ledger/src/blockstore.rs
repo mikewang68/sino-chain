@@ -838,7 +838,7 @@ impl Blockstore {
             }
         }
 
-        // 擦除slot偏移
+        // 获取切片中需要擦除的slot
         let erasure_set = shred.erasure_set();
         // 获取需要插入的切片数据
         let newly_completed_data_sets = self.insert_data_shred(
@@ -1192,12 +1192,14 @@ impl Blockstore {
 
         // Commit step: commit all changes to the mutable structures at once, or none at all.
         // We don't want only a subset of these changes going through.
+        // 向数据库中的ShredData列添加数据，payload为切片data_header的大小
         write_batch.put_bytes::<cf::ShredData>(
             (slot, index),
             // Payload will be padded out to SHRED_PAYLOAD_SIZE
             // But only need to store the bytes within data_header.size
             &shred.payload[..shred.data_header.size as usize],
         )?;
+        // 将切片index插入data_index
         data_index.insert(index);
         let newly_completed_data_sets = update_slot_meta(
             last_in_slot,

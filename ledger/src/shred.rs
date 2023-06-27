@@ -223,7 +223,7 @@ pub struct Shred {
     pub common_header: ShredCommonHeader,
     pub data_header: DataShredHeader,
     pub coding_header: CodingShredHeader,
-    pub payload: Vec<u8>, //最大？
+    pub payload: Vec<u8>, //最大？  data_header.size
 }
 
 /// Tuple which uniquely identifies a shred should it exists.
