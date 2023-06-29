@@ -140,6 +140,7 @@ pub fn create_new_ledger(
 ) -> Result<Hash> {
     Blockstore::destroy(ledger_path)?;
 
+    // 将evm账户存入数据库，并创建evm state包含第一个slot和块哈希
     match evm_state_json {
         EvmStateJson::OpenEthereum(path) => {
             let extractor = OpenEthereumAccountExtractor::open_dump(path).unwrap();
@@ -159,13 +160,14 @@ pub fn create_new_ledger(
     let blockstore = Blockstore::open_with_access_type(ledger_path, access_type, None, false)?;
     let ticks_per_slot = genesis_config.ticks_per_slot;
     let hashes_per_tick = genesis_config.poh_config.hashes_per_tick.unwrap_or(0);
+    // 将 slot 0 填充
     let entries = create_ticks(ticks_per_slot, hashes_per_tick, genesis_config.hash());
     let last_hash = entries.last().unwrap().hash;
     // 由块0的哈希计算version
     let version = sdk::shred_version::version_from_hash(&last_hash);
-
+    // 将 slot 0 切片
     let shredder = Shredder::new(0, 0, 0, version).unwrap();
-    let shreds = shredder
+    let shreds: Vec<Shred> = shredder
         .entries_to_shreds(
             &Keypair::new(),
             &entries,
@@ -534,8 +536,8 @@ impl Blockstore {
         self.insert_shreds_handle_duplicate(
             shreds,
             vec![false; shreds_len],
-            leader_schedule,
-            is_trusted,
+            leader_schedule, //none
+            is_trusted, //f
             None,    // retransmit-sender
             &|_| {}, // handle-duplicates
             &mut BlockstoreInsertionMetrics::default(),
@@ -563,6 +565,7 @@ impl Blockstore {
         metrics.insert_lock_elapsed += start.as_us();
 
         let db = &*self.db;
+        // 获取表头？？
         let mut write_batch = db.batch()?;
 
         let mut just_inserted_shreds = HashMap::with_capacity(shreds.len());
@@ -702,16 +705,19 @@ impl Blockstore {
         metrics.chaining_elapsed += start.as_us();
 
         let mut start = Measure::start("Commit Working Sets");
+        // 检查是否有任何元数据被更改，如果有，将更新的元数据送入write batch
         let (should_signal, newly_completed_slots) = commit_slot_meta_working_set(
             &slot_meta_working_set,
             &self.completed_slots_senders,
             &mut write_batch,
         )?;
 
+        // 擦除错误coding信息
         for (erasure_set, erasure_meta) in erasure_metas {
             write_batch.put::<cf::ErasureMeta>(erasure_set.store_key(), &erasure_meta)?;
         }
 
+        // 索引相关
         for (&slot, index_working_set_entry) in index_working_set.iter() {
             if index_working_set_entry.did_insert_occur {
                 write_batch.put::<cf::Index>(slot, &index_working_set_entry.index)?;
@@ -763,12 +769,12 @@ impl Blockstore {
     fn check_insert_data_shred<F>(
         &self,
         shred: Shred,
-        erasure_metas: &mut HashMap<ErasureSetId, ErasureMeta>,
-        index_working_set: &mut HashMap<u64, IndexMetaWorkingSetEntry>,
-        slot_meta_working_set: &mut HashMap<u64, SlotMetaWorkingSetEntry>,
+        erasure_metas: &mut HashMap<ErasureSetId, ErasureMeta>, // 输入的空hashmap
+        index_working_set: &mut HashMap<u64, IndexMetaWorkingSetEntry>, // 输入的空hashmap
+        slot_meta_working_set: &mut HashMap<u64, SlotMetaWorkingSetEntry>, // 输入的空hashmap
         write_batch: &mut WriteBatch,
-        just_inserted_shreds: &mut HashMap<ShredId, Shred>,
-        index_meta_time: &mut u64,
+        just_inserted_shreds: &mut HashMap<ShredId, Shred>, // 输入的空hashmap
+        index_meta_time: &mut u64, // 0
         is_trusted: bool,
         handle_duplicate: &F,
         leader_schedule: Option<&LeaderScheduleCache>,
@@ -776,14 +782,20 @@ impl Blockstore {
     ) -> std::result::Result<Vec<CompletedDataSetInfo>, InsertDataShredError>
     where
         F: Fn(Shred),
-    {
+    {   
+        // 获取ShredCommonHeader中的slot
         let slot = shred.slot();
+        // 获取ShredCommonHeader中的index
         let shred_index = u64::from(shred.index());
 
+        // 获取index_working_set 中 ShredCommonHeader里的slot对应的IndexMetaWorkingSetEntry， 
+        // 如果没有则从数据库中获取；若数据库中没有，则在该slot处新建一个默认的IndexMetaWorkingSetEntry
         let index_meta_working_set_entry =
             get_index_meta_entry(&self.db, slot, index_working_set, index_meta_time);
 
         let index_meta = &mut index_meta_working_set_entry.index;
+        
+        // 检查是否已经将这个分片的slot元数据插入到数据库中，取没插入数据库中的数据
         let slot_meta_entry = get_slot_meta_entry(
             &self.db,
             slot_meta_working_set,
@@ -827,7 +839,9 @@ impl Blockstore {
             }
         }
 
+        // 获取切片中需要擦除的slot
         let erasure_set = shred.erasure_set();
+        // 获取需要插入的切片数据
         let newly_completed_data_sets = self.insert_data_shred(
             slot_meta,
             index_meta.data_mut(),
@@ -838,6 +852,7 @@ impl Blockstore {
         just_inserted_shreds.insert(shred.id(), shred);
         index_meta_working_set_entry.did_insert_occur = true;
         slot_meta_entry.did_insert_occur = true;
+        // 检查erasure_metas中是否存在erasure_set键的条目，如果不存在，则将blockstore中的erasure_meta插入到这个键的位置上。
         if let HashMapEntry::Vacant(entry) = erasure_metas.entry(erasure_set) {
             if let Some(meta) = self.erasure_meta(erasure_set).unwrap() {
                 entry.insert(meta);
@@ -1178,12 +1193,14 @@ impl Blockstore {
 
         // Commit step: commit all changes to the mutable structures at once, or none at all.
         // We don't want only a subset of these changes going through.
+        // 向数据库中的ShredData列添加数据，payload为切片data_header的大小
         write_batch.put_bytes::<cf::ShredData>(
             (slot, index),
             // Payload will be padded out to SHRED_PAYLOAD_SIZE
             // But only need to store the bytes within data_header.size
             &shred.payload[..shred.data_header.size as usize],
         )?;
+        // 将切片index插入data_index
         data_index.insert(index);
         let newly_completed_data_sets = update_slot_meta(
             last_in_slot,
@@ -1549,6 +1566,7 @@ fn handle_chaining(
     Ok(())
 }
 
+/// 检查是否有任何元数据被更改，如果有，将更新的元数据送入write batch
 fn commit_slot_meta_working_set(
     slot_meta_working_set: &HashMap<u64, SlotMetaWorkingSetEntry>,
     completed_slots_senders: &[SyncSender<Vec<u64>>],
@@ -1612,12 +1630,15 @@ fn send_signals(
     }
 }
 
+/// 获取index_working_set 中 ShredCommonHeader中的slot对应的IndexMetaWorkingSetEntry，
+/// 如果没有则从数据库中获取；若数据库中没有，则在该slot处新建一个默认的IndexMetaWorkingSetEntry
 fn get_index_meta_entry<'a>(
     db: &Database,
-    slot: Slot,
-    index_working_set: &'a mut HashMap<u64, IndexMetaWorkingSetEntry>,
-    index_meta_time: &mut u64,
+    slot: Slot, // ShredCommonHeader中的slot
+    index_working_set: &'a mut HashMap<u64, IndexMetaWorkingSetEntry>, // 输入的空hashmap
+    index_meta_time: &mut u64, // 0 
 ) -> &'a mut IndexMetaWorkingSetEntry {
+    // 读取Index列
     let index_cf = db.column::<cf::Index>();
     let mut total_start = Measure::start("Total elapsed");
     let res = index_working_set.entry(slot).or_insert_with(|| {
@@ -1635,27 +1656,33 @@ fn get_index_meta_entry<'a>(
     res
 }
 
+/// 检查是否已经将这个分片的slot元数据插入到数据库中，取没插入数据库中的数据
 fn get_slot_meta_entry<'a>(
     db: &Database,
     slot_meta_working_set: &'a mut HashMap<u64, SlotMetaWorkingSetEntry>,
     slot: Slot,
     parent_slot: Slot,
 ) -> &'a mut SlotMetaWorkingSetEntry {
+    // 取数据库中SlotMeta列数据
     let meta_cf = db.column::<cf::SlotMeta>();
 
     // Check if we've already inserted the slot metadata for this shred's slot
     slot_meta_working_set.entry(slot).or_insert_with(|| {
         // Store a 2-tuple of the metadata (working copy, backup copy)
+        // 从数据库中获取slot键值对应的数据
         if let Some(mut meta) = meta_cf.get(slot).expect("Expect database get to succeed") {
+            // 复制数据，作为备份
             let backup = Some(meta.clone());
             // If parent_slot == None, then this is one of the orphans inserted
             // during the chaining process, see the function find_slot_meta_in_cached_state()
             // for details. Slots that are orphans are missing a parent_slot, so we should
             // fill in the parent now that we know it.
+            
+            // 如果meta数据没有父slot，将输入的父slot赋给meta数据
             if is_orphan(&meta) {
                 meta.parent_slot = Some(parent_slot);
             }
-
+            // 建立SlotMetaWorkingSetEntry
             SlotMetaWorkingSetEntry::new(Rc::new(RefCell::new(meta)), backup)
         } else {
             SlotMetaWorkingSetEntry::new(

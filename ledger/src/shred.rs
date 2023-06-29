@@ -217,12 +217,13 @@ pub struct CodingShredHeader {
     pub position: u16,
 }
 
+/// 900字节 ipv6 不确定
 #[derive(Clone, Debug, PartialEq)]
-pub struct Shred {
+pub struct Shred { 
     pub common_header: ShredCommonHeader,
     pub data_header: DataShredHeader,
     pub coding_header: CodingShredHeader,
-    pub payload: Vec<u8>,
+    pub payload: Vec<u8>, //最大？  data_header.size
 }
 
 /// Tuple which uniquely identifies a shred should it exists.
@@ -239,7 +240,7 @@ impl ShredId {
     }
 }
 
-/// Tuple which identifies erasure coding set that the shred belongs to.
+// Tuple which identifies erasure coding set that the shred belongs to.
 #[derive(Clone, Copy, Debug, Eq, Hash, PartialEq)]
 pub(crate) struct ErasureSetId(Slot, /*fec_set_index:*/ u32);
 
@@ -730,9 +731,9 @@ impl Shredder {
         &self,
         keypair: &Keypair,
         entries: &[Entry],
-        is_last_in_slot: bool, // t
-        next_shred_index: u32, //0
-        next_code_index: u32, //0
+        is_last_in_slot: bool, //t
+        next_shred_index: u32, // 0
+        next_code_index: u32, // 0
     ) -> (
         Vec<Shred>, // data shreds
         Vec<Shred>, // coding shreds
@@ -741,10 +742,10 @@ impl Shredder {
         let data_shreds = self.entries_to_data_shreds(
             keypair,
             entries,
-            is_last_in_slot,
-            next_shred_index, // 0
-            next_shred_index, // fec_set_offset 0
-            &mut stats,
+            is_last_in_slot, //t
+            next_shred_index, //0 
+            next_shred_index, // fec_set_offset //0
+            &mut stats, // 0
         );
         let coding_shreds = Self::data_shreds_to_coding_shreds(
             keypair,
@@ -779,13 +780,15 @@ impl Shredder {
         process_stats: &mut ProcessShredsStats,
     ) -> Vec<Shred> {
         let mut serialize_time = Measure::start("shred_serialize");
+        // 序列化entries
         let serialized_shreds =
             bincode::serialize(entries).expect("Expect to serialize all entries");
         serialize_time.stop();
 
         let mut gen_data_time = Measure::start("shred_gen_data_time");
-        let payload_capacity = SIZE_OF_DATA_SHRED_PAYLOAD;
+        let payload_capacity = SIZE_OF_DATA_SHRED_PAYLOAD; //1051
         // Integer division to ensure we have enough shreds to fit all the data
+        // 切片数量
         let num_shreds = (serialized_shreds.len() + payload_capacity - 1) / payload_capacity;
         let last_shred_index = next_shred_index + num_shreds as u32 - 1;
         // 1) Generate data shreds
