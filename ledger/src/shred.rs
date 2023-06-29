@@ -290,15 +290,15 @@ impl Shred {
     }
 
     pub fn new_from_data(
-        slot: Slot,
-        index: u32,
-        parent_offset: u16,
-        data: Option<&[u8]>,
+        slot: Slot, //0
+        index: u32, //分片索引
+        parent_offset: u16, //0
+        data: Option<&[u8]>, //分片数据
         is_last_data: bool,
         is_last_in_slot: bool,
-        reference_tick: u8,
+        reference_tick: u8, //0
         version: u16,
-        fec_set_index: u32,
+        fec_set_index: u32, //分片索引
     ) -> Self {
         let payload_size = SHRED_PAYLOAD_SIZE;
         let mut payload = vec![0; payload_size];
@@ -730,9 +730,9 @@ impl Shredder {
         &self,
         keypair: &Keypair,
         entries: &[Entry],
-        is_last_in_slot: bool,
-        next_shred_index: u32,
-        next_code_index: u32,
+        is_last_in_slot: bool, // t
+        next_shred_index: u32, //0
+        next_code_index: u32, //0
     ) -> (
         Vec<Shred>, // data shreds
         Vec<Shred>, // coding shreds
@@ -742,15 +742,15 @@ impl Shredder {
             keypair,
             entries,
             is_last_in_slot,
-            next_shred_index,
-            next_shred_index, // fec_set_offset
+            next_shred_index, // 0
+            next_shred_index, // fec_set_offset 0
             &mut stats,
         );
         let coding_shreds = Self::data_shreds_to_coding_shreds(
             keypair,
             &data_shreds,
             is_last_in_slot,
-            next_code_index,
+            next_code_index, // 0
             &mut stats,
         )
         .unwrap();
@@ -762,6 +762,7 @@ impl Shredder {
     // Shred indices with the same value of:
     //   (shred_index - fec_set_offset) / MAX_DATA_SHREDS_PER_FEC_BLOCK
     // belong to the same FEC set.
+    /// shred_index - （shred_index - fec_set_offset）% 32
     pub fn fec_set_index(shred_index: u32, fec_set_offset: u32) -> Option<u32> {
         let diff = shred_index.checked_sub(fec_set_offset)?;
         Some(shred_index - diff % MAX_DATA_SHREDS_PER_FEC_BLOCK)
@@ -792,25 +793,27 @@ impl Shredder {
             let is_last_data = shred_index == last_shred_index;
             let is_last_in_slot = is_last_data && is_last_in_slot;
             let parent_offset = self.slot - self.parent_slot;
-            let fec_set_index = Self::fec_set_index(shred_index, fec_set_offset);
+            let fec_set_index = Self::fec_set_index(shred_index, fec_set_offset); // shred_index
             let mut shred = Shred::new_from_data(
-                self.slot,
-                shred_index,
-                parent_offset as u16,
-                Some(data),
+                self.slot, // 0
+                shred_index, // 分片索引
+                parent_offset as u16, // 0
+                Some(data), // 分片数据
                 is_last_data,
                 is_last_in_slot,
-                self.reference_tick,
-                self.version,
-                fec_set_index.unwrap(),
+                self.reference_tick, // 0
+                self.version, // 由genesis块哈希计算生成的version
+                fec_set_index.unwrap(), // shred_index
             );
+            // 将切片签名，并写入ShredCommonHeader
             Shredder::sign_shred(keypair, &mut shred);
             shred
         };
+        // 默认线程数为cpu数量/2
         let data_shreds: Vec<Shred> = PAR_THREAD_POOL.with(|thread_pool| {
             thread_pool.borrow().install(|| {
                 serialized_shreds
-                    .par_chunks(payload_capacity)
+                    .par_chunks(payload_capacity) //1050
                     .enumerate()
                     .map(|(i, shred_data)| {
                         let shred_index = next_shred_index + i as u32;
@@ -829,9 +832,9 @@ impl Shredder {
 
     pub fn data_shreds_to_coding_shreds(
         keypair: &Keypair,
-        data_shreds: &[Shred],
+        data_shreds: &[Shred], // 数据切片
         is_last_in_slot: bool,
-        next_code_index: u32,
+        next_code_index: u32, // 0
         process_stats: &mut ProcessShredsStats,
     ) -> Result<Vec<Shred>> {
         if data_shreds.is_empty() {
@@ -841,8 +844,9 @@ impl Shredder {
         // 1) Generate coding shreds
         let mut coding_shreds: Vec<_> = PAR_THREAD_POOL.with(|thread_pool| {
             thread_pool.borrow().install(|| {
+                // 将数据切片以32个为一组分组
                 data_shreds
-                    .par_chunks(MAX_DATA_SHREDS_PER_FEC_BLOCK as usize)
+                    .par_chunks(MAX_DATA_SHREDS_PER_FEC_BLOCK as usize) // 32 
                     .enumerate()
                     .flat_map(|(i, shred_data_batch)| {
                         // Assumption here is that, for now, each fec block has
@@ -854,7 +858,7 @@ impl Shredder {
                             .checked_add(
                                 u32::try_from(i)
                                     .unwrap()
-                                    .checked_mul(MAX_DATA_SHREDS_PER_FEC_BLOCK)
+                                    .checked_mul(MAX_DATA_SHREDS_PER_FEC_BLOCK)//32
                                     .unwrap(),
                             )
                             .unwrap();
@@ -938,6 +942,7 @@ impl Shredder {
             && shred.common_header.version == version
             && shred.fec_set_index() == fec_set_index));
         let num_data = data.len();
+        // 当为slot最后的时候（2*32 - 分组数据大小）与 分组数据大小 中的最大值
         let num_coding = if is_last_in_slot {
             (2 * MAX_DATA_SHREDS_PER_FEC_BLOCK as usize)
                 .saturating_sub(num_data)
@@ -962,10 +967,10 @@ impl Shredder {
             .map(|(i, parity)| {
                 let index = next_code_index + u32::try_from(i).unwrap();
                 let mut shred = Shred::new_empty_coding(
-                    slot,
-                    index,
-                    fec_set_index,
-                    num_data,
+                    slot, // 分组中第一个数据切片的common header中的slot
+                    index, // 分组中第一个数据切片的common header中的index
+                    fec_set_index, // 分组中第一个数据切片的common header中的fec_set_index
+                    num_data, // 分组数据大小
                     num_coding,
                     u16::try_from(i).unwrap(), // position
                     version,
