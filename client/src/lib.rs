@@ -4,7 +4,7 @@ extern crate serde_derive;
 
 // pub mod blockhash_query;
 pub mod client_error;
-// pub mod http_sender;
+pub mod http_sender;
 // pub mod mock_sender;
 // pub mod nonce_utils;
 // pub mod perf_utils;
@@ -22,4 +22,3 @@ pub mod rpc_response;
 // pub mod thin_client;
 // pub mod tpu_client;
 // pub mod transaction_executor;
-// test
