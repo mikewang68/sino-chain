@@ -31,18 +31,18 @@ pub type StringAmount = String;
 pub type StringDecimals = String;
 // pub const MAX_BASE58_BYTES: usize = 128;
 
-// /// A duplicate representation of an Account for pretty JSON serialization
-// #[derive(Serialize, Deserialize, Clone, Debug)]
-// #[serde(rename_all = "camelCase")]
-// pub struct UiAccount {
-//     pub lamports: u64,
-//     #[serde(default)]
-//     pub lamports_str: StringAmount,
-//     pub data: UiAccountData,
-//     pub owner: String,
-//     pub executable: bool,
-//     pub rent_epoch: Epoch,
-// }
+/// A duplicate representation of an Account for pretty JSON serialization
+#[derive(Serialize, Deserialize, Clone, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct UiAccount {
+    pub lamports: u64,
+    #[serde(default)]
+    pub lamports_str: StringAmount,
+    pub data: UiAccountData,
+    pub owner: String,
+    pub executable: bool,
+    pub rent_epoch: Epoch,
+}
 
 // #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 // #[serde(rename_all = "camelCase", untagged)]
