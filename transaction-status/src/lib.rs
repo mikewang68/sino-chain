@@ -271,13 +271,13 @@ impl Default for TransactionStatusMeta {
 //     }
 // }
 
-// #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-// #[serde(rename_all = "camelCase")]
-// pub enum TransactionConfirmationStatus {
-//     Processed,
-//     Confirmed,
-//     Finalized,
-// }
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum TransactionConfirmationStatus {
+    Processed,
+    Confirmed,
+    Finalized,
+}
 
 // #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 // #[serde(rename_all = "camelCase")]
@@ -324,15 +324,15 @@ impl Default for TransactionStatusMeta {
 //     }
 // }
 
-// #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-// #[serde(rename_all = "camelCase")]
-// pub struct ConfirmedTransactionStatusWithSignature {
-//     pub signature: Signature,
-//     pub slot: Slot,
-//     pub err: Option<TransactionError>,
-//     pub memo: Option<String>,
-//     pub block_time: Option<UnixTimestamp>,
-// }
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ConfirmedTransactionStatusWithSignature {
+    pub signature: Signature,
+    pub slot: Slot,
+    pub err: Option<TransactionError>,
+    pub memo: Option<String>,
+    pub block_time: Option<UnixTimestamp>,
+}
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -455,21 +455,21 @@ pub type Rewards = Vec<Reward>;
 //     pub block_height: Option<u64>,
 // }
 
-// #[derive(Debug, PartialEq, Serialize, Deserialize)]
-// #[serde(rename_all = "camelCase")]
-// pub struct UiConfirmedBlock {
-//     pub previous_blockhash: String,
-//     pub blockhash: String,
-//     pub parent_slot: Slot,
-//     #[serde(default, skip_serializing_if = "Option::is_none")]
-//     pub transactions: Option<Vec<EncodedTransactionWithStatusMeta>>,
-//     #[serde(default, skip_serializing_if = "Option::is_none")]
-//     pub signatures: Option<Vec<String>>,
-//     #[serde(default, skip_serializing_if = "Option::is_none")]
-//     pub rewards: Option<Rewards>,
-//     pub block_time: Option<UnixTimestamp>,
-//     pub block_height: Option<u64>,
-// }
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct UiConfirmedBlock {
+    pub previous_blockhash: String,
+    pub blockhash: String,
+    pub parent_slot: Slot,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub transactions: Option<Vec<EncodedTransactionWithStatusMeta>>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub signatures: Option<Vec<String>>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub rewards: Option<Rewards>,
+    pub block_time: Option<UnixTimestamp>,
+    pub block_height: Option<u64>,
+}
 
 // impl From<EncodedConfirmedBlock> for UiConfirmedBlock {
 //     fn from(block: EncodedConfirmedBlock) -> Self {
