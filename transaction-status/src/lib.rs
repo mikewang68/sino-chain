@@ -500,13 +500,13 @@ pub struct UiConfirmedBlock {
 //     }
 // }
 
-// #[derive(Debug, Clone, Copy, Eq, Hash, PartialEq, Serialize, Deserialize)]
-// #[serde(rename_all = "camelCase")]
-// pub enum TransactionDetails {
-//     Full,
-//     Signatures,
-//     None,
-// }
+#[derive(Debug, Clone, Copy, Eq, Hash, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum TransactionDetails {
+    Full,
+    Signatures,
+    None,
+}
 
 // impl Default for TransactionDetails {
 //     fn default() -> Self {
@@ -639,15 +639,15 @@ pub struct UiConfirmedBlock {
 //     }
 // }
 
-// #[derive(Serialize, Deserialize, Clone, Copy, Debug, Eq, Hash, PartialEq)]
-// #[serde(rename_all = "camelCase")]
-// pub enum UiTransactionEncoding {
-//     Binary, // Legacy. Retained for RPC backwards compatibility
-//     Base64,
-//     Base58,
-//     Json,
-//     JsonParsed,
-// }
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, Eq, Hash, PartialEq)]
+#[serde(rename_all = "camelCase")]
+pub enum UiTransactionEncoding {
+    Binary, // Legacy. Retained for RPC backwards compatibility
+    Base64,
+    Base58,
+    Json,
+    JsonParsed,
+}
 
 // impl fmt::Display for UiTransactionEncoding {
 //     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
