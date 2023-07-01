@@ -52,16 +52,16 @@ pub struct UiAccount {
 //     Binary(String, UiAccountEncoding),
 // }
 
-// #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash)]
-// #[serde(rename_all = "camelCase")]
-// pub enum UiAccountEncoding {
-//     Binary, // Legacy. Retained for RPC backwards compatibility
-//     Base58,
-//     Base64,
-//     JsonParsed,
-//     #[serde(rename = "base64+zstd")]
-//     Base64Zstd,
-// }
+#[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash)]
+#[serde(rename_all = "camelCase")]
+pub enum UiAccountEncoding {
+    Binary, // Legacy. Retained for RPC backwards compatibility
+    Base58,
+    Base64,
+    JsonParsed,
+    #[serde(rename = "base64+zstd")]
+    Base64Zstd,
+}
 
 // impl UiAccount {
 //     fn encode_bs58<T: ReadableAccount>(
@@ -185,12 +185,12 @@ pub struct UiAccount {
 //     }
 // }
 
-// #[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
-// #[serde(rename_all = "camelCase")]
-// pub struct UiDataSliceConfig {
-//     pub offset: usize,
-//     pub length: usize,
-// }
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct UiDataSliceConfig {
+    pub offset: usize,
+    pub length: usize,
+}
 
 // fn slice_data(data: &[u8], data_slice_config: Option<UiDataSliceConfig>) -> &[u8] {
 //     if let Some(UiDataSliceConfig { offset, length }) = data_slice_config {
