@@ -6,7 +6,7 @@ pub mod parsed_token_accounts;
 // pub mod evm_rpc_impl;
 pub mod rpc;
 pub mod rpc_completed_slots_service;
-// pub mod rpc_health;
+pub mod rpc_health;
 // pub mod rpc_pubsub;
 // pub mod rpc_pubsub_service;
 // pub mod rpc_service;
