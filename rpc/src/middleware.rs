@@ -65,3 +65,75 @@ pub fn restore_original_call(call: Call) -> Result<(MethodCall, BatchId), Call> 
         _ => Err(call),
     }
 }
+
+#[derive(Clone, Default)]
+pub struct BatchLimiter;
+impl Middleware<Arc<JsonRpcRequestProcessor>> for BatchLimiter {
+    type Future = FutureResponse;
+    type CallFuture = FutureOutput;
+
+    fn on_request<F, X>(
+        &self,
+        request: Request,
+        meta: Arc<JsonRpcRequestProcessor>,
+        next: F,
+    ) -> Either<Self::Future, X>
+    where
+        F: Fn(Request, Arc<JsonRpcRequestProcessor>) -> X + Send + Sync,
+        X: std::future::Future<Output = Option<Response>> + Send + 'static,
+    {
+        if let Request::Batch(calls) = request {
+            let mut rng = thread_rng();
+            let mut batch_id = rng.gen::<BatchId>();
+            while !meta.batch_state_map.add_batch(batch_id) {
+                batch_id = rng.gen();
+            }
+            debug!("Create batch {}", batch_id);
+            let patched_request = Request::Batch(patch_calls(calls, batch_id));
+            Either::Left(Box::pin(next(patched_request, meta.clone()).map(
+                move |res| {
+                    meta.batch_state_map.remove_batch(&batch_id);
+                    res
+                },
+            )))
+        } else {
+            Either::Right(next(request, meta))
+        }
+    }
+
+    fn on_call<F, X>(
+        &self,
+        call: Call,
+        meta: Arc<JsonRpcRequestProcessor>,
+        next: F,
+    ) -> Either<Self::CallFuture, X>
+    where
+        F: FnOnce(Call, Arc<JsonRpcRequestProcessor>) -> X + Send,
+        X: std::future::Future<Output = Option<Output>> + Send + 'static,
+    {
+        let (original_call, batch_id) = match restore_original_call(call) {
+            Ok((original_call, batch_id)) => (original_call, batch_id),
+            Err(call) => return Either::Right(next(call, meta)),
+        };
+        let next_future = next(Call::MethodCall(original_call.clone()), meta.clone());
+        Either::Left(Box::pin(async move {
+            if let Err(error) = meta.check_batch_timeout(batch_id) {
+                return Some(Output::Failure(Failure {
+                    jsonrpc: Some(Version::V2),
+                    error,
+                    id: original_call.id,
+                }));
+            }
+            let start = std::time::Instant::now();
+            next_future
+                .map(move |res| {
+                    let total_duration = meta
+                        .batch_state_map
+                        .update_duration(batch_id, start.elapsed());
+                    debug!("Batch total duration: {:?}", total_duration);
+                    res
+                })
+                .await
+        }))
+    }
+}
