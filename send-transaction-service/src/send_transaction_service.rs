@@ -1,22 +1,33 @@
-// use {
-//     crate::tpu_info::TpuInfo,
-//     log::*,
-//     solana_metrics::{datapoint_warn, inc_new_counter_info},
-//     solana_runtime::{bank::Bank, bank_forks::BankForks},
-//     solana_sdk::{hash::Hash, nonce_account, pubkey::Pubkey, signature::Signature},
-//     std::{
-//         collections::hash_map::{Entry, HashMap},
-//         net::{SocketAddr, UdpSocket},
-//         sync::{
-//             mpsc::{Receiver, RecvTimeoutError},
-//             Arc, RwLock,
-//         },
-//         thread::{self, Builder, JoinHandle},
-//         time::{Duration, Instant},
-//     },
-// };
+use {
+    crate::tpu_info::TpuInfo,
+    log::*,
+    metrics::{datapoint_warn, inc_new_counter_info},
+    runtime::{bank::Bank, bank_forks::BankForks},
+    sdk::{hash::Hash, nonce_account, pubkey::Pubkey, signature::Signature},
+    std::{
+        collections::hash_map::{Entry, HashMap},
+        net::{SocketAddr, UdpSocket},
+        sync::{
+            mpsc::{Receiver, RecvTimeoutError},
+            Arc, RwLock,
+        },
+        thread::{self, Builder, JoinHandle},
+        time::{Duration, Instant},
+    },
+};
 
-use std::thread::{self, Builder, JoinHandle},
+/// Maximum size of the transaction queue
+const MAX_TRANSACTION_QUEUE_SIZE: usize = 10_000; // This seems like a lot but maybe it needs to be bigger one day
+/// Default retry interval
+const DEFAULT_RETRY_RATE_MS: u64 = 2_000;
+/// Default number of leaders to forward transactions to
+const DEFAULT_LEADER_FORWARD_COUNT: u64 = 2;
+/// Default max number of time the service will retry broadcast
+const DEFAULT_SERVICE_MAX_RETRIES: usize = usize::MAX;
+
+pub struct SendTransactionService {
+    thread: JoinHandle<()>,
+}
 
 pub struct TransactionInfo {
     pub signature: Signature,
@@ -46,8 +57,33 @@ impl TransactionInfo {
     }
 }
 
-pub struct SendTransactionService {
-    thread: JoinHandle<()>,
+#[derive(Default, Debug, PartialEq)]
+struct ProcessTransactionsResult {
+    rooted: u64,
+    expired: u64,
+    retried: u64,
+    max_retries_elapsed: u64,
+    failed: u64,
+    retained: u64,
+}
+
+#[derive(Clone, Debug)]
+pub struct Config {
+    pub retry_rate_ms: u64,
+    pub leader_forward_count: u64,
+    pub default_max_retries: Option<usize>,
+    pub service_max_retries: usize,
+}
+
+impl Default for Config {
+    fn default() -> Self {
+        Self {
+            retry_rate_ms: DEFAULT_RETRY_RATE_MS,
+            leader_forward_count: DEFAULT_LEADER_FORWARD_COUNT,
+            default_max_retries: None,
+            service_max_retries: DEFAULT_SERVICE_MAX_RETRIES,
+        }
+    }
 }
 
 impl SendTransactionService {
@@ -294,5 +330,578 @@ impl SendTransactionService {
 
     pub fn join(self) -> thread::Result<()> {
         self.thread.join()
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use {
+        super::*,
+        crate::tpu_info::NullTpuInfo,
+        sdk::{
+            account::AccountSharedData,
+            genesis_config::create_genesis_config,
+            nonce::{self, state::DurableNonce},
+            pubkey::Pubkey,
+            signature::Signer,
+            system_program, system_transaction,
+        },
+        std::sync::mpsc::channel,
+    };
+
+    #[test]
+    fn service_exit() {
+        let tpu_address = "127.0.0.1:0".parse().unwrap();
+        let bank = Bank::default_for_tests();
+        let bank_forks = Arc::new(RwLock::new(BankForks::new(bank)));
+        let (sender, receiver) = channel();
+
+        let send_tranaction_service = SendTransactionService::new::<NullTpuInfo>(
+            tpu_address,
+            &bank_forks,
+            None,
+            receiver,
+            1000,
+            1,
+        );
+
+        drop(sender);
+        send_tranaction_service.join().unwrap();
+    }
+
+    #[test]
+    fn process_transactions() {
+        logger::setup();
+
+        let (genesis_config, mint_keypair) = create_genesis_config(4);
+        let bank = Bank::new_for_tests(&genesis_config);
+        let bank_forks = Arc::new(RwLock::new(BankForks::new(bank)));
+        let send_socket = UdpSocket::bind("0.0.0.0:0").unwrap();
+        let tpu_address = "127.0.0.1:0".parse().unwrap();
+        let config = Config {
+            leader_forward_count: 1,
+            ..Config::default()
+        };
+
+        let root_bank = Arc::new(Bank::new_from_parent(
+            &bank_forks.read().unwrap().working_bank(),
+            &Pubkey::default(),
+            1,
+        ));
+        let rooted_signature = root_bank
+            .transfer(1, &mint_keypair, &mint_keypair.pubkey())
+            .unwrap();
+
+        let working_bank = Arc::new(Bank::new_from_parent(&root_bank, &Pubkey::default(), 2));
+
+        let non_rooted_signature = working_bank
+            .transfer(2, &mint_keypair, &mint_keypair.pubkey())
+            .unwrap();
+
+        let failed_signature = {
+            let blockhash = working_bank.last_blockhash();
+            let transaction =
+                system_transaction::transfer(&mint_keypair, &Pubkey::default(), 1, blockhash);
+            let signature = transaction.signatures[0];
+            working_bank.process_transaction(&transaction).unwrap_err();
+            signature
+        };
+
+        let mut transactions = HashMap::new();
+
+        info!("Expired transactions are dropped...");
+        transactions.insert(
+            Signature::default(),
+            TransactionInfo::new(
+                Signature::default(),
+                vec![],
+                root_bank.block_height() - 1,
+                None,
+                None,
+            ),
+        );
+        let result = SendTransactionService::process_transactions::<NullTpuInfo>(
+            &working_bank,
+            &root_bank,
+            &send_socket,
+            &tpu_address,
+            &mut transactions,
+            &None,
+            &config,
+        );
+        assert!(transactions.is_empty());
+        assert_eq!(
+            result,
+            ProcessTransactionsResult {
+                expired: 1,
+                ..ProcessTransactionsResult::default()
+            }
+        );
+
+        info!("Rooted transactions are dropped...");
+        transactions.insert(
+            rooted_signature,
+            TransactionInfo::new(
+                rooted_signature,
+                vec![],
+                working_bank.block_height(),
+                None,
+                None,
+            ),
+        );
+        let result = SendTransactionService::process_transactions::<NullTpuInfo>(
+            &working_bank,
+            &root_bank,
+            &send_socket,
+            &tpu_address,
+            &mut transactions,
+            &None,
+            &config,
+        );
+        assert!(transactions.is_empty());
+        assert_eq!(
+            result,
+            ProcessTransactionsResult {
+                rooted: 1,
+                ..ProcessTransactionsResult::default()
+            }
+        );
+
+        info!("Failed transactions are dropped...");
+        transactions.insert(
+            failed_signature,
+            TransactionInfo::new(
+                failed_signature,
+                vec![],
+                working_bank.block_height(),
+                None,
+                None,
+            ),
+        );
+        let result = SendTransactionService::process_transactions::<NullTpuInfo>(
+            &working_bank,
+            &root_bank,
+            &send_socket,
+            &tpu_address,
+            &mut transactions,
+            &None,
+            &config,
+        );
+        assert!(transactions.is_empty());
+        assert_eq!(
+            result,
+            ProcessTransactionsResult {
+                failed: 1,
+                ..ProcessTransactionsResult::default()
+            }
+        );
+
+        info!("Non-rooted transactions are kept...");
+        transactions.insert(
+            non_rooted_signature,
+            TransactionInfo::new(
+                non_rooted_signature,
+                vec![],
+                working_bank.block_height(),
+                None,
+                None,
+            ),
+        );
+        let result = SendTransactionService::process_transactions::<NullTpuInfo>(
+            &working_bank,
+            &root_bank,
+            &send_socket,
+            &tpu_address,
+            &mut transactions,
+            &None,
+            &config,
+        );
+        assert_eq!(transactions.len(), 1);
+        assert_eq!(
+            result,
+            ProcessTransactionsResult {
+                retained: 1,
+                ..ProcessTransactionsResult::default()
+            }
+        );
+        transactions.clear();
+
+        info!("Unknown transactions are retried...");
+        transactions.insert(
+            Signature::default(),
+            TransactionInfo::new(
+                Signature::default(),
+                vec![],
+                working_bank.block_height(),
+                None,
+                None,
+            ),
+        );
+        let result = SendTransactionService::process_transactions::<NullTpuInfo>(
+            &working_bank,
+            &root_bank,
+            &send_socket,
+            &tpu_address,
+            &mut transactions,
+            &None,
+            &config,
+        );
+        assert_eq!(transactions.len(), 1);
+        assert_eq!(
+            result,
+            ProcessTransactionsResult {
+                retried: 1,
+                ..ProcessTransactionsResult::default()
+            }
+        );
+        transactions.clear();
+
+        info!("Transactions are only retried until max_retries");
+        transactions.insert(
+            Signature::new(&[1; 64]),
+            TransactionInfo::new(
+                Signature::default(),
+                vec![],
+                working_bank.block_height(),
+                None,
+                Some(0),
+            ),
+        );
+        transactions.insert(
+            Signature::new(&[2; 64]),
+            TransactionInfo::new(
+                Signature::default(),
+                vec![],
+                working_bank.block_height(),
+                None,
+                Some(1),
+            ),
+        );
+        let result = SendTransactionService::process_transactions::<NullTpuInfo>(
+            &working_bank,
+            &root_bank,
+            &send_socket,
+            &tpu_address,
+            &mut transactions,
+            &None,
+            &config,
+        );
+        assert_eq!(transactions.len(), 1);
+        assert_eq!(
+            result,
+            ProcessTransactionsResult {
+                retried: 1,
+                max_retries_elapsed: 1,
+                ..ProcessTransactionsResult::default()
+            }
+        );
+        let result = SendTransactionService::process_transactions::<NullTpuInfo>(
+            &working_bank,
+            &root_bank,
+            &send_socket,
+            &tpu_address,
+            &mut transactions,
+            &None,
+            &config,
+        );
+        assert!(transactions.is_empty());
+        assert_eq!(
+            result,
+            ProcessTransactionsResult {
+                max_retries_elapsed: 1,
+                ..ProcessTransactionsResult::default()
+            }
+        );
+    }
+
+    #[test]
+    fn test_retry_durable_nonce_transactions() {
+        logger::setup();
+
+        let (genesis_config, mint_keypair) = create_genesis_config(4);
+        let bank = Bank::new_for_tests(&genesis_config);
+        let bank_forks = Arc::new(RwLock::new(BankForks::new(bank)));
+        let send_socket = UdpSocket::bind("0.0.0.0:0").unwrap();
+        let tpu_address = "127.0.0.1:0".parse().unwrap();
+        let config = Config {
+            leader_forward_count: 1,
+            ..Config::default()
+        };
+
+        let root_bank = Arc::new(Bank::new_from_parent(
+            &bank_forks.read().unwrap().working_bank(),
+            &Pubkey::default(),
+            1,
+        ));
+        let rooted_signature = root_bank
+            .transfer(1, &mint_keypair, &mint_keypair.pubkey())
+            .unwrap();
+
+        let nonce_address = Pubkey::new_unique();
+        let durable_nonce =
+            DurableNonce::from_blockhash(&Hash::new_unique(), /*separate_domains:*/ true);
+        let nonce_state = nonce::state::Versions::new(
+            nonce::State::Initialized(nonce::state::Data::new(
+                Pubkey::default(),
+                durable_nonce,
+                42,
+            )),
+            true, // separate_domains
+        );
+        let nonce_account =
+            AccountSharedData::new_data(43, &nonce_state, &system_program::id()).unwrap();
+        root_bank.store_account(&nonce_address, &nonce_account);
+
+        let working_bank = Arc::new(Bank::new_from_parent(&root_bank, &Pubkey::default(), 2));
+        let non_rooted_signature = working_bank
+            .transfer(2, &mint_keypair, &mint_keypair.pubkey())
+            .unwrap();
+
+        let last_valid_block_height = working_bank.block_height() + 300;
+
+        let failed_signature = {
+            let blockhash = working_bank.last_blockhash();
+            let transaction =
+                system_transaction::transfer(&mint_keypair, &Pubkey::default(), 1, blockhash);
+            let signature = transaction.signatures[0];
+            working_bank.process_transaction(&transaction).unwrap_err();
+            signature
+        };
+
+        let mut transactions = HashMap::new();
+
+        info!("Rooted durable-nonce transactions are dropped...");
+        transactions.insert(
+            rooted_signature,
+            TransactionInfo::new(
+                rooted_signature,
+                vec![],
+                last_valid_block_height,
+                Some((nonce_address, *durable_nonce.as_hash())),
+                None,
+            ),
+        );
+        let result = SendTransactionService::process_transactions::<NullTpuInfo>(
+            &working_bank,
+            &root_bank,
+            &send_socket,
+            &tpu_address,
+            &mut transactions,
+            &None,
+            &config,
+        );
+        assert!(transactions.is_empty());
+        assert_eq!(
+            result,
+            ProcessTransactionsResult {
+                rooted: 1,
+                ..ProcessTransactionsResult::default()
+            }
+        );
+        // Nonce expired case
+        transactions.insert(
+            rooted_signature,
+            TransactionInfo::new(
+                rooted_signature,
+                vec![],
+                last_valid_block_height,
+                Some((nonce_address, Hash::new_unique())),
+                None,
+            ),
+        );
+        let result = SendTransactionService::process_transactions::<NullTpuInfo>(
+            &working_bank,
+            &root_bank,
+            &send_socket,
+            &tpu_address,
+            &mut transactions,
+            &None,
+            &config,
+        );
+        assert!(transactions.is_empty());
+        assert_eq!(
+            result,
+            ProcessTransactionsResult {
+                rooted: 1,
+                ..ProcessTransactionsResult::default()
+            }
+        );
+
+        // Expired durable-nonce transactions are dropped; nonce has advanced...
+        info!("Expired durable-nonce transactions are dropped...");
+        transactions.insert(
+            Signature::default(),
+            TransactionInfo::new(
+                Signature::default(),
+                vec![],
+                last_valid_block_height,
+                Some((nonce_address, Hash::new_unique())),
+                None,
+            ),
+        );
+        let result = SendTransactionService::process_transactions::<NullTpuInfo>(
+            &working_bank,
+            &root_bank,
+            &send_socket,
+            &tpu_address,
+            &mut transactions,
+            &None,
+            &config,
+        );
+        assert!(transactions.is_empty());
+        assert_eq!(
+            result,
+            ProcessTransactionsResult {
+                expired: 1,
+                ..ProcessTransactionsResult::default()
+            }
+        );
+        // ... or last_valid_block_height timeout has passed
+        transactions.insert(
+            Signature::default(),
+            TransactionInfo::new(
+                Signature::default(),
+                vec![],
+                root_bank.block_height() - 1,
+                Some((nonce_address, *durable_nonce.as_hash())),
+                None,
+            ),
+        );
+        let result = SendTransactionService::process_transactions::<NullTpuInfo>(
+            &working_bank,
+            &root_bank,
+            &send_socket,
+            &tpu_address,
+            &mut transactions,
+            &None,
+            &config,
+        );
+        assert!(transactions.is_empty());
+        assert_eq!(
+            result,
+            ProcessTransactionsResult {
+                expired: 1,
+                ..ProcessTransactionsResult::default()
+            }
+        );
+
+        info!("Failed durable-nonce transactions are dropped...");
+        transactions.insert(
+            failed_signature,
+            TransactionInfo::new(
+                failed_signature,
+                vec![],
+                last_valid_block_height,
+                Some((nonce_address, Hash::new_unique())), // runtime should advance nonce on failed transactions
+                None,
+            ),
+        );
+        let result = SendTransactionService::process_transactions::<NullTpuInfo>(
+            &working_bank,
+            &root_bank,
+            &send_socket,
+            &tpu_address,
+            &mut transactions,
+            &None,
+            &config,
+        );
+        assert!(transactions.is_empty());
+        assert_eq!(
+            result,
+            ProcessTransactionsResult {
+                failed: 1,
+                ..ProcessTransactionsResult::default()
+            }
+        );
+
+        info!("Non-rooted durable-nonce transactions are kept...");
+        transactions.insert(
+            non_rooted_signature,
+            TransactionInfo::new(
+                non_rooted_signature,
+                vec![],
+                last_valid_block_height,
+                Some((nonce_address, Hash::new_unique())), // runtime advances nonce when transaction lands
+                None,
+            ),
+        );
+        let result = SendTransactionService::process_transactions::<NullTpuInfo>(
+            &working_bank,
+            &root_bank,
+            &send_socket,
+            &tpu_address,
+            &mut transactions,
+            &None,
+            &config,
+        );
+        assert_eq!(transactions.len(), 1);
+        assert_eq!(
+            result,
+            ProcessTransactionsResult {
+                retained: 1,
+                ..ProcessTransactionsResult::default()
+            }
+        );
+        transactions.clear();
+
+        info!("Unknown durable-nonce transactions are retried until nonce advances...");
+        transactions.insert(
+            Signature::default(),
+            TransactionInfo::new(
+                Signature::default(),
+                vec![],
+                last_valid_block_height,
+                Some((nonce_address, *durable_nonce.as_hash())),
+                None,
+            ),
+        );
+        let result = SendTransactionService::process_transactions::<NullTpuInfo>(
+            &working_bank,
+            &root_bank,
+            &send_socket,
+            &tpu_address,
+            &mut transactions,
+            &None,
+            &config,
+        );
+        assert_eq!(transactions.len(), 1);
+        assert_eq!(
+            result,
+            ProcessTransactionsResult {
+                retried: 1,
+                ..ProcessTransactionsResult::default()
+            }
+        );
+        // Advance nonce
+        let new_durable_nonce =
+            DurableNonce::from_blockhash(&Hash::new_unique(), /*separate_domains:*/ true);
+        let new_nonce_state = nonce::state::Versions::new(
+            nonce::State::Initialized(nonce::state::Data::new(
+                Pubkey::default(),
+                new_durable_nonce,
+                42,
+            )),
+            true, // separate_domains
+        );
+        let nonce_account =
+            AccountSharedData::new_data(43, &new_nonce_state, &system_program::id()).unwrap();
+        working_bank.store_account(&nonce_address, &nonce_account);
+        let result = SendTransactionService::process_transactions::<NullTpuInfo>(
+            &working_bank,
+            &root_bank,
+            &send_socket,
+            &tpu_address,
+            &mut transactions,
+            &None,
+            &config,
+        );
+        assert_eq!(transactions.len(), 0);
+        assert_eq!(
+            result,
+            ProcessTransactionsResult {
+                expired: 1,
+                ..ProcessTransactionsResult::default()
+            }
+        );
     }
 }
