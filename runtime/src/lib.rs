@@ -15,6 +15,7 @@ pub mod inline_spl_token;
 pub mod accounts_update_notifier_interface;
 pub mod append_vec;
 pub mod blockhash_queue;
+pub mod snapshot_utils;
 pub mod secondary_index;
 pub mod non_circulating_supply;
 pub mod status_cache;
