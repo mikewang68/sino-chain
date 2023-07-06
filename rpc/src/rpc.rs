@@ -3053,7 +3053,7 @@ pub mod rpc_minimal {
             debug!("get_version rpc request received");
             let version = version::Version::default();
             Ok(RpcVersionInfo {
-                core: version.to_string(),
+                sino_core: version.to_string(),
                 feature_set: Some(version.feature_set),
             })
         }
