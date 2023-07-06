@@ -15,6 +15,7 @@ pub mod accounts_update_notifier_interface;
 pub mod append_vec;
 pub mod blockhash_queue;
 pub mod secondary_index;
+pub mod non_circulating_supply;
 pub mod status_cache;
 pub mod read_only_accounts_cache;
 pub mod rent_collector;
