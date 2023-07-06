@@ -3,6 +3,7 @@ use {
         StringAmount, 
         StringDecimals,
     },
+    sdk::pubkey::Pubkey,
     std::str::FromStr,
 };
 
@@ -30,6 +31,17 @@ pub fn real_number_string_trimmed(amount: u64, decimals: u8) -> StringDecimals {
     s
 }
 // -----------
+
+// A helper function to convert spl_token::id() as spl_sdk::pubkey::Pubkey to
+// solana_sdk::pubkey::Pubkey
+fn spl_token_id() -> Pubkey {
+    Pubkey::new_from_array(spl_token::id().to_bytes())
+}
+
+// Check if the provided program id as a known SPL Token program id
+pub fn is_known_spl_token_id(program_id: &Pubkey) -> bool {
+    *program_id == spl_token_id()
+}
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
