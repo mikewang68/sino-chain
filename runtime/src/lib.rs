@@ -19,6 +19,7 @@ pub mod read_only_accounts_cache;
 pub mod rent_collector;
 pub mod epoch_stakes;
 pub mod stakes;
+pub mod commitment;
 pub mod stake_delegations;
 pub mod stake_history;
 pub mod vote_account;
