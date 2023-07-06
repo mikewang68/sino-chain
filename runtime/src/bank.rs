@@ -131,6 +131,13 @@ pub trait DropCallback: fmt::Debug {
     fn clone_box(&self) -> Box<dyn DropCallback + Send + Sync>;
 }
 
+pub struct TransactionSimulationResult {
+    pub result: Result<()>,
+    pub logs: TransactionLogMessages,
+    pub post_simulation_accounts: Vec<(Pubkey, AccountSharedData)>,
+    pub units_consumed: u64,
+}
+
 #[derive(AbiExample, Clone, Debug, PartialEq)]
 pub struct TransactionLogInfo {
     pub signature: Signature,
