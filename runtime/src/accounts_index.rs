@@ -41,6 +41,27 @@ use {
 
 pub type RefCount = u64;
 
+#[derive(Debug, Clone, Copy)]
+pub enum IndexKey {
+    ProgramId(Pubkey),
+    SplTokenMint(Pubkey),
+    SplTokenOwner(Pubkey),
+    VelasAccountStorage(Pubkey),
+    VelasAccountOwner(Pubkey),
+    VelasAccountOperational(Pubkey),
+    VelasRelyingOwner(Pubkey),
+}
+
+#[derive(Debug, Default)]
+pub struct ScanConfig {
+    /// checked by the scan. When true, abort scan.
+    pub abort: Option<Arc<AtomicBool>>,
+
+    /// true to allow return of all matching items and allow them to be unsorted.
+    /// This is more efficient.
+    pub collect_all_unsorted: bool,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum AccountIndex {
     ProgramId,
