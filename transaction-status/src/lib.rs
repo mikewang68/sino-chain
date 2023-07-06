@@ -289,15 +289,15 @@ pub enum TransactionConfirmationStatus {
     Finalized,
 }
 
-// #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-// #[serde(rename_all = "camelCase")]
-// pub struct TransactionStatus {
-//     pub slot: Slot,
-//     pub confirmations: Option<usize>, // None = rooted
-//     pub status: Result<()>,           // legacy field
-//     pub err: Option<TransactionError>,
-//     pub confirmation_status: Option<TransactionConfirmationStatus>,
-// }
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TransactionStatus {
+    pub slot: Slot,
+    pub confirmations: Option<usize>, // None = rooted
+    pub status: Result<()>,           // legacy field
+    pub err: Option<TransactionError>,
+    pub confirmation_status: Option<TransactionConfirmationStatus>,
+}
 
 // impl TransactionStatus {
 //     pub fn satisfies_commitment(&self, commitment_config: CommitmentConfig) -> bool {
@@ -344,15 +344,15 @@ pub struct ConfirmedTransactionStatusWithSignature {
     pub block_time: Option<UnixTimestamp>,
 }
 
-// #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-// #[serde(rename_all = "camelCase")]
-// pub struct Reward {
-//     pub pubkey: String,
-//     pub lamports: i64,
-//     pub post_balance: u64, // Account balance in lamports after `lamports` was applied
-//     pub reward_type: Option<RewardType>,
-//     pub commission: Option<u8>, // Vote account commission when the reward was credited, only present for voting and staking rewards
-// }
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Reward {
+    pub pubkey: String,
+    pub lamports: i64,
+    pub post_balance: u64, // Account balance in lamports after `lamports` was applied
+    pub reward_type: Option<RewardType>,
+    pub commission: Option<u8>, // Vote account commission when the reward was credited, only present for voting and staking rewards
+}
 
 pub type Rewards = Vec<Reward>;
 
@@ -531,12 +531,12 @@ pub enum TransactionDetails {
 //     pub block_time: Option<UnixTimestamp>,
 // }
 
-// #[derive(Debug, Clone, PartialEq)]
-// pub struct ConfirmedTransactionWithOptionalMetadata {
-//     pub slot: Slot,
-//     pub transaction: TransactionWithOptionalMetadata,
-//     pub block_time: Option<UnixTimestamp>,
-// }
+#[derive(Debug, Clone, PartialEq)]
+pub struct ConfirmedTransactionWithOptionalMetadata {
+    pub slot: Slot,
+    pub transaction: TransactionWithOptionalMetadata,
+    pub block_time: Option<UnixTimestamp>,
+}
 
 // impl From<ConfirmedTransaction> for ConfirmedTransactionWithOptionalMetadata {
 //     fn from(confirmed_tx: ConfirmedTransaction) -> Self {
@@ -558,14 +558,14 @@ pub enum TransactionDetails {
 //     }
 // }
 
-// #[derive(Debug, PartialEq, Serialize, Deserialize)]
-// #[serde(rename_all = "camelCase")]
-// pub struct EncodedConfirmedTransaction {
-//     pub slot: Slot,
-//     #[serde(flatten)]
-//     pub transaction: EncodedTransactionWithStatusMeta,
-//     pub block_time: Option<UnixTimestamp>,
-// }
+#[derive(Debug, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct EncodedConfirmedTransaction {
+    pub slot: Slot,
+    #[serde(flatten)]
+    pub transaction: EncodedTransactionWithStatusMeta,
+    pub block_time: Option<UnixTimestamp>,
+}
 
 // /// A duplicate representation of a Transaction for pretty JSON serialization
 // #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -864,3 +864,11 @@ pub enum UiTransactionEncoding {
 //         assert!(status.satisfies_commitment(CommitmentConfig::confirmed()));
 //     }
 // }
+
+#[derive(Debug, PartialEq, Serialize, Deserialize, AbiExample, AbiEnumVisitor, Clone, Copy)]
+pub enum RewardType {
+    Fee,
+    Rent,
+    Staking,
+    Voting,
+}
