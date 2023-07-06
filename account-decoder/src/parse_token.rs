@@ -21,6 +21,19 @@ pub fn real_number_string(amount: u64, decimals: u8) -> StringDecimals {
         amount.to_string()
     }
 }
+
+pub fn token_amount_to_ui_amount(amount: u64, decimals: u8) -> UiTokenAmount {
+    let amount_decimals = 10_usize
+        .checked_pow(decimals as u32)
+        .map(|dividend| amount as f64 / dividend as f64);
+    UiTokenAmount {
+        ui_amount: amount_decimals,
+        decimals,
+        amount: amount.to_string(),
+        ui_amount_string: real_number_string_trimmed(amount, decimals),
+    }
+}
+
 // -----------
 pub fn real_number_string_trimmed(amount: u64, decimals: u8) -> StringDecimals {
     let mut s = real_number_string(amount, decimals);
