@@ -91,6 +91,12 @@ enum ShredSource {
     Recovered,
 }
 
+#[derive(Default)]
+pub struct SignatureInfosForAddress {
+    pub infos: Vec<ConfirmedTransactionStatusWithSignature>,
+    pub found_before: bool,
+}
+
 #[derive(Error, Debug)]
 pub enum InsertDataShredError {
     Exists,
