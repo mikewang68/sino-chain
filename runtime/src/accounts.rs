@@ -33,3 +33,8 @@ pub struct Accounts {
     /// being processed by banking/replay threads
     pub(crate) account_locks: Mutex<AccountLocks>,
 }
+
+pub enum AccountAddressFilter {
+    Exclude, // exclude all addresses matching the filter
+    Include, // only include addresses matching the filter
+}
