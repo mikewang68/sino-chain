@@ -4,6 +4,7 @@
 pub mod hardened_unpack;
 pub mod genesis_utils;
 pub mod bank;
+pub mod bank_forks;
 pub mod accounts;
 pub mod accounts_db;
 pub mod ancestors;
