@@ -8,6 +8,7 @@ pub mod bank_forks;
 pub mod accounts;
 pub mod accounts_db;
 pub mod ancestors;
+pub mod snapshot_config;
 pub mod accounts_index;
 pub mod accounts_cache;
 pub mod inline_spl_token;
