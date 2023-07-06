@@ -10,6 +10,7 @@ pub mod accounts_db;
 pub mod ancestors;
 pub mod accounts_index;
 pub mod accounts_cache;
+pub mod inline_spl_token;
 pub mod accounts_update_notifier_interface;
 pub mod append_vec;
 pub mod blockhash_queue;

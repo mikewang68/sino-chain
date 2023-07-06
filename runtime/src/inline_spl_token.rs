@@ -1,0 +1,2 @@
+pub const SPL_TOKEN_ACCOUNT_MINT_OFFSET: usize = 0;
+pub const SPL_TOKEN_ACCOUNT_OWNER_OFFSET: usize = 32;
