@@ -4,7 +4,7 @@
 pub mod cluster_info;
 // mod cluster_info_metrics;
 // #[macro_use]
-// pub mod contact_info;
+pub mod contact_info;
 // pub mod crds;
 // pub mod crds_entry;
 // pub mod crds_gossip;
