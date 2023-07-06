@@ -16,15 +16,25 @@ extern crate serde_derive;
 // pub mod parse_vote;
 // pub mod token_balances;
 
-pub use {runtime::bank::RewardType};
+pub use {crate::extract_memos::extract_and_fmt_memos, solana_runtime::bank::RewardType};
 use {
-
+    crate::{
+        parse_accounts::{parse_accounts, ParsedAccount},
+        parse_instruction::{parse, ParsedInstruction},
+    },
     account_decoder::parse_token::UiTokenAmount,
     sdk::{
+        clock::{Slot, UnixTimestamp},
+        commitment_config::CommitmentConfig,
         deserialize_utils::default_on_eof,
         instruction::CompiledInstruction,
-        transaction::{Result},
+        message::{Message, MessageHeader},
+        pubkey::Pubkey,
+        sanitize::Sanitize,
+        signature::Signature,
+        transaction::{Result, Transaction, TransactionError},
     },
+    std::fmt,
 };
 // /// A duplicate representation of an Instruction for pretty JSON serialization
 // #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
@@ -334,53 +344,53 @@ pub struct ConfirmedTransactionStatusWithSignature {
     pub block_time: Option<UnixTimestamp>,
 }
 
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct Reward {
-    pub pubkey: String,
-    pub lamports: i64,
-    pub post_balance: u64, // Account balance in lamports after `lamports` was applied
-    pub reward_type: Option<RewardType>,
-    pub commission: Option<u8>, // Vote account commission when the reward was credited, only present for voting and staking rewards
-}
+// #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+// #[serde(rename_all = "camelCase")]
+// pub struct Reward {
+//     pub pubkey: String,
+//     pub lamports: i64,
+//     pub post_balance: u64, // Account balance in lamports after `lamports` was applied
+//     pub reward_type: Option<RewardType>,
+//     pub commission: Option<u8>, // Vote account commission when the reward was credited, only present for voting and staking rewards
+// }
 
 pub type Rewards = Vec<Reward>;
 
-// #[derive(Clone, Debug, PartialEq)]
-// pub struct ConfirmedBlock {
-//     pub previous_blockhash: String,
-//     pub blockhash: String,
-//     pub parent_slot: Slot,
-//     pub transactions: Vec<TransactionWithMetadata>,
-//     pub rewards: Rewards,
-//     pub block_time: Option<UnixTimestamp>,
-//     pub block_height: Option<u64>,
-// }
+#[derive(Clone, Debug, PartialEq)]
+pub struct ConfirmedBlock {
+    pub previous_blockhash: String,
+    pub blockhash: String,
+    pub parent_slot: Slot,
+    pub transactions: Vec<TransactionWithMetadata>,
+    pub rewards: Rewards,
+    pub block_time: Option<UnixTimestamp>,
+    pub block_height: Option<u64>,
+}
 
-// #[derive(Clone, Debug, PartialEq)]
-// pub struct ConfirmedBlockWithOptionalMetadata {
-//     pub previous_blockhash: String,
-//     pub blockhash: String,
-//     pub parent_slot: Slot,
-//     pub transactions: Vec<TransactionWithOptionalMetadata>,
-//     pub rewards: Rewards,
-//     pub block_time: Option<UnixTimestamp>,
-//     pub block_height: Option<u64>,
-// }
+#[derive(Clone, Debug, PartialEq)]
+pub struct ConfirmedBlockWithOptionalMetadata {
+    pub previous_blockhash: String,
+    pub blockhash: String,
+    pub parent_slot: Slot,
+    pub transactions: Vec<TransactionWithOptionalMetadata>,
+    pub rewards: Rewards,
+    pub block_time: Option<UnixTimestamp>,
+    pub block_height: Option<u64>,
+}
 
-// impl From<ConfirmedBlock> for ConfirmedBlockWithOptionalMetadata {
-//     fn from(block: ConfirmedBlock) -> Self {
-//         Self {
-//             previous_blockhash: block.previous_blockhash,
-//             blockhash: block.blockhash,
-//             parent_slot: block.parent_slot,
-//             transactions: block.transactions.into_iter().map(Into::into).collect(),
-//             rewards: block.rewards,
-//             block_time: block.block_time,
-//             block_height: block.block_height,
-//         }
-//     }
-// }
+impl From<ConfirmedBlock> for ConfirmedBlockWithOptionalMetadata {
+    fn from(block: ConfirmedBlock) -> Self {
+        Self {
+            previous_blockhash: block.previous_blockhash,
+            blockhash: block.blockhash,
+            parent_slot: block.parent_slot,
+            transactions: block.transactions.into_iter().map(Into::into).collect(),
+            rewards: block.rewards,
+            block_time: block.block_time,
+            block_height: block.block_height,
+        }
+    }
+}
 
 // impl ConfirmedBlockWithOptionalMetadata {
 //     pub fn encode(self, encoding: UiTransactionEncoding) -> EncodedConfirmedBlock {
