@@ -1501,6 +1501,13 @@ pub enum EvmStateJson<'a> {
     None
 }
 
+#[macro_export]
+macro_rules! get_tmp_ledger_path {
+    () => {
+        $crate::blockstore::get_ledger_path_from_name($crate::tmp_ledger_name!())
+    };
+}
+
 #[cfg(unix)]
 fn adjust_ulimit_nofile(enforce_ulimit_nofile: bool) -> Result<()> {
     // Rocks DB likes to have many open files.  The default open file descriptor limit is
