@@ -35,6 +35,8 @@ pub mod bucket_map_holder;
 pub mod bucket_map_holder_stats;
 pub mod accounts_index_storage;
 pub mod waitable_condvar;
+//pub mod serde_snapshot;
+pub mod shared_buffer_reader;
 
 #[macro_use]
 extern crate metrics;
