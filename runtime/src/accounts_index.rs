@@ -40,7 +40,7 @@ use {
 // use velas_relying_party_program::RelyingPartyData;
 
 pub type RefCount = u64;
-pub type ScanResult<T> = Result<T, ScanError>;
+pub type ScanResult<T, ScanError> = Result<T, ScanError>;
 
 #[derive(Debug, Clone, Copy)]
 pub enum IndexKey {
