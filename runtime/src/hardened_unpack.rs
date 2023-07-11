@@ -1,7 +1,7 @@
 // use crate::snapshot_utils::EVM_STATE_DIR;
 use {
     bzip2::bufread::BzDecoder,
-    rand::{thread_rng, Rng}
+    rand::{thread_rng, Rng},
     log::*,
     sdk::genesis_config::{DEFAULT_GENESIS_FILE},
     std::{
