@@ -87,7 +87,7 @@ use {
         },
     },
 };
-
+use sdk::account::AccountSharedData;
 
 #[derive(Debug, PartialEq, Serialize, Deserialize, Clone, Copy)]
 pub enum RewardType {
