@@ -89,6 +89,8 @@ use {
 };
 use sdk::account::AccountSharedData;
 
+use crate::status_cache::SlotDelta;
+
 #[derive(Debug, PartialEq, Serialize, Deserialize, Clone, Copy)]
 pub enum RewardType {
     Fee,
@@ -229,6 +231,9 @@ pub struct StatusCacheRc {
     /// A cache of signature statuses
     pub status_cache: Arc<RwLock<BankStatusCache>>,
 }
+
+#[frozen_abi(digest = "HdYCU65Jwfv9sF3C8k6ZmjUAaXSkJwazebuur21v8JtY")]
+pub type BankSlotDelta = SlotDelta<Result<()>>;
 
 #[derive(Debug, Clone, Default)]
 pub struct BuiltinPrograms {
