@@ -21,7 +21,7 @@
 #[cfg(test)]
 use std::{thread::sleep, time::Duration};
 
-use crate::accounts_index::AccountsIndexConfig;
+use crate::accounts_index::{AccountsIndexConfig, ACCOUNTS_INDEX_CONFIG_FOR_TESTING};
 use {
     crate::{
         // accounts_background_service::{DroppedSlotsSender, SendDroppedBankCallback},
@@ -172,6 +172,14 @@ struct RecycleStores {
 
 pub type SnapshotStorage = Vec<Arc<AccountStorageEntry>>;
 pub type SnapshotStorages = Vec<SnapshotStorage>;
+
+pub const ACCOUNTS_DB_CONFIG_FOR_TESTING: AccountsDbConfig = AccountsDbConfig {
+    index: Some(ACCOUNTS_INDEX_CONFIG_FOR_TESTING),
+    accounts_hash_cache_path: None,
+    filler_account_count: None,
+    hash_calc_num_passes: None,
+    write_cache_limit_bytes: None,
+};
 
 #[derive(Clone, Default, Debug, Serialize, Deserialize, PartialEq, AbiExample)]
 pub struct BankHashInfo {

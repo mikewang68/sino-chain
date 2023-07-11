@@ -42,6 +42,18 @@ use {
 pub type RefCount = u64;
 pub type ScanResult<T, ScanError> = Result<T, ScanError>;
 
+pub const BINS_FOR_TESTING: usize = 2; // we want > 1, but each bin is a few disk files with a disk based index, so fewer is better
+pub const BINS_FOR_BENCHMARKS: usize = 2;
+pub const FLUSH_THREADS_TESTING: usize = 1;
+pub const ACCOUNTS_INDEX_CONFIG_FOR_TESTING: AccountsIndexConfig = AccountsIndexConfig {
+    bins: Some(BINS_FOR_TESTING),
+    flush_threads: Some(FLUSH_THREADS_TESTING),
+    drives: None,
+    index_limit_mb: None,
+    ages_to_stay_in_cache: None,
+    scan_results_limit_bytes: None,
+};
+
 #[derive(Debug, Clone, Copy)]
 pub enum IndexKey {
     ProgramId(Pubkey),
