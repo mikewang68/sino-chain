@@ -18,7 +18,7 @@ pub struct NonCirculatingSupply {
     pub accounts: Vec<Pubkey>,
 }
 
-pub fn calculate_non_circulating_supply(bank: &Arc<Bank>) -> ScanResult<NonCirculatingSupply> {
+pub fn calculate_non_circulating_supply<ScanError>(bank: &Arc<Bank>) -> ScanResult<NonCirculatingSupply, ScanError> {
     debug!("Updating Bank supply, epoch: {}", bank.epoch());
     let mut non_circulating_accounts_set: HashSet<Pubkey> = HashSet::new();
 
