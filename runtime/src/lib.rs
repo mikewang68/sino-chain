@@ -38,6 +38,7 @@ pub mod waitable_condvar;
 //pub mod serde_snapshot;
 pub mod shared_buffer_reader;
 pub mod snapshot_archive_info;
+pub mod snapshot_package;
 
 #[macro_use]
 extern crate metrics;
