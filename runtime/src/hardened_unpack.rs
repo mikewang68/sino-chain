@@ -1,10 +1,12 @@
 // use crate::snapshot_utils::EVM_STATE_DIR;
 use {
     bzip2::bufread::BzDecoder,
+    rand::{thread_rng, Rng}
     log::*,
     sdk::genesis_config::{DEFAULT_GENESIS_FILE},
     std::{
         fs::{self, File},
+        collections::HashMap,
         io::{BufReader, Read},
         path::{
             Component::{self, CurDir, Normal},
@@ -324,4 +326,131 @@ fn validate_inside_dst(dst: &Path, file_dst: &Path) -> Result<PathBuf> {
         )));
     }
     Ok(canon_target)
+}
+
+const MAX_SNAPSHOT_ARCHIVE_UNPACKED_APPARENT_SIZE: u64 = 64 * 1024 * 1024 * 1024 * 1024;
+
+// 4 TiB;
+// This is the actually consumed disk usage for sparse files
+const MAX_SNAPSHOT_ARCHIVE_UNPACKED_ACTUAL_SIZE: u64 = 4 * 1024 * 1024 * 1024 * 1024;
+
+const MAX_SNAPSHOT_ARCHIVE_UNPACKED_COUNT: u64 = 5_000_000;
+
+pub const EVM_STATE_DIR: &str = "evm-state";
+
+pub type UnpackedAppendVecMap = HashMap<String, PathBuf>;
+
+// select/choose only 'index' out of each # of 'divisions' of total items.
+pub struct ParallelSelector {
+    pub index: usize,
+    pub divisions: usize,
+}
+
+impl ParallelSelector {
+    pub fn select_index(&self, index: usize) -> bool {
+        index % self.divisions == self.index
+    }
+}
+
+#[allow(clippy::is_digit_ascii_radix)]
+fn all_digits(v: &str) -> bool {
+    if v.is_empty() {
+        return false;
+    }
+    for x in v.chars() {
+        if !x.is_digit(10) {
+            return false;
+        }
+    }
+    true
+}
+
+#[allow(clippy::is_digit_ascii_radix)]
+fn like_storage(v: &str) -> bool {
+    let mut periods = 0;
+    let mut saw_numbers = false;
+    for x in v.chars() {
+        if !x.is_digit(10) {
+            if x == '.' {
+                if periods > 0 || !saw_numbers {
+                    return false;
+                }
+                saw_numbers = false;
+                periods += 1;
+            } else {
+                return false;
+            }
+        } else {
+            saw_numbers = true;
+        }
+    }
+    saw_numbers && periods == 1
+}
+
+fn is_valid_snapshot_archive_entry(parts: &[&str], kind: tar::EntryType) -> bool {
+    match (parts, kind) {
+        (["version"], Regular) => true,
+        (["accounts"], Directory) => true,
+        (["accounts", file], GNUSparse) if like_storage(file) => true,
+        (["accounts", file], Regular) if like_storage(file) => true,
+        (["snapshots"], Directory) => true,
+        (["snapshots", "status_cache"], GNUSparse) => true,
+        (["snapshots", "status_cache"], Regular) => true,
+        (["snapshots", dir, file], GNUSparse) if all_digits(dir) && all_digits(file) => true,
+        (["snapshots", dir, file], Regular) if all_digits(dir) && all_digits(file) => true,
+        (["snapshots", dir], Directory) if all_digits(dir) => true,
+        (["snapshots", dir, evm_state_dir], Directory)
+            if *evm_state_dir == EVM_STATE_DIR && all_digits(dir) => true,
+        (["snapshots", dir, evm_state_dir, ..], _)
+            if *evm_state_dir == EVM_STATE_DIR && all_digits(dir) => true,
+        _ => false,
+    }
+}
+
+pub fn unpack_snapshot<A: Read>(
+    archive: &mut Archive<A>,
+    ledger_dir: &Path,
+    account_paths: &[PathBuf],
+    parallel_selector: Option<ParallelSelector>,
+) -> Result<UnpackedAppendVecMap> {
+    assert!(!account_paths.is_empty());
+    let mut unpacked_append_vec_map = UnpackedAppendVecMap::new();
+    let mut i = 0;
+
+    unpack_archive(
+        archive,
+        MAX_SNAPSHOT_ARCHIVE_UNPACKED_APPARENT_SIZE,
+        MAX_SNAPSHOT_ARCHIVE_UNPACKED_ACTUAL_SIZE,
+        MAX_SNAPSHOT_ARCHIVE_UNPACKED_COUNT,
+        |parts, kind| {
+            if is_valid_snapshot_archive_entry(parts, kind) {
+                i += 1;
+                match &parallel_selector {
+                    Some(parallel_selector) => {
+                        if !parallel_selector.select_index(i - 1) {
+                            return UnpackPath::Ignore;
+                        }
+                    }
+                    None => {}
+                };
+                if let ["accounts", file] = parts {
+                    // Randomly distribute the accounts files about the available `account_paths`,
+                    let path_index = thread_rng().gen_range(0, account_paths.len());
+                    match account_paths.get(path_index).map(|path_buf| {
+                        unpacked_append_vec_map
+                            .insert(file.to_string(), path_buf.join("accounts").join(file));
+                        path_buf.as_path()
+                    }) {
+                        Some(path) => UnpackPath::Valid(path),
+                        None => UnpackPath::Invalid,
+                    }
+                } else {
+                    UnpackPath::Valid(ledger_dir)
+                }
+            } else {
+                UnpackPath::Invalid
+            }
+        },
+    )
+    .map(|_| unpacked_append_vec_map)
 }
