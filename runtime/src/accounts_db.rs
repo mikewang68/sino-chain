@@ -20,6 +20,8 @@
 
 #[cfg(test)]
 use std::{thread::sleep, time::Duration};
+
+use crate::accounts_index::AccountsIndexConfig;
 use {
     crate::{
         // accounts_background_service::{DroppedSlotsSender, SendDroppedBankCallback},
@@ -150,6 +152,15 @@ impl IsCached for AccountInfo {
 }
 impl IndexValue for AccountInfo {}
 
+#[derive(Debug, Default, Clone)]
+pub struct AccountsDbConfig {
+    pub index: Option<AccountsIndexConfig>,
+    pub accounts_hash_cache_path: Option<PathBuf>,
+    pub filler_account_count: Option<usize>,
+    pub hash_calc_num_passes: Option<usize>,
+    pub write_cache_limit_bytes: Option<u64>,
+}
+
 #[derive(Clone, Default, Debug)]
 pub struct AccountStorage(pub DashMap<Slot, SlotStores>);
 
@@ -158,6 +169,9 @@ struct RecycleStores {
     entries: Vec<(Instant, Arc<AccountStorageEntry>)>,
     total_bytes: u64,
 }
+
+pub type SnapshotStorage = Vec<Arc<AccountStorageEntry>>;
+pub type SnapshotStorages = Vec<SnapshotStorage>;
 
 #[derive(Clone, Default, Debug, Serialize, Deserialize, PartialEq, AbiExample)]
 pub struct BankHashInfo {
