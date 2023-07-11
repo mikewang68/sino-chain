@@ -58,3 +58,12 @@ enum InnerBuiltinFeatureTransition {
 
 #[derive(AbiExample, Clone, Debug)]
 pub struct BuiltinFeatureTransition(InnerBuiltinFeatureTransition);
+
+#[derive(Clone, Debug)]
+pub struct Builtins {
+    /// Builtin programs that are always available
+    pub genesis_builtins: Vec<Builtin>,
+
+    /// Dynamic feature transitions for builtin programs
+    pub feature_transitions: Vec<BuiltinFeatureTransition>,
+}
