@@ -4,7 +4,7 @@ use {
     rand::{thread_rng, Rng},
     measure::measure::Measure,
     std::{
-        fs::{remove_file, OpenOptions},
+        fs::{/*remove_file,*/ OpenOptions},
         io::{Seek, SeekFrom, Write},
         path::PathBuf,
         sync::{
@@ -289,6 +289,28 @@ impl BucketStorage {
         unsafe {
             let item = item_slice.as_ptr() as *const T;
             &*item
+        }
+    }
+
+    pub fn get_cell_slice<T: Sized>(&self, ix: u64, len: u64) -> &[T] {
+        assert!(ix < self.capacity(), "bad index size");
+        let ix = self.cell_size * ix;
+        let start = ix as usize + std::mem::size_of::<Header>();
+        let end = start + std::mem::size_of::<T>() * len as usize;
+        //debug!("GET slice {} {}", start, end);
+        let item_slice: &[u8] = &self.mmap[start..end];
+        unsafe {
+            let item = item_slice.as_ptr() as *const T;
+            std::slice::from_raw_parts(item, len as usize)
+        }
+    }
+
+    pub fn get_empty_cell_slice<T: Sized>(&self) -> &[T] {
+        let len = 0;
+        let item_slice: &[u8] = &self.mmap[0..0];
+        unsafe {
+            let item = item_slice.as_ptr() as *const T;
+            std::slice::from_raw_parts(item, len as usize)
         }
     }
 }

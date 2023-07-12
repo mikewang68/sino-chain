@@ -28,7 +28,8 @@ use {
 type K = Pubkey;
 type CacheRangesHeld = RwLock<Vec<Option<RangeInclusive<Pubkey>>>>;
 pub type SlotT<T> = (Slot, T);
-
+pub type SlotList<T> = Vec<(Slot, T)>;
+pub type RefCount = u64;
 
 pub enum InsertNewEntryResults {
     DidNotExist,
@@ -82,6 +83,101 @@ impl<T: IndexValue> InMemAccountsIndex<T> {
             // initialize this to max, to make it clear we have not flushed at age 0, the starting age
             last_age_flushed: AtomicU8::new(Age::MAX),
         }
+    }
+
+    /// lookup 'pubkey' in index (in mem or on disk)
+    pub fn get(&self, pubkey: &K) -> Option<AccountMapEntry<T>> {
+        self.get_internal(pubkey, |entry| (true, entry.map(Arc::clone)))
+    }
+
+    fn load_from_disk(&self, pubkey: &Pubkey) -> Option<(SlotList<T>, RefCount)> {
+        self.bucket.as_ref().and_then(|disk| {
+            let m = Measure::start("load_disk_found_count");
+            let entry_disk = disk.read_value(pubkey);
+            match &entry_disk {
+                Some(_) => {
+                    Self::update_time_stat(&self.stats().load_disk_found_us, m);
+                    Self::update_stat(&self.stats().load_disk_found_count, 1);
+                }
+                None => {
+                    Self::update_time_stat(&self.stats().load_disk_missing_us, m);
+                    Self::update_stat(&self.stats().load_disk_missing_count, 1);
+                }
+            }
+            entry_disk
+        })
+    }
+
+    fn load_account_entry_from_disk(&self, pubkey: &Pubkey) -> Option<AccountMapEntry<T>> {
+        let entry_disk = self.load_from_disk(pubkey)?; // returns None if not on disk
+
+        Some(self.disk_to_cache_entry(entry_disk.0, entry_disk.1))
+    }
+
+    /// lookup 'pubkey' in index (in_mem or disk).
+    /// call 'callback' whether found or not
+    pub(crate) fn get_internal<RT>(
+        &self,
+        pubkey: &K,
+        // return true if item should be added to in_mem cache
+        callback: impl for<'a> FnOnce(Option<&AccountMapEntry<T>>) -> (bool, RT),
+    ) -> RT {
+        self.get_only_in_mem(pubkey, |entry| {
+            if let Some(entry) = entry {
+                entry.set_age(self.storage.future_age_to_flush());
+                callback(Some(entry)).1
+            } else {
+                // not in cache, look on disk
+                let stats = &self.stats();
+                let disk_entry = self.load_account_entry_from_disk(pubkey);
+                if disk_entry.is_none() {
+                    return callback(None).1;
+                }
+                let disk_entry = disk_entry.unwrap();
+                let mut map = self.map().write().unwrap();
+                let entry = map.entry(*pubkey);
+                match entry {
+                    Entry::Occupied(occupied) => callback(Some(occupied.get())).1,
+                    Entry::Vacant(vacant) => {
+                        let (add_to_cache, rt) = callback(Some(&disk_entry));
+
+                        if add_to_cache {
+                            stats.insert_or_delete_mem(true, self.bin);
+                            vacant.insert(disk_entry);
+                        }
+                        rt
+                    }
+                }
+            }
+        })
+    }
+
+    /// lookup 'pubkey' by only looking in memory. Does not look on disk.
+    /// callback is called whether pubkey is found or not
+    fn get_only_in_mem<RT>(
+        &self,
+        pubkey: &K,
+        callback: impl for<'a> FnOnce(Option<&'a AccountMapEntry<T>>) -> RT,
+    ) -> RT {
+        let m = Measure::start("get");
+        let map = self.map().read().unwrap();
+        let result = map.get(pubkey);
+        let stats = self.stats();
+        let (count, time) = if result.is_some() {
+            (&stats.gets_from_mem, &stats.get_mem_us)
+        } else {
+            (&stats.gets_missing, &stats.get_missing_us)
+        };
+        Self::update_time_stat(time, m);
+        Self::update_stat(count, 1);
+
+        callback(if let Some(entry) = result {
+            entry.set_age(self.storage.future_age_to_flush());
+            Some(entry)
+        } else {
+            drop(map);
+            None
+        })
     }
 
     pub(crate) fn flush(&self) {

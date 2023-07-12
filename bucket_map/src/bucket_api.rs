@@ -7,7 +7,7 @@ use {
     },
     sdk::pubkey::Pubkey,
     std::{
-        ops::RangeBounds,
+        // ops::RangeBounds,
         path::PathBuf,
         sync::{
             atomic::{AtomicU64, Ordering},
@@ -25,7 +25,17 @@ pub struct BucketApi<T: Clone + Copy> {
     bucket: LockedBucket<T>,
     count: Arc<AtomicU64>,
 }
+
 impl<T: Clone + Copy> BucketApi<T> {
+        /// Get the values for Pubkey `key`
+    pub fn read_value(&self, key: &Pubkey) -> Option<(Vec<T>, RefCount)> {
+        self.bucket.read().unwrap().as_ref().and_then(|bucket| {
+            bucket
+                .read_value(key)
+                .map(|(value, ref_count)| (value.to_vec(), ref_count))
+        })
+    }
+
     pub fn try_write(
         &self,
         pubkey: &Pubkey,

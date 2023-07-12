@@ -41,6 +41,10 @@ use {
         accounts::{
             Accounts, 
         },
+        accounts_db::{
+            /*AccountShrinkThreshold, AccountsDbConfig,*/ SnapshotStorages,
+            /*ACCOUNTS_DB_CONFIG_FOR_BENCHMARKS, ACCOUNTS_DB_CONFIG_FOR_TESTING,*/
+        },
         ancestors::{Ancestors},
         status_cache::{StatusCache},
         rent_collector::{RentCollector},
@@ -56,7 +60,14 @@ use {
             BuiltinProgram, Executor
         },
     },
+    log::*,
+    measure::measure::Measure,
+    itertools::Itertools,
     sdk::{
+        account::{
+            create_account_shared_data_with_fields as create_account, from_account, Account,
+            AccountSharedData, InheritableAccountFields, ReadableAccount, WritableAccount,
+        },
         clock::{
             BankId, Epoch, Slot, UnixTimestamp,SlotIndex,
         },
@@ -64,6 +75,7 @@ use {
         feature_set::{
              FeatureSet,
         },
+        sysvar::{self, Sysvar, SysvarId},
         fee::FeeStructure,
         fee_calculator::{FeeCalculator, FeeRateGovernor},
         genesis_config::{ClusterType},
@@ -87,7 +99,6 @@ use {
         },
     },
 };
-use sdk::account::AccountSharedData;
 
 use crate::status_cache::SlotDelta;
 
@@ -230,6 +241,25 @@ pub struct StatusCacheRc {
     /// where all the Accounts are stored
     /// A cache of signature statuses
     pub status_cache: Arc<RwLock<BankStatusCache>>,
+}
+
+impl StatusCacheRc {
+    pub fn slot_deltas(&self, slots: &[Slot]) -> Vec<BankSlotDelta> {
+        let sc = self.status_cache.read().unwrap();
+        sc.slot_deltas(slots)
+    }
+
+    pub fn roots(&self) -> Vec<Slot> {
+        self.status_cache
+            .read()
+            .unwrap()
+            .roots()
+            .iter()
+            .cloned()
+            .sorted()
+            .collect()
+    }
+
 }
 
 #[frozen_abi(digest = "HdYCU65Jwfv9sF3C8k6ZmjUAaXSkJwazebuur21v8JtY")]
@@ -445,6 +475,249 @@ impl Bank {
     pub fn get_slots_in_epoch(&self, epoch: Epoch) -> u64 {
         self.epoch_schedule.get_slots_in_epoch(epoch)
     }
+
+    /// Return the block_height of this bank
+    pub fn block_height(&self) -> u64 {
+        self.block_height
+    }
+
+    /// Return the total capitalization of the Bank
+    pub fn capitalization(&self) -> u64 {
+        self.capitalization.load(Relaxed)
+    }
+
+    pub fn cluster_type(&self) -> ClusterType {
+        // unwrap is safe; self.cluster_type is ensured to be Some() always...
+        // we only using Option here for ABI compatibility...
+        self.cluster_type.unwrap()
+    }
+
+    pub fn epoch(&self) -> Epoch {
+        self.epoch
+    }
+
+    pub fn get_account_modified_slot(&self, pubkey: &Pubkey) -> Option<(AccountSharedData, Slot)> {
+        self.load_slow(&self.ancestors, pubkey)
+    }
+
+    // Hi! leaky abstraction here....
+    // try to use get_account_with_fixed_root() if it's called ONLY from on-chain runtime account
+    // processing. That alternative fn provides more safety.
+    pub fn get_account(&self, pubkey: &Pubkey) -> Option<AccountSharedData> {
+        self.get_account_modified_slot(pubkey)
+            .map(|(acc, _slot)| acc)
+    }
+
+    pub fn read_balance(account: &AccountSharedData) -> u64 {
+        account.wens()
+    }
+
+    /// Each program would need to be able to introspect its own state
+    /// this is hard-coded to the Budget language
+    pub fn get_balance(&self, pubkey: &Pubkey) -> u64 {
+        self.get_account(pubkey)
+            .map(|x| Self::read_balance(&x))
+            .unwrap_or(0)
+    }
+
+
+    // pub fn clock(&self) -> sysvar::clock::Clock {
+    //     from_account(&self.get_account(&sysvar::clock::id()).unwrap_or_default())
+    //         .unwrap_or_default()
+    // }
+
+    // Hi! leaky abstraction here....
+    // try to use get_account_with_fixed_root() if it's called ONLY from on-chain runtime account
+    // processing. That alternative fn provides more safety.
+    // pub fn get_account(&self, pubkey: &Pubkey) -> Option<AccountSharedData> {
+    //     self.get_account_modified_slot(pubkey)
+    //         .map(|(acc, _slot)| acc)
+    // }
+
+    // Hi! leaky abstraction here....
+    // use this over get_account() if it's called ONLY from on-chain runtime account
+    // processing (i.e. from in-band replay/banking stage; that ensures root is *fixed* while
+    // running).
+    // pro: safer assertion can be enabled inside AccountsDb
+    // con: panics!() if called from off-chain processing
+    // pub fn get_account_with_fixed_root(&self, pubkey: &Pubkey) -> Option<AccountSharedData> {
+    //     self.load_slow_with_fixed_root(&self.ancestors, pubkey)
+    //         .map(|(acc, _slot)| acc)
+    // }
+
+    // pub fn get_account_modified_slot(&self, pubkey: &Pubkey) -> Option<(AccountSharedData, Slot)> {
+    //     self.load_slow(&self.ancestors, pubkey)
+    // }
+
+    fn load_slow(
+        &self,
+        ancestors: &Ancestors,
+        pubkey: &Pubkey,
+    ) -> Option<(AccountSharedData, Slot)> {
+        // get_account (= primary this fn caller) may be called from on-chain Bank code even if we
+        // try hard to use get_account_with_fixed_root for that purpose...
+        // so pass safer LoadHint:Unspecified here as a fallback
+        self.rc.accounts.load_without_fixed_root(ancestors, pubkey)
+    }
+
+    fn load_slow_with_fixed_root(
+        &self,
+        ancestors: &Ancestors,
+        pubkey: &Pubkey,
+    ) -> Option<(AccountSharedData, Slot)> {
+        self.rc.accounts.load_with_fixed_root(ancestors, pubkey)
+    }
+
+    pub fn is_complete(&self) -> bool {
+        self.tick_height() == self.max_tick_height()
+    }
+
+    /// Return the number of ticks since genesis.
+    pub fn tick_height(&self) -> u64 {
+        self.tick_height.load(Relaxed)
+    }
+
+    /// Return this bank's max_tick_height
+    pub fn max_tick_height(&self) -> u64 {
+        self.max_tick_height
+    }
+
+    // /// squash the parent's state up into this Bank,
+    // ///   this Bank becomes a root
+    // pub fn squash(&self) -> SquashTiming {
+    //     self.freeze();
+
+    //     //this bank and all its parents are now on the rooted path
+    //     let mut roots = vec![self.slot()];
+    //     roots.append(&mut self.parents().iter().map(|p| p.slot()).collect());
+
+    //     let mut total_index_us = 0;
+    //     let mut total_cache_us = 0;
+    //     let mut total_store_us = 0;
+
+    //     let mut squash_accounts_time = Measure::start("squash_accounts_time");
+    //     for slot in roots.iter().rev() {
+    //         // root forks cannot be purged
+    //         let add_root_timing = self.rc.accounts.add_root(*slot);
+    //         total_index_us += add_root_timing.index_us;
+    //         total_cache_us += add_root_timing.cache_us;
+    //         total_store_us += add_root_timing.store_us;
+    //     }
+    //     squash_accounts_time.stop();
+
+    //     *self.rc.parent.write().unwrap() = None;
+
+    //     let mut squash_cache_time = Measure::start("squash_cache_time");
+    //     roots
+    //         .iter()
+    //         .for_each(|slot| self.src.status_cache.write().unwrap().add_root(*slot));
+    //     squash_cache_time.stop();
+
+    //     SquashTiming {
+    //         squash_accounts_ms: squash_accounts_time.as_ms(),
+    //         squash_accounts_index_ms: total_index_us / 1000,
+    //         squash_accounts_cache_ms: total_cache_us / 1000,
+    //         squash_accounts_store_ms: total_store_us / 1000,
+
+    //         squash_cache_ms: squash_cache_time.as_ms(),
+    //     }
+    // }
+
+    pub fn get_snapshot_storages(&self, base_slot: Option<Slot>) -> SnapshotStorages {
+        self.rc
+            .accounts
+            .accounts_db
+            .get_snapshot_storages(self.slot(), base_slot, None)
+            .0
+    }
+
+    pub fn slot(&self) -> Slot {
+        self.slot
+    }
+
+    pub fn get_accounts_hash(&self) -> Hash {
+        self.rc.accounts.accounts_db.get_accounts_hash(self.slot)
+    }
+    
+    // pub fn clean_accounts(
+    //     &self,
+    //     skip_last: bool,
+    //     is_startup: bool,
+    //     last_full_snapshot_slot: Option<Slot>,
+    // ) {
+    //     // Don't clean the slot we're snapshotting because it may have zero-lamport
+    //     // accounts that were included in the bank delta hash when the bank was frozen,
+    //     // and if we clean them here, any newly created snapshot's hash for this bank
+    //     // may not match the frozen hash.
+    //     //
+    //     // So when we're snapshotting, set `skip_last` to true so the highest slot to clean is
+    //     // lowered by one.
+    //     let highest_slot_to_clean = skip_last.then(|| self.slot().saturating_sub(1));
+
+    //     self.rc.accounts.accounts_db.clean_accounts(
+    //         highest_slot_to_clean,
+    //         is_startup,
+    //         last_full_snapshot_slot,
+    //     );
+    // }
+
+    // /// A snapshot bank should be purged of 0 lamport accounts which are not part of the hash
+    // /// calculation and could shield other real accounts.
+    // pub fn verify_snapshot_bank(
+    //     &self,
+    //     test_hash_calculation: bool,
+    //     accounts_db_skip_shrink: bool,
+    //     last_full_snapshot_slot: Option<Slot>,
+    // ) -> bool {
+    //     info!("cleaning..");
+    //     let mut clean_time = Measure::start("clean");
+    //     if self.slot() > 0 {
+    //         self.clean_accounts(true, true, last_full_snapshot_slot);
+    //     }
+    //     clean_time.stop();
+
+    //     self.rc
+    //         .accounts
+    //         .accounts_db
+    //         .accounts_index
+    //         .set_startup(true);
+    //     let mut shrink_all_slots_time = Measure::start("shrink_all_slots");
+    //     if !accounts_db_skip_shrink && self.slot() > 0 {
+    //         info!("shrinking..");
+    //         self.shrink_all_slots(true, last_full_snapshot_slot);
+    //     }
+    //     shrink_all_slots_time.stop();
+
+    //     info!("verify_bank_hash..");
+    //     let mut verify_time = Measure::start("verify_bank_hash");
+    //     let mut verify = self.verify_bank_hash(test_hash_calculation);
+    //     verify_time.stop();
+    //     self.rc
+    //         .accounts
+    //         .accounts_db
+    //         .accounts_index
+    //         .set_startup(false);
+
+    //     info!("verify_hash..");
+    //     let mut verify2_time = Measure::start("verify_hash");
+    //     // Order and short-circuiting is significant; verify_hash requires a valid bank hash
+    //     verify = verify && self.verify_hash();
+    //     verify2_time.stop();
+
+    //     datapoint_info!(
+    //         "verify_snapshot_bank",
+    //         ("clean_us", clean_time.as_us(), i64),
+    //         ("shrink_all_slots_us", shrink_all_slots_time.as_us(), i64),
+    //         ("verify_bank_hash_us", verify_time.as_us(), i64),
+    //         ("verify_hash_us", verify2_time.as_us(), i64),
+    //     );
+
+    //     verify
+    // }
+
+    // pub fn slot(&self) -> Slot {
+    //     self.slot
+    // }
 
 }
 

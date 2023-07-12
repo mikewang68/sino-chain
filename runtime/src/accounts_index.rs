@@ -9,6 +9,7 @@ use {
         // inline_spl_token_2022,
         pubkey_bins::PubkeyBinCalculator24,
         secondary_index::*,
+        ancestors::Ancestors,
     },
     bv::BitVec,
     log::*,
@@ -41,6 +42,7 @@ use {
 
 pub type RefCount = u64;
 pub type ScanResult<T, ScanError> = Result<T, ScanError>;
+pub type SlotSlice<'s, T> = &'s [(Slot, T)];
 
 pub const BINS_FOR_TESTING: usize = 2; // we want > 1, but each bin is a few disk files with a disk based index, so fewer is better
 pub const BINS_FOR_BENCHMARKS: usize = 2;
@@ -345,6 +347,36 @@ impl PartialEq<RollingBitField> for RollingBitField {
     }
 }
 
+pub enum AccountIndexGetResult<'a, T: IndexValue> {
+    Found(ReadAccountMapEntry<T>, usize),
+    NotFoundOnFork,
+    Missing(AccountMapsReadLock<'a, T>),
+}
+
+type AccountMapsReadLock<'a, T> = RwLockReadGuard<'a, MapType<T>>;
+
+#[self_referencing]
+pub struct ReadAccountMapEntry<T: IndexValue> {
+    owned_entry: AccountMapEntry<T>,
+    #[borrows(owned_entry)]
+    #[covariant]
+    slot_list_guard: RwLockReadGuard<'this, SlotList<T>>,
+}
+
+impl<T: IndexValue> ReadAccountMapEntry<T> {
+    pub fn from_account_map_entry(account_map_entry: AccountMapEntry<T>) -> Self {
+        ReadAccountMapEntryBuilder {
+            owned_entry: account_map_entry,
+            slot_list_guard_builder: |lock| lock.slot_list.read().unwrap(),
+        }
+        .build()
+    }
+
+    pub fn slot_list(&self) -> &SlotList<T> {
+        self.borrow_slot_list_guard()
+    }
+}
+
 pub type AccountMap<V> = Arc<InMemAccountsIndex<V>>;
 type MapType<T> = AccountMap<T>;
 type LockMapType<T> = Vec<RwLock<MapType<T>>>;
@@ -381,6 +413,10 @@ impl<T: IndexValue> AccountMapEntryInner<T> {
 
     pub fn dirty(&self) -> bool {
         self.meta.dirty.load(Ordering::Acquire)
+    }
+
+    pub fn set_age(&self, value: Age) {
+        self.meta.age.store(value, Ordering::Relaxed)
     }
 }
 
@@ -452,6 +488,83 @@ pub struct AccountsIndex<T: IndexValue> {
 
     /// when a scan's accumulated data exceeds this limit, abort the scan
     pub scan_results_limit_bytes: Option<usize>,
+}
+
+impl<T: IndexValue> AccountsIndex<T> {
+
+    pub fn is_root(&self, slot: Slot) -> bool {
+        self.roots_tracker.read().unwrap().roots.contains(&slot)
+    }
+
+    /// Get an account
+    /// The latest account that appears in `ancestors` or `roots` is returned.
+    pub(crate) fn get(
+        &self,
+        pubkey: &Pubkey,
+        ancestors: Option<&Ancestors>,
+        max_root: Option<Slot>,
+    ) -> AccountIndexGetResult<'_, T> {
+        let read_lock = self.account_maps[self.bin_calculator.bin_from_pubkey(pubkey)]
+            .read()
+            .unwrap();
+        let account = read_lock
+            .get(pubkey)
+            .map(ReadAccountMapEntry::from_account_map_entry);
+
+        match account {
+            Some(locked_entry) => {
+                drop(read_lock);
+                let slot_list = locked_entry.slot_list();
+                let found_index = self.latest_slot(ancestors, slot_list, max_root);
+                match found_index {
+                    Some(found_index) => AccountIndexGetResult::Found(locked_entry, found_index),
+                    None => AccountIndexGetResult::NotFoundOnFork,
+                }
+            }
+            None => AccountIndexGetResult::Missing(read_lock),
+        }
+    }
+
+    // Given a SlotSlice `L`, a list of ancestors and a maximum slot, find the latest element
+    // in `L`, where the slot `S` is an ancestor or root, and if `S` is a root, then `S <= max_root`
+    fn latest_slot(
+        &self,
+        ancestors: Option<&Ancestors>,
+        slice: SlotSlice<T>,
+        max_root: Option<Slot>,
+    ) -> Option<usize> {
+        let mut current_max = 0;
+        let mut rv = None;
+        if let Some(ancestors) = ancestors {
+            if !ancestors.is_empty() {
+                for (i, (slot, _t)) in slice.iter().rev().enumerate() {
+                    if (rv.is_none() || *slot > current_max) && ancestors.contains_key(slot) {
+                        rv = Some(i);
+                        current_max = *slot;
+                    }
+                }
+            }
+        }
+
+        let max_root = max_root.unwrap_or(Slot::MAX);
+        let mut tracker = None;
+
+        for (i, (slot, _t)) in slice.iter().rev().enumerate() {
+            if (rv.is_none() || *slot > current_max) && *slot <= max_root {
+                let lock = match tracker {
+                    Some(inner) => inner,
+                    None => self.roots_tracker.read().unwrap(),
+                };
+                if lock.roots.contains(slot) {
+                    rv = Some(i);
+                    current_max = *slot;
+                }
+                tracker = Some(lock);
+            }
+        }
+
+        rv.map(|index| slice.len() - 1 - index)
+    }
 }
 
 

@@ -37,6 +37,20 @@ pub struct SlotCacheInner {
     total_size: Arc<AtomicU64>,
     is_frozen: AtomicBool,
 }
+
+impl SlotCacheInner {
+
+    pub fn get_cloned(&self, pubkey: &Pubkey) -> Option<CachedAccount> {
+        self.cache
+            .get(pubkey)
+            // 1) Maybe can eventually use a Cow to avoid a clone on every read
+            // 2) Popping is only safe if it's guaranteed that only
+            //    replay/banking threads are reading from the AccountsDb
+            .map(|account_ref| account_ref.value().clone())
+    }
+
+}
+
 #[derive(Debug, Default)]
 pub struct AccountsCache {
     cache: DashMap<Slot, SlotCache>,
@@ -45,5 +59,18 @@ pub struct AccountsCache {
     maybe_unflushed_roots: RwLock<BTreeSet<Slot>>,
     max_flushed_root: AtomicU64,
     total_size: Arc<AtomicU64>,
+}
+
+impl AccountsCache {
+
+    pub fn load(&self, slot: Slot, pubkey: &Pubkey) -> Option<CachedAccount> {
+        self.slot_cache(slot)
+            .and_then(|slot_cache| slot_cache.get_cloned(pubkey))
+    }
+
+    pub fn slot_cache(&self, slot: Slot) -> Option<SlotCache> {
+        self.cache.get(&slot).map(|result| result.value().clone())
+    }
+
 }
 
