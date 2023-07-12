@@ -41,6 +41,17 @@ pub(crate) struct ReadOnlyAccountsCache {
 }
 
 impl ReadOnlyAccountsCache {
+    pub(crate) fn new(max_data_size: usize) -> Self {
+        Self {
+            max_data_size,
+            cache: DashMap::default(),
+            queue: Mutex::<IndexList<ReadOnlyCacheKey>>::default(),
+            data_size: AtomicUsize::default(),
+            hits: AtomicU64::default(),
+            misses: AtomicU64::default(),
+        }
+    }
+
     pub(crate) fn load(&self, pubkey: Pubkey, slot: Slot) -> Option<AccountSharedData> {
         let key = (pubkey, slot);
         let mut entry = match self.cache.get_mut(&key) {

@@ -74,3 +74,24 @@ impl AccountsCache {
 
 }
 
+impl CachedAccountInner {
+    pub fn hash(&self) -> Hash {
+        let hash = self.hash.read().unwrap();
+        match *hash {
+            Some(hash) => hash,
+            None => {
+                drop(hash);
+                let hash = crate::accounts_db::AccountsDb::hash_account(
+                    self.slot,
+                    &self.account,
+                    &self.pubkey,
+                );
+                *self.hash.write().unwrap() = Some(hash);
+                hash
+            }
+        }
+    }
+    pub fn pubkey(&self) -> &Pubkey {
+        &self.pubkey
+    }
+}

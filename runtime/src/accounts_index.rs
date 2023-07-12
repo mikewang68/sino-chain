@@ -43,6 +43,7 @@ use {
 pub type RefCount = u64;
 pub type ScanResult<T, ScanError> = Result<T, ScanError>;
 pub type SlotSlice<'s, T> = &'s [(Slot, T)];
+pub type SlotList<T> = Vec<(Slot, T)>;
 
 pub const BINS_FOR_TESTING: usize = 2; // we want > 1, but each bin is a few disk files with a disk based index, so fewer is better
 pub const BINS_FOR_BENCHMARKS: usize = 2;
@@ -55,6 +56,7 @@ pub const ACCOUNTS_INDEX_CONFIG_FOR_TESTING: AccountsIndexConfig = AccountsIndex
     ages_to_stay_in_cache: None,
     scan_results_limit_bytes: None,
 };
+pub const BINS_DEFAULT: usize = 8192;
 
 #[derive(Debug, Clone, Copy)]
 pub enum IndexKey {
@@ -494,6 +496,62 @@ impl<T: IndexValue> AccountsIndex<T> {
 
     pub fn is_root(&self, slot: Slot) -> bool {
         self.roots_tracker.read().unwrap().roots.contains(&slot)
+    }
+
+    pub fn new(config: Option<AccountsIndexConfig>) -> Self {
+        let scan_results_limit_bytes = config
+            .as_ref()
+            .and_then(|config| config.scan_results_limit_bytes);
+        let (account_maps, bin_calculator, storage) = Self::allocate_accounts_index(config);
+        Self {
+            account_maps,
+            bin_calculator,
+            program_id_index: SecondaryIndex::<DashMapSecondaryIndexEntry>::new(
+                "program_id_index_stats",
+            ),
+            spl_token_mint_index: SecondaryIndex::<DashMapSecondaryIndexEntry>::new(
+                "spl_token_mint_index_stats",
+            ),
+            spl_token_owner_index: SecondaryIndex::<RwLockSecondaryIndexEntry>::new(
+                "spl_token_owner_index_stats",
+            ),
+            roots_tracker: RwLock::<RootsTracker>::default(),
+            ongoing_scan_roots: RwLock::<BTreeMap<Slot, u64>>::default(),
+            removed_bank_ids: Mutex::<HashSet<BankId>>::default(),
+            storage,
+            scan_results_limit_bytes,
+
+            //Velas indexes
+            velas_account_storage_index: SecondaryIndex::<DashMapSecondaryIndexEntry>::new("velas_account_storage_index"),
+            velas_account_owner_index: SecondaryIndex::<DashMapSecondaryIndexEntry>::new("velas_account_owner_index"),
+            velas_account_operational_index: SecondaryIndex::<DashMapSecondaryIndexEntry>::new("velas_account_operational_index"),
+            velas_relying_party_owner_index: SecondaryIndex::<DashMapSecondaryIndexEntry>::new("velas_relying_party_owner_index"),
+        }
+    }
+
+    fn allocate_accounts_index(
+        config: Option<AccountsIndexConfig>,
+    ) -> (
+        LockMapType<T>,
+        PubkeyBinCalculator24,
+        AccountsIndexStorage<T>,
+    ) {
+        let bins = config
+            .as_ref()
+            .and_then(|config| config.bins)
+            .unwrap_or(BINS_DEFAULT);
+        // create bin_calculator early to verify # bins is reasonable
+        let bin_calculator = PubkeyBinCalculator24::new(bins);
+        let storage = AccountsIndexStorage::new(bins, &config);
+        let account_maps = (0..bins)
+            .into_iter()
+            .map(|bin| RwLock::new(Arc::clone(&storage.in_mem[bin])))
+            .collect::<Vec<_>>();
+        (account_maps, bin_calculator, storage)
+    }
+
+    pub fn set_startup(&self, value: bool) {
+        self.storage.set_startup(value);
     }
 
     /// Get an account

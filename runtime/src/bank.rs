@@ -572,6 +572,103 @@ impl Bank {
         self.tick_height() == self.max_tick_height()
     }
 
+    /// used only by filler accounts in debug path
+    /// previous means slot - 1, not parent
+    pub fn variable_cycle_partition_from_previous_slot(
+        epoch_schedule: &EpochSchedule,
+        slot: Slot,
+    ) -> Partition {
+        // similar code to Bank::variable_cycle_partitions
+        let (current_epoch, current_slot_index) = epoch_schedule.get_epoch_and_slot_index(slot);
+        let (parent_epoch, mut parent_slot_index) =
+            epoch_schedule.get_epoch_and_slot_index(slot.saturating_sub(1));
+        let cycle_params = Self::rent_single_epoch_collection_cycle_params(
+            current_epoch,
+            epoch_schedule.get_slots_in_epoch(current_epoch),
+        );
+
+        if parent_epoch < current_epoch {
+            parent_slot_index = 0;
+        }
+
+        let generated_for_gapped_epochs = false;
+        Self::get_partition_from_slot_indexes(
+            cycle_params,
+            parent_slot_index,
+            current_slot_index,
+            generated_for_gapped_epochs,
+        )
+    }
+
+    // Mostly, the pair (start_index & end_index) is equivalent to this range:
+    // start_index..=end_index. But it has some exceptional cases, including
+    // this important and valid one:
+    //   0..=0: the first partition in the new epoch when crossing epochs
+    pub fn pubkey_range_from_partition(
+        (start_index, end_index, partition_count): Partition,
+    ) -> RangeInclusive<Pubkey> {
+        assert!(start_index <= end_index);
+        assert!(start_index < partition_count);
+        assert!(end_index < partition_count);
+        assert!(0 < partition_count);
+
+        type Prefix = u64;
+        const PREFIX_SIZE: usize = mem::size_of::<Prefix>();
+        const PREFIX_MAX: Prefix = Prefix::max_value();
+
+        let mut start_pubkey = [0x00u8; 32];
+        let mut end_pubkey = [0xffu8; 32];
+
+        if partition_count == 1 {
+            assert_eq!(start_index, 0);
+            assert_eq!(end_index, 0);
+            return Pubkey::new_from_array(start_pubkey)..=Pubkey::new_from_array(end_pubkey);
+        }
+
+        // not-overflowing way of `(Prefix::max_value() + 1) / partition_count`
+        let partition_width = (PREFIX_MAX - partition_count + 1) / partition_count + 1;
+        let mut start_key_prefix = if start_index == 0 && end_index == 0 {
+            0
+        } else if start_index + 1 == partition_count {
+            PREFIX_MAX
+        } else {
+            (start_index + 1) * partition_width
+        };
+
+        let mut end_key_prefix = if end_index + 1 == partition_count {
+            PREFIX_MAX
+        } else {
+            (end_index + 1) * partition_width - 1
+        };
+
+        if start_index != 0 && start_index == end_index {
+            // n..=n (n != 0): a noop pair across epochs without a gap under
+            // multi_epoch_cycle, just nullify it.
+            if end_key_prefix == PREFIX_MAX {
+                start_key_prefix = end_key_prefix;
+                start_pubkey = end_pubkey;
+            } else {
+                end_key_prefix = start_key_prefix;
+                end_pubkey = start_pubkey;
+            }
+        }
+
+        start_pubkey[0..PREFIX_SIZE].copy_from_slice(&start_key_prefix.to_be_bytes());
+        end_pubkey[0..PREFIX_SIZE].copy_from_slice(&end_key_prefix.to_be_bytes());
+        trace!(
+            "pubkey_range_from_partition: ({}-{})/{} [{}]: {}-{}",
+            start_index,
+            end_index,
+            partition_count,
+            (end_key_prefix - start_key_prefix),
+            start_pubkey.iter().map(|x| format!("{:02x}", x)).join(""),
+            end_pubkey.iter().map(|x| format!("{:02x}", x)).join(""),
+        );
+        // should be an inclusive range (a closed interval) like this:
+        // [0xgg00-0xhhff], [0xii00-0xjjff], ... (where 0xii00 == 0xhhff + 1)
+        Pubkey::new_from_array(start_pubkey)..=Pubkey::new_from_array(end_pubkey)
+    }
+
     /// Return the number of ticks since genesis.
     pub fn tick_height(&self) -> u64 {
         self.tick_height.load(Relaxed)

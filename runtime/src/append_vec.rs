@@ -37,6 +37,18 @@ macro_rules! u64_align {
     };
 }
 
+/// Meta contains enough context to recover the index from storage itself
+/// This struct will be backed by mmaped and snapshotted data files.
+/// So the data layout must be stable and consistent across the entire cluster!
+#[derive(Clone, PartialEq, Debug)]
+pub struct StoredMeta {
+    /// global write version
+    pub write_version: StoredMetaWriteVersion,
+    /// key for the account
+    pub pubkey: Pubkey,
+    pub data_len: u64,
+}
+
 /// A thread-safe, file-backed block of memory used to store `Account` instances. Append operations
 /// are serialized such that only one thread updates the internal `append_lock` at a time. No
 /// restrictions are placed on reading. That is, one may read items from one thread while another
