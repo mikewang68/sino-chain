@@ -45,7 +45,7 @@ use {
         status_cache::{StatusCache},
         rent_collector::{RentCollector},
         epoch_stakes::{EpochStakes},
-        stakes::{StakesCache},
+        stakes::{StakesCache, Stakes},
         builtins::{BuiltinFeatureTransition},
         cost_tracker::CostTracker,
     },
@@ -89,7 +89,7 @@ use {
 };
 use sdk::account::AccountSharedData;
 
-use crate::status_cache::SlotDelta;
+use crate::{status_cache::SlotDelta, ancestors::AncestorsForSerialization};
 
 #[derive(Debug, PartialEq, Serialize, Deserialize, Clone, Copy)]
 pub enum RewardType {
@@ -519,4 +519,86 @@ mod executor_cache {
         }
     }
 
+}
+
+// Bank's common fields shared by all supported snapshot versions for deserialization.
+// Sync fields with BankFieldsToSerialize! This is paired with it.
+// All members are made public to remain Bank's members private and to make versioned deserializer workable on this
+#[derive(Clone, Debug, Default)]
+pub(crate) struct BankFieldsToDeserialize {
+    pub(crate) blockhash_queue: BlockhashQueue,
+    pub(crate) ancestors: AncestorsForSerialization,
+    pub(crate) hash: Hash,
+    pub(crate) parent_hash: Hash,
+    pub(crate) parent_slot: Slot,
+    pub(crate) hard_forks: HardForks,
+    pub(crate) transaction_count: u64,
+    pub(crate) tick_height: u64,
+    pub(crate) signature_count: u64,
+    pub(crate) capitalization: u64,
+    pub(crate) max_tick_height: u64,
+    pub(crate) hashes_per_tick: Option<u64>,
+    pub(crate) ticks_per_slot: u64,
+    pub(crate) ns_per_slot: u128,
+    pub(crate) genesis_creation_time: UnixTimestamp,
+    pub(crate) slots_per_year: f64,
+    pub(crate) slot: Slot,
+    pub(crate) epoch: Epoch,
+    pub(crate) block_height: u64,
+    pub(crate) collector_id: Pubkey,
+    pub(crate) collector_fees: u64,
+    pub(crate) fee_calculator: FeeCalculator,
+    pub(crate) fee_rate_governor: FeeRateGovernor,
+    pub(crate) collected_rent: u64,
+    pub(crate) rent_collector: RentCollector,
+    pub(crate) epoch_schedule: EpochSchedule,
+    pub(crate) inflation: Inflation,
+    pub(crate) stakes: Stakes,
+    pub(crate) epoch_stakes: HashMap<Epoch, EpochStakes>,
+    pub(crate) is_delta: bool,
+    pub(crate) evm_chain_id: u64,
+    pub(crate) evm_persist_fields: evm_state::EvmPersistState,
+    pub(crate) evm_blockhashes: BlockHashEvm,
+    pub(crate) accounts_data_len: u64,
+}
+
+// This is separated from BankFieldsToDeserialize to avoid cloning by using refs.
+// So, sync fields with BankFieldsToDeserialize!
+// all members are made public to keep Bank private and to make versioned serializer workable on this
+#[derive(Debug)]
+pub(crate) struct BankFieldsToSerialize<'a> {
+    pub(crate) blockhash_queue: &'a RwLock<BlockhashQueue>,
+    pub(crate) ancestors: &'a AncestorsForSerialization,
+    pub(crate) hash: Hash,
+    pub(crate) parent_hash: Hash,
+    pub(crate) parent_slot: Slot,
+    pub(crate) hard_forks: &'a RwLock<HardForks>,
+    pub(crate) transaction_count: u64,
+    pub(crate) tick_height: u64,
+    pub(crate) signature_count: u64,
+    pub(crate) capitalization: u64,
+    pub(crate) max_tick_height: u64,
+    pub(crate) hashes_per_tick: Option<u64>,
+    pub(crate) ticks_per_slot: u64,
+    pub(crate) ns_per_slot: u128,
+    pub(crate) genesis_creation_time: UnixTimestamp,
+    pub(crate) slots_per_year: f64,
+    pub(crate) slot: Slot,
+    pub(crate) epoch: Epoch,
+    pub(crate) block_height: u64,
+    pub(crate) collector_id: Pubkey,
+    pub(crate) collector_fees: u64,
+    pub(crate) fee_calculator: FeeCalculator,
+    pub(crate) fee_rate_governor: FeeRateGovernor,
+    pub(crate) collected_rent: u64,
+    pub(crate) rent_collector: RentCollector,
+    pub(crate) epoch_schedule: EpochSchedule,
+    pub(crate) inflation: Inflation,
+    pub(crate) stakes: &'a StakesCache,
+    pub(crate) epoch_stakes: &'a HashMap<Epoch, EpochStakes>,
+    pub(crate) is_delta: bool,
+    pub(crate) evm_chain_id: u64,
+    pub(crate) evm_persist_fields: evm_state::EvmPersistState,
+    pub(crate) evm_blockhashes: &'a RwLock<BlockHashEvm>,
+    pub(crate) accounts_data_len: u64,
 }
