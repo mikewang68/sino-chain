@@ -15,6 +15,8 @@ use {
         clock::{BankId, Slot, INITIAL_RENT_EPOCH},
         account::{Account, AccountSharedData, ReadableAccount, WritableAccount},
         pubkey::Pubkey,
+        clock::Slot,
+        account::AccountSharedData,
     },
 
     std::{
@@ -76,4 +78,19 @@ impl Accounts{
 pub enum AccountAddressFilter {
     Exclude, // exclude all addresses matching the filter
     Include, // only include addresses matching the filter
+}
+
+pub fn create_test_accounts(
+    accounts: &Accounts,
+    pubkeys: &mut Vec<Pubkey>,
+    num: usize,
+    slot: Slot,
+) {
+    for t in 0..num {
+        let pubkey = sdk::pubkey::new_rand();
+        let account =
+            AccountSharedData::new((t + 1) as u64, 0, AccountSharedData::default().owner());
+        accounts.store_slow_uncached(slot, &pubkey, &account);
+        pubkeys.push(pubkey);
+    }
 }
