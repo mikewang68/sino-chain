@@ -122,6 +122,10 @@ pub enum AccountStorageStatus {
     Candidate = 2,
 }
 
+#[derive(Debug, Default, Clone, Copy)]
+pub struct IndexGenerationInfo {
+    pub accounts_data_len: u64,
+}
 
 #[derive(Default, Debug, PartialEq, Clone, Copy)]
 pub struct AccountInfo {
@@ -454,4 +458,11 @@ pub struct AccountsDb {
     // lower passes = faster total time, higher dynamic memory usage
     // passes=2 cuts dynamic memory usage in approximately half.
     pub num_hash_scan_passes: Option<usize>,
+}
+
+pub fn get_temp_accounts_paths(count: u32) -> IoResult<(Vec<TempDir>, Vec<PathBuf>)> {
+    let temp_dirs: IoResult<Vec<TempDir>> = (0..count).map(|_| TempDir::new()).collect();
+    let temp_dirs = temp_dirs?;
+    let paths: Vec<PathBuf> = temp_dirs.iter().map(|t| t.path().to_path_buf()).collect();
+    Ok((temp_dirs, paths))
 }
