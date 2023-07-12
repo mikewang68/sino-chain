@@ -7,6 +7,8 @@ use {
 
     sdk::{
         pubkey::Pubkey,
+        clock::Slot,
+        account::AccountSharedData,
     },
 
     std::{
@@ -37,4 +39,19 @@ pub struct Accounts {
 pub enum AccountAddressFilter {
     Exclude, // exclude all addresses matching the filter
     Include, // only include addresses matching the filter
+}
+
+pub fn create_test_accounts(
+    accounts: &Accounts,
+    pubkeys: &mut Vec<Pubkey>,
+    num: usize,
+    slot: Slot,
+) {
+    for t in 0..num {
+        let pubkey = sdk::pubkey::new_rand();
+        let account =
+            AccountSharedData::new((t + 1) as u64, 0, AccountSharedData::default().owner());
+        accounts.store_slow_uncached(slot, &pubkey, &account);
+        pubkeys.push(pubkey);
+    }
 }
