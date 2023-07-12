@@ -384,7 +384,6 @@ type MapType<T> = AccountMap<T>;
 type LockMapType<T> = Vec<RwLock<MapType<T>>>;
 
 pub(crate) type AccountMapEntry<T> = Arc<AccountMapEntryInner<T>>;
-pub type SlotList<T> = Vec<(Slot, T)>;
 
 #[derive(Debug, Default)]
 pub struct AccountMapEntryInner<T> {

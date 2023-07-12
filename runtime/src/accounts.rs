@@ -15,8 +15,6 @@ use {
         clock::{BankId, Slot, INITIAL_RENT_EPOCH},
         account::{Account, AccountSharedData, ReadableAccount, WritableAccount},
         pubkey::Pubkey,
-        clock::Slot,
-        account::AccountSharedData,
     },
 
     std::{

@@ -100,6 +100,8 @@ use {
     },
 };
 
+use std::mem;
+
 use crate::{status_cache::SlotDelta, ancestors::AncestorsForSerialization};
 
 #[derive(Debug, PartialEq, Serialize, Deserialize, Clone, Copy)]
@@ -128,6 +130,9 @@ type BankStatusCache = StatusCache<Result<()>>;
 
 /// A list of log messages emitted during a transaction
 pub type TransactionLogMessages = Vec<String>;
+type PartitionIndex = u64;
+type PartitionsPerCycle = u64;
+type Partition = (PartitionIndex, PartitionIndex, PartitionsPerCycle);
 
 #[derive(Debug, Default)]
 pub struct OptionalDropCallback(Option<Box<dyn DropCallback + Send + Sync>>);
@@ -283,6 +288,28 @@ pub struct RewardInfo {
     pub lamports: i64,          // Reward amount
     pub post_balance: u64,      // Account balance in lamports after `lamports` was applied
     pub commission: Option<u8>, // Vote account commission when the reward was credited, only present for voting and staking rewards
+}
+
+//#[lang = "RangeInclusive"]
+#[doc(alias = "..=")]
+#[derive(Clone, PartialEq, Eq, Hash)] // not Copy -- see #27186
+//#[stable(feature = "inclusive_range", since = "1.26.0")]
+pub struct RangeInclusive<Idx> {
+    // Note that the fields here are not public to allow changing the
+    // representation in the future; in particular, while we could plausibly
+    // expose start/end, modifying them without changing (future/current)
+    // private fields may lead to incorrect behavior, so we don't want to
+    // support that mode.
+    pub(crate) start: Idx,
+    pub(crate) end: Idx,
+
+    // This field is:
+    //  - `false` upon construction
+    //  - `false` when iteration has yielded an element and the iterator is not exhausted
+    //  - `true` when iteration has been used to exhaust the iterator
+    //
+    // This is required to support PartialEq and Hash without a PartialOrd bound or specialization.
+    pub(crate) exhausted: bool,
 }
 
 
