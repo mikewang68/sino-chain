@@ -45,19 +45,20 @@ use {
             /*AccountShrinkThreshold, AccountsDbConfig,*/ SnapshotStorages,
             /*ACCOUNTS_DB_CONFIG_FOR_BENCHMARKS, ACCOUNTS_DB_CONFIG_FOR_TESTING,*/
         },
+        builtins::{self, /*BuiltinAction,*/ BuiltinFeatureTransition, Builtins},
         ancestors::{Ancestors},
         status_cache::{StatusCache},
         rent_collector::{RentCollector},
         epoch_stakes::{EpochStakes},
         stakes::{StakesCache, Stakes},
-        builtins::{BuiltinFeatureTransition},
         cost_tracker::CostTracker,
+        // cost_tracker::CostTracker,
     },
     program_runtime::{
         compute_budget::{ComputeBudget},
         sysvar_cache::SysvarCache,
         invoke_context::{
-            BuiltinProgram, Executor
+            BuiltinProgram, Executor, ProcessInstructionWithContext
         },
     },
     log::*,
@@ -73,12 +74,12 @@ use {
         },
         epoch_schedule::EpochSchedule,
         feature_set::{
-             FeatureSet,
+            disable_fee_calculator,FeatureSet,
         },
         sysvar::{self, Sysvar, SysvarId},
         fee::FeeStructure,
         fee_calculator::{FeeCalculator, FeeRateGovernor},
-        genesis_config::{ClusterType},
+        genesis_config::{ClusterType, GenesisConfig},
         hard_forks::HardForks,
         hash::{Hash},
         inflation::Inflation,
@@ -87,20 +88,32 @@ use {
         transaction::{
             Result
         },
+        timing::years_as_slots,
+        precompiles::get_precompiles,
     },
     std::{
-        fmt,
+        // borrow::Cow,
+        // cell::RefCell,
         collections::{HashMap, HashSet},
+        // convert::{TryFrom, TryInto},
+        fmt, mem,
+        ops::{/*Div,*/ RangeInclusive},
+        // path::{Path, PathBuf},
+        // ptr,
+        // rc::Rc,
         sync::{
             atomic::{
-                AtomicBool, AtomicU64,Ordering::Relaxed
+                AtomicBool, AtomicU64,
+                Ordering::{/*AcqRel,*/ Acquire, Relaxed, /*Release*/},
             },
-            Arc, RwLock,
+            Arc, /*LockResult,*/ RwLock, /*RwLockReadGuard, RwLockWriteGuard,*/
         },
+        // time::{Duration, Instant},
     },
 };
 
-use std::mem;
+
+
 
 use crate::{status_cache::SlotDelta, ancestors::AncestorsForSerialization};
 
@@ -241,6 +254,17 @@ impl Default for CachedExecutors {
     }
 }
 
+impl CachedExecutors {
+    fn new(max_capacity: usize, current_epoch: Epoch) -> Self {
+        Self {
+            capacity: max_capacity,
+            current_epoch,
+            executors: HashMap::new(),
+            stats: executor_cache::Stats::default(),
+        }
+    }
+}
+
 #[derive(Default, Debug, AbiExample)]
 pub struct StatusCacheRc {
     /// where all the Accounts are stored
@@ -290,27 +314,7 @@ pub struct RewardInfo {
     pub commission: Option<u8>, // Vote account commission when the reward was credited, only present for voting and staking rewards
 }
 
-//#[lang = "RangeInclusive"]
-#[doc(alias = "..=")]
-#[derive(Clone, PartialEq, Eq, Hash)] // not Copy -- see #27186
-//#[stable(feature = "inclusive_range", since = "1.26.0")]
-pub struct RangeInclusive<Idx> {
-    // Note that the fields here are not public to allow changing the
-    // representation in the future; in particular, while we could plausibly
-    // expose start/end, modifying them without changing (future/current)
-    // private fields may lead to incorrect behavior, so we don't want to
-    // support that mode.
-    pub(crate) start: Idx,
-    pub(crate) end: Idx,
 
-    // This field is:
-    //  - `false` upon construction
-    //  - `false` when iteration has yielded an element and the iterator is not exhausted
-    //  - `true` when iteration has been used to exhaust the iterator
-    //
-    // This is required to support PartialEq and Hash without a PartialOrd bound or specialization.
-    pub(crate) exhausted: bool,
-}
 
 
 /// Manager for the state of all accounts and programs after processing its entries.
@@ -545,6 +549,10 @@ impl Bank {
         self.get_account(pubkey)
             .map(|x| Self::read_balance(&x))
             .unwrap_or(0)
+    }
+
+    pub fn rent_collector(&self) -> RentCollector {
+        self.rent_collector.clone()
     }
 
 
@@ -843,6 +851,271 @@ impl Bank {
     //     self.slot
     // }
 
+    /// Return subset of bank fields representing serializable state
+    pub(crate) fn get_fields_to_serialize<'a>(
+        &'a self,
+        ancestors: &'a HashMap<Slot, usize>,
+    ) -> BankFieldsToSerialize<'a> {
+        BankFieldsToSerialize {
+            blockhash_queue: &self.blockhash_queue,
+            evm_blockhashes: &self.evm_blockhashes,
+            evm_chain_id: self.evm_chain_id,
+            evm_persist_fields: self.evm_state.read().unwrap().clone().save_state(),
+            ancestors,
+            hash: *self.hash.read().unwrap(),
+            parent_hash: self.parent_hash,
+            parent_slot: self.parent_slot,
+            hard_forks: &self.hard_forks,
+            transaction_count: self.transaction_count.load(Relaxed),
+            tick_height: self.tick_height.load(Relaxed),
+            signature_count: self.signature_count.load(Relaxed),
+            capitalization: self.capitalization.load(Relaxed),
+            max_tick_height: self.max_tick_height,
+            hashes_per_tick: self.hashes_per_tick,
+            ticks_per_slot: self.ticks_per_slot,
+            ns_per_slot: self.ns_per_slot,
+            genesis_creation_time: self.genesis_creation_time,
+            slots_per_year: self.slots_per_year,
+            slot: self.slot,
+            epoch: self.epoch,
+            block_height: self.block_height,
+            collector_id: self.collector_id,
+            collector_fees: self.collector_fees.load(Relaxed),
+            fee_calculator: self.fee_calculator,
+            fee_rate_governor: self.fee_rate_governor.clone(),
+            collected_rent: self.collected_rent.load(Relaxed),
+            rent_collector: self.rent_collector.clone(),
+            epoch_schedule: self.epoch_schedule,
+            inflation: *self.inflation.read().unwrap(),
+            stakes: &self.stakes_cache,
+            epoch_stakes: &self.epoch_stakes,
+            is_delta: self.is_delta.load(Relaxed),
+            accounts_data_len: self.load_accounts_data_len(),
+        }
+    }
+
+    /// Load the accounts data len
+    fn load_accounts_data_len(&self) -> u64 {
+        self.accounts_data_len.load(Acquire)
+    }
+
+    // Create a bank from explicit arguments and deserialized fields from snapshot
+    #[allow(clippy::float_cmp)]
+    pub(crate) fn new_from_fields(
+        evm_state: evm_state::EvmState,
+        bank_rc: BankRc,
+        genesis_config: &GenesisConfig,
+        fields: BankFieldsToDeserialize,
+        debug_keys: Option<Arc<HashSet<Pubkey>>>,
+        additional_builtins: Option<&Builtins>,
+        debug_do_not_add_builtins: bool,
+        accounts_data_len: u64,
+    ) -> Self {
+        fn new<T: Default>() -> T {
+            T::default()
+        }
+        let mut bank = Self {
+            rc: bank_rc,
+            src: new(),
+            blockhash_queue: RwLock::new(fields.blockhash_queue),
+            evm_blockhashes: RwLock::new(fields.evm_blockhashes),
+            evm_chain_id: fields.evm_chain_id,
+            evm_state: RwLock::new(evm_state),
+            evm_changed_list: RwLock::new(None),
+            ancestors: Ancestors::from(&fields.ancestors),
+            hash: RwLock::new(fields.hash),
+            parent_hash: fields.parent_hash,
+            parent_slot: fields.parent_slot,
+            hard_forks: Arc::new(RwLock::new(fields.hard_forks)),
+            transaction_count: AtomicU64::new(fields.transaction_count),
+            transaction_error_count: new(),
+            transaction_entries_count: new(),
+            transactions_per_entry_max: new(),
+            tick_height: AtomicU64::new(fields.tick_height),
+            signature_count: AtomicU64::new(fields.signature_count),
+            capitalization: AtomicU64::new(fields.capitalization),
+            max_tick_height: fields.max_tick_height,
+            hashes_per_tick: fields.hashes_per_tick,
+            ticks_per_slot: fields.ticks_per_slot,
+            ns_per_slot: fields.ns_per_slot,
+            genesis_creation_time: fields.genesis_creation_time,
+            slots_per_year: fields.slots_per_year,
+            slot: fields.slot,
+            bank_id: 0,
+            epoch: fields.epoch,
+            block_height: fields.block_height,
+            collector_id: fields.collector_id,
+            collector_fees: AtomicU64::new(fields.collector_fees),
+            fee_calculator: fields.fee_calculator,
+            fee_rate_governor: fields.fee_rate_governor,
+            collected_rent: AtomicU64::new(fields.collected_rent),
+            // clone()-ing is needed to consider a gated behavior in rent_collector
+            rent_collector: fields.rent_collector.clone_with_epoch(fields.epoch),
+            epoch_schedule: fields.epoch_schedule,
+            inflation: Arc::new(RwLock::new(fields.inflation)),
+            stakes_cache: StakesCache::new(fields.stakes),
+            epoch_stakes: fields.epoch_stakes,
+            is_delta: AtomicBool::new(fields.is_delta),
+            builtin_programs: new(),
+            compute_budget: None,
+            builtin_feature_transitions: new(),
+            rewards: new(),
+            cluster_type: Some(genesis_config.cluster_type),
+            lazy_rent_collection: new(),
+            rewards_pool_pubkeys: new(),
+            cached_executors: RwLock::new(CachedExecutors::new(MAX_CACHED_EXECUTORS, fields.epoch)),
+            transaction_debug_keys: debug_keys,
+            transaction_log_collector_config: new(),
+            transaction_log_collector: new(),
+            feature_set: new(),
+            drop_callback: RwLock::new(OptionalDropCallback(None)),
+            freeze_started: AtomicBool::new(fields.hash != Hash::default()),
+            vote_only_bank: false,
+            cost_tracker: RwLock::new(CostTracker::default()),
+            sysvar_cache: RwLock::new(SysvarCache::default()),
+            accounts_data_len: AtomicU64::new(accounts_data_len),
+            fee_structure: FeeStructure::default(),
+        };
+        bank.finish_init(
+            genesis_config,
+            additional_builtins,
+            debug_do_not_add_builtins,
+        );
+
+        // Sanity assertions between bank snapshot and genesis config
+        // Consider removing from serializable bank state
+        // (BankFieldsToSerialize/BankFieldsToDeserialize) and initializing
+        // from the passed in genesis_config instead (as new()/new_with_paths() already do)
+        assert_eq!(
+            bank.hashes_per_tick,
+            genesis_config.poh_config.hashes_per_tick
+        );
+        assert_eq!(bank.ticks_per_slot, genesis_config.ticks_per_slot);
+        assert_eq!(
+            bank.ns_per_slot,
+            genesis_config.poh_config.target_tick_duration.as_nanos()
+                * genesis_config.ticks_per_slot as u128
+        );
+        assert_eq!(bank.genesis_creation_time, genesis_config.creation_time);
+        assert_eq!(bank.max_tick_height, (bank.slot + 1) * bank.ticks_per_slot);
+        assert_eq!(
+            bank.slots_per_year,
+            years_as_slots(
+                1.0,
+                &genesis_config.poh_config.target_tick_duration,
+                bank.ticks_per_slot,
+            )
+        );
+        assert_eq!(bank.epoch_schedule, genesis_config.epoch_schedule);
+        assert_eq!(bank.epoch, bank.epoch_schedule.get_epoch(bank.slot));
+        if !bank.feature_set.is_active(&disable_fee_calculator::id()) {
+            bank.fee_rate_governor.lamports_per_signature =
+                bank.fee_calculator.wens_per_signature;
+            assert_eq!(
+                bank.fee_rate_governor.create_fee_calculator(),
+                bank.fee_calculator
+            );
+        }
+
+        datapoint_info!(
+            "bank-new-from-fields",
+            (
+                "accounts_data_len-from-snapshot",
+                fields.accounts_data_len as i64,
+                i64
+            ),
+            (
+                "accounts_data_len-from-generate_index",
+                accounts_data_len as i64,
+                i64
+            ),
+        );
+        bank
+    }
+
+    fn finish_init(
+        &mut self,
+        genesis_config: &GenesisConfig,
+        additional_builtins: Option<&Builtins>,
+        debug_do_not_add_builtins: bool,
+    ) {
+        self.rewards_pool_pubkeys =
+            Arc::new(genesis_config.rewards_pools.keys().cloned().collect());
+
+        let mut builtins = builtins::get();
+        if let Some(additional_builtins) = additional_builtins {
+            builtins
+                .genesis_builtins
+                .extend_from_slice(&additional_builtins.genesis_builtins);
+            builtins
+                .feature_transitions
+                .extend_from_slice(&additional_builtins.feature_transitions);
+        }
+        if !debug_do_not_add_builtins {
+            for builtin in builtins.genesis_builtins {
+                self.add_builtin(
+                    &builtin.name,
+                    &builtin.id,
+                    builtin.process_instruction_with_context,
+                );
+            }
+            for precompile in get_precompiles() {
+                if precompile.feature.is_none() {
+                    self.add_precompile(&precompile.program_id);
+                }
+            }
+        }
+
+        self.add_builtin(
+            "evm_loader",
+            &sdk::evm_loader::id(),
+            |acc, data, context| {
+                evm_loader_program::EvmProcessor {}.process_instruction(acc, data, context)
+            },
+        );
+
+        self.builtin_feature_transitions = Arc::new(builtins.feature_transitions);
+
+        self.evm_state
+            .write()
+            .expect("poisoned state")
+            .reregister_slot(self.slot())
+            .expect("cannot register slot");
+
+        self.apply_feature_activations(true, debug_do_not_add_builtins);
+    }
+
+    /// Add an instruction processor to intercept instructions before the dynamic loader.
+    pub fn add_builtin(
+        &mut self,
+        name: &str,
+        program_id: &Pubkey,
+        process_instruction: ProcessInstructionWithContext,
+    ) {
+        debug!("Adding program {} under {:?}", name, program_id);
+        self.add_builtin_account(name, program_id, false);
+        if let Some(entry) = self
+            .builtin_programs
+            .vec
+            .iter_mut()
+            .find(|entry| entry.program_id == *program_id)
+        {
+            entry.process_instruction = process_instruction;
+        } else {
+            self.builtin_programs.vec.push(BuiltinProgram {
+                program_id: *program_id,
+                process_instruction,
+            });
+        }
+        debug!("Added program {} under {:?}", name, program_id);
+    }
+
+    pub fn add_precompile(&mut self, program_id: &Pubkey) {
+        debug!("Adding precompiled program {}", program_id);
+        self.add_precompiled_account(program_id);
+        debug!("Added precompiled program {:?}", program_id);
+    }
+
 }
 
 #[derive(Debug)]
@@ -857,6 +1130,17 @@ pub struct BankRc {
     pub(crate) slot: Slot,
 
     pub(crate) bank_id_generator: Arc<AtomicU64>,
+}
+
+impl BankRc {
+    pub(crate) fn new(accounts: Accounts, slot: Slot) -> Self {
+        Self {
+            accounts: Arc::new(accounts),
+            parent: RwLock::new(None),
+            slot,
+            bank_id_generator: Arc::new(AtomicU64::new(0)),
+        }
+    }
 }
 
 mod executor_cache {

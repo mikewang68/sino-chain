@@ -39,6 +39,7 @@ pub mod serde_snapshot;
 pub mod shared_buffer_reader;
 pub mod snapshot_archive_info;
 pub mod snapshot_package;
+pub mod block_cost_limits;
 
 #[macro_use]
 extern crate metrics;

@@ -48,3 +48,9 @@ impl Stakes {
 
 #[derive(Default, Debug, Deserialize, Serialize, AbiExample)]
 pub struct StakesCache(RwLock<Stakes>);
+
+impl StakesCache {
+    pub fn new(stakes: Stakes) -> Self {
+        Self(RwLock::new(stakes))
+    }
+}

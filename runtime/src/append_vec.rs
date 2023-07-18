@@ -37,6 +37,8 @@ macro_rules! u64_align {
     };
 }
 
+const MAXIMUM_APPEND_VEC_FILE_SIZE: u64 = 16 * 1024 * 1024 * 1024; // 16 GiB
+
 /// Meta contains enough context to recover the index from storage itself
 /// This struct will be backed by mmaped and snapshotted data files.
 /// So the data layout must be stable and consistent across the entire cluster!
@@ -86,6 +88,16 @@ impl AppendVec {
 
     pub fn file_name(slot: Slot, id: usize) -> String {
         format!("{}.{}", slot, id)
+    }
+
+    /// Return account metadata for each account, starting from `offset`.
+    pub fn accounts(&self, mut offset: usize) -> Vec<StoredAccountMeta> {
+        let mut accounts = vec![];
+        while let Some((account, next)) = self.get_account(offset) {
+            accounts.push(account);
+            offset = next;
+        }
+        accounts
     }
 
     /// Return account metadata for the account at `offset` if its data doesn't overrun
@@ -144,6 +156,91 @@ impl AppendVec {
             next,
         ))
     }
+
+    pub fn new_from_file<P: AsRef<Path>>(path: P, current_len: usize) -> io::Result<(Self, usize)> {
+        let data = OpenOptions::new()
+            .read(true)
+            .write(true)
+            .create(false)
+            .open(&path)?;
+
+        let file_size = std::fs::metadata(&path)?.len();
+        AppendVec::sanitize_len_and_size(current_len, file_size as usize)?;
+
+        let map = unsafe {
+            let result = MmapMut::map_mut(&data);
+            if result.is_err() {
+                // for vm.max_map_count, error is: {code: 12, kind: Other, message: "Cannot allocate memory"}
+                info!("memory map error: {:?}. This may be because vm.max_map_count is not set correctly.", result);
+            }
+            result?
+        };
+
+        let new = AppendVec {
+            path: path.as_ref().to_path_buf(),
+            map,
+            append_lock: Mutex::new(()),
+            current_len: AtomicUsize::new(current_len),
+            file_size,
+            remove_on_drop: true,
+        };
+
+        let (sanitized, num_accounts) = new.sanitize_layout_and_length();
+        if !sanitized {
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::Other,
+                "incorrect layout/length/data",
+            ));
+        }
+
+        Ok((new, num_accounts))
+    }
+
+    fn sanitize_len_and_size(current_len: usize, file_size: usize) -> io::Result<()> {
+        if file_size == 0 {
+            Err(std::io::Error::new(
+                std::io::ErrorKind::Other,
+                format!("too small file size {} for AppendVec", file_size),
+            ))
+        } else if usize::try_from(MAXIMUM_APPEND_VEC_FILE_SIZE)
+            .map(|max| file_size > max)
+            .unwrap_or(true)
+        {
+            Err(std::io::Error::new(
+                std::io::ErrorKind::Other,
+                format!("too large file size {} for AppendVec", file_size),
+            ))
+        } else if current_len > file_size {
+            Err(std::io::Error::new(
+                std::io::ErrorKind::Other,
+                format!("current_len is larger than file size ({})", file_size),
+            ))
+        } else {
+            Ok(())
+        }
+    }
+
+    fn sanitize_layout_and_length(&self) -> (bool, usize) {
+        let mut offset = 0;
+
+        // This discards allocated accounts immediately after check at each loop iteration.
+        //
+        // This code should not reuse AppendVec.accounts() method as the current form or
+        // extend it to be reused here because it would allow attackers to accumulate
+        // some measurable amount of memory needlessly.
+        let mut num_accounts = 0;
+        while let Some((account, next_offset)) = self.get_account(offset) {
+            if !account.sanitize() {
+                return (false, num_accounts);
+            }
+            offset = next_offset;
+            num_accounts += 1;
+        }
+        let aligned_current_len = u64_align!(self.current_len.load(Ordering::Relaxed));
+
+        (offset == aligned_current_len, num_accounts)
+    }
+    
 }
 
 /// References to account data stored elsewhere. Getting an `Account` requires cloning
@@ -170,20 +267,43 @@ impl<'a> StoredAccountMeta<'a> {
             data: self.data.to_vec(),
         })
     }
+
+    fn sanitize(&self) -> bool {
+        self.sanitize_executable() && self.sanitize_lamports()
+    }
+
+    fn sanitize_executable(&self) -> bool {
+        // Sanitize executable to ensure higher 7-bits are cleared correctly.
+        self.ref_executable_byte() & !1 == 0
+    }
+
+    fn sanitize_lamports(&self) -> bool {
+        // Sanitize 0 lamports to ensure to be same as AccountSharedData::default()
+        self.account_meta.lamports != 0 || self.clone_account() == AccountSharedData::default()
+    }
+
+    fn ref_executable_byte(&self) -> &u8 {
+        // Use extra references to avoid value silently clamped to 1 (=true) and 0 (=false)
+        // Yes, this really happens; see test_new_from_file_crafted_executable
+        let executable_bool: &bool = &self.account_meta.executable;
+        // UNSAFE: Force to interpret mmap-backed bool as u8 to really read the actual memory content
+        let executable_byte: &u8 = unsafe { &*(executable_bool as *const bool as *const u8) };
+        executable_byte
+    }
 }
 
 pub type StoredMetaWriteVersion = u64;
 /// Meta contains enough context to recover the index from storage itself
 /// This struct will be backed by mmaped and snapshotted data files.
 /// So the data layout must be stable and consistent across the entire cluster!
-#[derive(Clone, PartialEq, Debug)]
-pub struct StoredMeta {
-    /// global write version
-    pub write_version: StoredMetaWriteVersion,
-    /// key for the account
-    pub pubkey: Pubkey,
-    pub data_len: u64,
-}
+// #[derive(Clone, PartialEq, Debug)]
+// pub struct StoredMeta {
+//     /// global write version
+//     pub write_version: StoredMetaWriteVersion,
+//     /// key for the account
+//     pub pubkey: Pubkey,
+//     pub data_len: u64,
+// }
 
 /// This struct will be backed by mmaped and snapshotted data files.
 /// So the data layout must be stable and consistent across the entire cluster!

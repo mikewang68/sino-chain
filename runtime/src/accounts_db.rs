@@ -100,6 +100,8 @@ use {
     tempfile::TempDir,
 };
 
+mod geyser_plugin_utils;
+
 
 // A specially reserved storage id just for entries in the cache, so that
 // operations that take a storage entry can maintain a common interface
@@ -416,6 +418,26 @@ impl AccountStorageEntry {
 
     fn get_stored_account_meta(&self, offset: usize) -> Option<StoredAccountMeta> {
         Some(self.accounts.get_account(offset)?.0)
+    }
+
+    pub(crate) fn new_existing(
+        slot: Slot,
+        id: AppendVecId,
+        accounts: AppendVec,
+        num_accounts: usize,
+    ) -> Self {
+        Self {
+            id: AtomicUsize::new(id),
+            slot: AtomicU64::new(slot),
+            accounts,
+            count_and_status: RwLock::new((0, AccountStorageStatus::Available)),
+            approx_store_count: AtomicUsize::new(num_accounts),
+            alive_bytes: AtomicUsize::new(0),
+        }
+    }
+
+    pub fn all_accounts(&self) -> Vec<StoredAccountMeta> {
+        self.accounts.accounts(0)
     }
 
 }

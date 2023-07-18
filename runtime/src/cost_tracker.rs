@@ -4,10 +4,12 @@
 //! - add_transaction_cost(&tx_cost), mutable function to accumulate tx_cost to tracker.
 //!
 use {
-    // crate::{block_cost_limits::*, cost_model::TransactionCost},
+    crate::{block_cost_limits::*/* , cost_model::TransactionCost*/},
     sdk::{pubkey::Pubkey},
     std::{collections::HashMap},
 };
+
+const WRITABLE_ACCOUNTS_PER_BLOCK: usize = 512;
 
 #[derive(AbiExample, Debug)]
 pub struct CostTracker {
@@ -18,4 +20,24 @@ pub struct CostTracker {
     block_cost: u64,
     vote_cost: u64,
     transaction_count: u64,
+}
+
+impl Default for CostTracker {
+    fn default() -> Self {
+        // Clippy doesn't like asserts in const contexts, so need to explicitly allow them.  For
+        // more info, see this issue: https://github.com/rust-lang/rust-clippy/issues/8159
+        #![allow(clippy::assertions_on_constants)]
+        const _: () = assert!(MAX_WRITABLE_ACCOUNT_UNITS <= MAX_BLOCK_UNITS);
+        const _: () = assert!(MAX_VOTE_UNITS <= MAX_BLOCK_UNITS);
+
+        Self {
+            account_cost_limit: MAX_WRITABLE_ACCOUNT_UNITS,
+            block_cost_limit: MAX_BLOCK_UNITS,
+            vote_cost_limit: MAX_VOTE_UNITS,
+            cost_by_writable_accounts: HashMap::with_capacity(WRITABLE_ACCOUNTS_PER_BLOCK),
+            block_cost: 0,
+            vote_cost: 0,
+            transaction_count: 0,
+        }
+    }
 }

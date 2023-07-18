@@ -13,3 +13,27 @@ pub struct RentCollector {
     pub rent: Rent,
 }
 
+impl RentCollector {
+    pub fn clone_with_epoch(&self, epoch: Epoch) -> Self {
+        Self {
+            epoch,
+            ..self.clone()
+        }
+    }
+
+    pub fn new(
+        epoch: Epoch,
+        epoch_schedule: &EpochSchedule,
+        slots_per_year: f64,
+        rent: &Rent,
+    ) -> Self {
+        Self {
+            epoch,
+            epoch_schedule: *epoch_schedule,
+            slots_per_year,
+            rent: *rent,
+        }
+    }
+
+}
+
