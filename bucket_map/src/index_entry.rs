@@ -29,6 +29,10 @@ pub struct IndexEntry {
 }
 
 impl IndexEntry {
+    pub fn ref_count(&self) -> RefCount {
+        self.ref_count
+    }
+
     pub fn data_bucket_from_num_slots(num_slots: Slot) -> u64 {
         (num_slots as f64).log2().ceil() as u64 // use int log here?
     }

@@ -1,7 +1,7 @@
 use {
     crate::{
         bucket::Bucket, 
-        // bucket_item::BucketItem, 
+        bucket_item::BucketItem, 
         bucket_map::BucketMapError,
         bucket_stats::BucketMapStats, MaxSearch, RefCount,
     },
@@ -14,6 +14,7 @@ use {
             Arc, RwLock, RwLockWriteGuard,
         },
     },
+    core::ops::RangeBounds,
 };
 
 type LockedBucket<T> = RwLock<Option<Bucket<T>>>;
@@ -27,6 +28,19 @@ pub struct BucketApi<T: Clone + Copy> {
 }
 
 impl<T: Clone + Copy> BucketApi<T> {
+    /// Get the items for bucket
+    pub fn items_in_range<R>(&self, range: &Option<&R>) -> Vec<BucketItem<T>>
+    where
+        R: RangeBounds<Pubkey>,
+    {
+        self.bucket
+            .read()
+            .unwrap()
+            .as_ref()
+            .map(|bucket| bucket.items_in_range(range))
+            .unwrap_or_default()
+    }
+
         /// Get the values for Pubkey `key`
     pub fn read_value(&self, key: &Pubkey) -> Option<(Vec<T>, RefCount)> {
         self.bucket.read().unwrap().as_ref().and_then(|bucket| {

@@ -41,6 +41,20 @@ pub(crate) struct ReadOnlyAccountsCache {
 }
 
 impl ReadOnlyAccountsCache {
+    pub(crate) fn get_and_reset_stats(&self) -> (u64, u64) {
+        let hits = self.hits.swap(0, Ordering::Relaxed);
+        let misses = self.misses.swap(0, Ordering::Relaxed);
+        (hits, misses)
+    }
+
+    pub(crate) fn data_size(&self) -> usize {
+        self.data_size.load(Ordering::Relaxed)
+    }
+
+    pub(crate) fn cache_len(&self) -> usize {
+        self.cache.len()
+    }
+
     pub(crate) fn new(max_data_size: usize) -> Self {
         Self {
             max_data_size,

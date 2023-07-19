@@ -3,6 +3,7 @@ use {
         accounts_index::{
             AccountMapEntry, 
             AccountMapEntryInner,
+            AccountMapEntryMeta,
             IndexValue,
         },
         bucket_map_holder::{Age, BucketMapHolder},
@@ -24,6 +25,7 @@ use {
             Arc, RwLock, 
         },
     },
+    core::ops::RangeBounds,
 };
 type K = Pubkey;
 type CacheRangesHeld = RwLock<Vec<Option<RangeInclusive<Pubkey>>>>;
@@ -66,6 +68,63 @@ impl<T: IndexValue> Debug for InMemAccountsIndex<T> {
 }
 
 impl<T: IndexValue> InMemAccountsIndex<T> {
+    pub fn items<R>(&self, range: &Option<&R>) -> Vec<(K, AccountMapEntry<T>)>
+    where
+        R: RangeBounds<Pubkey> + std::fmt::Debug,
+    {
+        self.start_stop_flush(true);
+        self.put_range_in_cache(range); // check range here to see if our items are already held in the cache
+        Self::update_stat(&self.stats().items, 1);
+        let map = self.map().read().unwrap();
+        let mut result = Vec::with_capacity(map.len());
+        map.iter().for_each(|(k, v)| {
+            if range.map(|range| range.contains(k)).unwrap_or(true) {
+                result.push((*k, Arc::clone(v)));
+            }
+        });
+        self.start_stop_flush(false);
+        result
+    }
+
+    fn put_range_in_cache<R>(&self, range: &Option<&R>)
+    where
+        R: RangeBounds<Pubkey>,
+    {
+        assert!(self.get_stop_flush()); // caller should be controlling the lifetime of how long this needs to be present
+        let m = Measure::start("range");
+
+        // load from disk
+        if let Some(disk) = self.bucket.as_ref() {
+            let mut map = self.map().write().unwrap();
+            let items = disk.items_in_range(range); // map's lock has to be held while we are getting items from disk
+            let future_age = self.storage.future_age_to_flush();
+            for item in items {
+                let entry = map.entry(item.pubkey);
+                match entry {
+                    Entry::Occupied(occupied) => {
+                        // item already in cache, bump age to future. This helps the current age flush to succeed.
+                        occupied.get().set_age(future_age);
+                    }
+                    Entry::Vacant(vacant) => {
+                        vacant.insert(self.disk_to_cache_entry(item.slot_list, item.ref_count));
+                        self.stats().insert_or_delete_mem(true, self.bin);
+                    }
+                }
+            }
+        }
+
+        Self::update_time_stat(&self.stats().get_range_us, m);
+    }
+
+    fn start_stop_flush(&self, stop: bool) {
+        if stop {
+            self.stop_flush.fetch_add(1, Ordering::Release);
+        } else if 1 == self.stop_flush.fetch_sub(1, Ordering::Release) {
+            // stop_flush went to 0, so this bucket could now be ready to be aged
+            self.storage.wait_dirty_or_aged.notify_one();
+        }
+    }
+
     pub fn new(storage: &Arc<BucketMapHolder<T>>, bin: usize) -> Self {
         Self {
             map_internal: RwLock::default(),
@@ -426,5 +485,18 @@ impl<T: IndexValue> InMemAccountsIndex<T> {
 
     fn get_stop_flush(&self) -> bool {
         self.stop_flush.load(Ordering::Relaxed) > 0
+    }
+
+    // convert from raw data on disk to AccountMapEntry, set to age in future
+    fn disk_to_cache_entry(
+        &self,
+        slot_list: SlotList<T>,
+        ref_count: RefCount,
+    ) -> AccountMapEntry<T> {
+        Arc::new(AccountMapEntryInner::new(
+            slot_list,
+            ref_count,
+            AccountMapEntryMeta::new_dirty(&self.storage),
+        ))
     }
 }

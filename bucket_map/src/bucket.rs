@@ -1,6 +1,6 @@
 use {
     crate::{
-        // bucket_item::BucketItem,
+        bucket_item::BucketItem,
         bucket_map::BucketMapError,
         bucket_stats::BucketMapStats,
         bucket_storage::{
@@ -47,6 +47,30 @@ pub struct Bucket<T> {
 }
 
 impl<T: Clone + Copy> Bucket<T> {
+    pub fn items_in_range<R>(&self, range: &Option<&R>) -> Vec<BucketItem<T>>
+    where
+        R: RangeBounds<Pubkey>,
+    {
+        let mut result = Vec::with_capacity(self.index.used.load(Ordering::Relaxed) as usize);
+        for i in 0..self.index.capacity() {
+            let ii = i % self.index.capacity();
+            if self.index.uid(ii) == UID_UNLOCKED {
+                continue;
+            }
+            let ix: &IndexEntry = self.index.get(ii);
+            let key = ix.key;
+            if range.map(|r| r.contains(&key)).unwrap_or(true) {
+                let val = ix.read_value(self);
+                result.push(BucketItem {
+                    pubkey: key,
+                    ref_count: ix.ref_count(),
+                    slot_list: val.map(|(v, _ref_count)| v.to_vec()).unwrap_or_default(),
+                });
+            }
+        }
+        result
+    }
+
     pub fn read_value(&self, key: &Pubkey) -> Option<(&[T], RefCount)> {
         //debug!("READ_VALUE: {:?}", key);
         let (elem, _) = self.find_entry(key)?;

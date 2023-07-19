@@ -2,7 +2,7 @@
 use sdk::{
     clock::Epoch,
     epoch_schedule::EpochSchedule,
-    rent::{Rent},
+    rent::Rent,
 };
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug, AbiExample)]

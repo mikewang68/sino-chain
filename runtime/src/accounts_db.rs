@@ -46,6 +46,7 @@ use {
             // ACCOUNTS_INDEX_CONFIG_FOR_BENCHMARKS,
             // ACCOUNTS_INDEX_CONFIG_FOR_TESTING,
         },
+        accounts_index::{AccountIndex, IndexKey, ScanConfig, ScanResult},
         accounts_update_notifier_interface::AccountsUpdateNotifier,
         ancestors::Ancestors,
         append_vec::{AppendVec, 
@@ -195,17 +196,25 @@ pub struct AccountInfo {
     lamports: u64,
 }
 
-impl ZeroLamport for AccountInfo {
-    fn is_zero_lamport(&self) -> bool {
-        self.lamports == 0
-    }
-}
 impl IsCached for AccountInfo {
     fn is_cached(&self) -> bool {
         self.store_id == CACHE_VIRTUAL_STORAGE_ID
     }
 }
+
 impl IndexValue for AccountInfo {}
+
+impl ZeroLamport for AccountInfo {
+    fn is_zero_lamport(&self) -> bool {
+        self.lamports == 0
+    }
+}
+
+impl ZeroLamport for AccountSharedData {
+    fn is_zero_lamport(&self) -> bool {
+        self.wens() == 0
+    }
+}
 
 #[derive(Debug, Default, Clone)]
 pub struct AccountsDbConfig {
@@ -252,6 +261,16 @@ impl AccountStorage {
 struct RecycleStores {
     entries: Vec<(Instant, Arc<AccountStorageEntry>)>,
     total_bytes: u64,
+}
+
+impl RecycleStores{
+    fn entry_count(&self) -> usize {
+        self.entries.len()
+    }
+
+    fn total_bytes(&self) -> u64 {
+        self.total_bytes
+    }
 }
 
 pub type SnapshotStorage = Vec<Arc<AccountStorageEntry>>;
@@ -449,6 +468,33 @@ pub struct BankHashStats {
     pub num_lamports_stored: u64,
     pub total_data_len: u64,
     pub num_executable_accounts: u64,
+}
+
+impl BankHashStats{
+    pub fn update<T: ReadableAccount + ZeroLamport>(&mut self, account: &T) {
+        if account.is_zero_lamport() {
+            self.num_removed_accounts += 1;
+        } else {
+            self.num_updated_accounts += 1;
+        }
+        self.total_data_len = self
+            .total_data_len
+            .wrapping_add(account.data().len() as u64);
+        if account.executable() {
+            self.num_executable_accounts += 1;
+        }
+        self.num_lamports_stored = self.num_lamports_stored.wrapping_add(account.wens());
+    }
+
+    pub fn merge(&mut self, other: &BankHashStats) {
+        self.num_updated_accounts += other.num_updated_accounts;
+        self.num_removed_accounts += other.num_removed_accounts;
+        self.total_data_len = self.total_data_len.wrapping_add(other.total_data_len);
+        self.num_lamports_stored = self
+            .num_lamports_stored
+            .wrapping_add(other.num_lamports_stored);
+        self.num_executable_accounts += other.num_executable_accounts;
+    }
 }
 
 #[derive(Debug, Default)]
@@ -731,6 +777,257 @@ impl Default for AccountShrinkThreshold {
 }
 
 impl AccountsDb {
+    /// Store the account update.
+    /// only called by tests
+    pub fn store_uncached(&self, slot: Slot, accounts: &[(&Pubkey, &AccountSharedData)]) {
+        self.store(slot, accounts, false);
+    }
+
+    fn store(&self, slot: Slot, accounts: &[(&Pubkey, &AccountSharedData)], is_cached_store: bool) {
+        // If all transactions in a batch are errored,
+        // it's possible to get a store with no accounts.
+        if accounts.is_empty() {
+            return;
+        }
+
+        let mut stats = BankHashStats::default();
+        let mut total_data = 0;
+        accounts.iter().for_each(|(_pubkey, account)| {
+            total_data += account.data().len();
+            stats.update(*account);
+        });
+
+        self.stats
+            .store_total_data
+            .fetch_add(total_data as u64, Ordering::Relaxed);
+
+        {
+            // we need to drop bank_hashes to prevent deadlocks
+            let mut bank_hashes = self.bank_hashes.write().unwrap();
+            let slot_info = bank_hashes
+                .entry(slot)
+                .or_insert_with(BankHashInfo::default);
+            slot_info.stats.merge(&stats);
+        }
+
+        // we use default hashes for now since the same account may be stored to the cache multiple times
+        self.store_accounts_unfrozen(slot, accounts, None, is_cached_store);
+        self.report_store_timings();
+    }
+
+    fn store_accounts_unfrozen(
+        &self,
+        slot: Slot,
+        accounts: &[(&Pubkey, &AccountSharedData)],
+        hashes: Option<&[&Hash]>,
+        is_cached_store: bool,
+    ) {
+        // This path comes from a store to a non-frozen slot.
+        // If a store is dead here, then a newer update for
+        // each pubkey in the store must exist in another
+        // store in the slot. Thus it is safe to reset the store and
+        // re-use it for a future store op. The pubkey ref counts should still
+        // hold just 1 ref from this slot.
+        let reset_accounts = true;
+
+        self.store_accounts_custom(
+            slot,
+            accounts,
+            hashes,
+            None::<StorageFinder>,
+            None::<Box<dyn Iterator<Item = u64>>>,
+            is_cached_store,
+            reset_accounts,
+        );
+    }
+
+    fn report_store_timings(&self) {
+        if self.stats.last_store_report.should_update(1000) {
+            let (read_only_cache_hits, read_only_cache_misses) =
+                self.read_only_accounts_cache.get_and_reset_stats();
+            datapoint_info!(
+                "accounts_db_store_timings",
+                (
+                    "hash_accounts",
+                    self.stats.store_hash_accounts.swap(0, Ordering::Relaxed),
+                    i64
+                ),
+                (
+                    "store_accounts",
+                    self.stats.store_accounts.swap(0, Ordering::Relaxed),
+                    i64
+                ),
+                (
+                    "update_index",
+                    self.stats.store_update_index.swap(0, Ordering::Relaxed),
+                    i64
+                ),
+                (
+                    "handle_reclaims",
+                    self.stats.store_handle_reclaims.swap(0, Ordering::Relaxed),
+                    i64
+                ),
+                (
+                    "append_accounts",
+                    self.stats.store_append_accounts.swap(0, Ordering::Relaxed),
+                    i64
+                ),
+                (
+                    "find_storage",
+                    self.stats.store_find_store.swap(0, Ordering::Relaxed),
+                    i64
+                ),
+                (
+                    "num_accounts",
+                    self.stats.store_num_accounts.swap(0, Ordering::Relaxed),
+                    i64
+                ),
+                (
+                    "total_data",
+                    self.stats.store_total_data.swap(0, Ordering::Relaxed),
+                    i64
+                ),
+                (
+                    "read_only_accounts_cache_entries",
+                    self.read_only_accounts_cache.cache_len(),
+                    i64
+                ),
+                (
+                    "read_only_accounts_cache_data_size",
+                    self.read_only_accounts_cache.data_size(),
+                    i64
+                ),
+                ("read_only_accounts_cache_hits", read_only_cache_hits, i64),
+                (
+                    "read_only_accounts_cache_misses",
+                    read_only_cache_misses,
+                    i64
+                ),
+                (
+                    "calc_stored_meta_us",
+                    self.stats.calc_stored_meta.swap(0, Ordering::Relaxed),
+                    i64
+                ),
+            );
+
+            let recycle_stores = self.recycle_stores.read().unwrap();
+            datapoint_info!(
+                "accounts_db_store_timings2",
+                (
+                    "recycle_store_count",
+                    self.stats.recycle_store_count.swap(0, Ordering::Relaxed),
+                    i64
+                ),
+                (
+                    "current_recycle_store_count",
+                    recycle_stores.entry_count(),
+                    i64
+                ),
+                (
+                    "current_recycle_store_bytes",
+                    recycle_stores.total_bytes(),
+                    i64
+                ),
+                (
+                    "create_store_count",
+                    self.stats.create_store_count.swap(0, Ordering::Relaxed),
+                    i64
+                ),
+                (
+                    "store_get_slot_store",
+                    self.stats.store_get_slot_store.swap(0, Ordering::Relaxed),
+                    i64
+                ),
+                (
+                    "store_find_existing",
+                    self.stats.store_find_existing.swap(0, Ordering::Relaxed),
+                    i64
+                ),
+                (
+                    "dropped_stores",
+                    self.stats.dropped_stores.swap(0, Ordering::Relaxed),
+                    i64
+                ),
+            );
+        }
+    }
+
+    pub fn index_scan_accounts<F, A>(
+        &self,
+        ancestors: &Ancestors,
+        bank_id: BankId,
+        index_key: IndexKey,
+        scan_func: F,
+        config: &ScanConfig,
+    ) -> ScanResult<(A, bool)>
+    where
+        F: Fn(&mut A, Option<(&Pubkey, AccountSharedData, Slot)>),
+        A: Default,
+    {
+        let key = match &index_key {
+            IndexKey::ProgramId(key) => key,
+            IndexKey::SplTokenMint(key) => key,
+            IndexKey::SplTokenOwner(key) => key,
+            IndexKey::VelasAccountStorage(key) => key,
+            IndexKey::VelasAccountOwner(key) => key,
+            IndexKey::VelasAccountOperational(key) => key,
+            IndexKey::VelasRelyingOwner(key) => key,
+        };
+
+        if !self.account_indexes.include_key(key) {
+            // the requested key was not indexed in the secondary index, so do a normal scan
+            let used_index = false;
+            let scan_result = self.scan_accounts(ancestors, bank_id, scan_func, config)?;
+            return Ok((scan_result, used_index));
+        }
+
+        let mut collector = A::default();
+        self.accounts_index.index_scan_accounts(
+            ancestors,
+            bank_id,
+            index_key,
+            |pubkey, (account_info, slot)| {
+                let account_slot = self
+                    .get_account_accessor(slot, pubkey, account_info.store_id, account_info.offset)
+                    .get_loaded_account()
+                    .map(|loaded_account| (pubkey, loaded_account.take_account(), slot));
+                scan_func(&mut collector, account_slot)
+            },
+            config,
+        )?;
+        let used_index = true;
+        Ok((collector, used_index))
+    }
+
+    pub fn scan_accounts<F, A>(
+        &self,
+        ancestors: &Ancestors,
+        bank_id: BankId,
+        scan_func: F,
+        config: &ScanConfig,
+    ) -> ScanResult<A>
+    where
+        F: Fn(&mut A, Option<(&Pubkey, AccountSharedData, Slot)>),
+        A: Default,
+    {
+        let mut collector = A::default();
+
+        // This can error out if the slots being scanned over are aborted
+        self.accounts_index.scan_accounts(
+            ancestors,
+            bank_id,
+            |pubkey, (account_info, slot)| {
+                let account_slot = self
+                    .get_account_accessor(slot, pubkey, account_info.store_id, account_info.offset)
+                    .get_loaded_account()
+                    .map(|loaded_account| (pubkey, loaded_account.take_account(), slot));
+                scan_func(&mut collector, account_slot)
+            },
+            config,
+        )?;
+
+        Ok(collector)
+    }
 
     pub fn load(
         &self,

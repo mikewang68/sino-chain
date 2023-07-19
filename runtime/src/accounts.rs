@@ -9,8 +9,8 @@ use {
             AccountsDb,
         },
         ancestors::Ancestors,
+        accounts_index::{AccountIndex, IndexKey, ScanConfig, ScanResult, ScanError},
     },
-
     sdk::{
         clock::{BankId, Slot, INITIAL_RENT_EPOCH},
         account::{Account, AccountSharedData, ReadableAccount, WritableAccount},
@@ -20,6 +20,7 @@ use {
     std::{
         collections::{HashMap, HashSet},
         sync::{
+            atomic::{AtomicUsize, Ordering},
             Arc, Mutex,
         },
     },
@@ -43,6 +44,114 @@ pub struct Accounts {
 }
 
 impl Accounts{
+    /// Slow because lock is held for 1 operation instead of many.
+    /// WARNING: This noncached version is only to be used for tests/benchmarking
+    /// as bypassing the cache in general is not supported
+    pub fn store_slow_uncached(&self, slot: Slot, pubkey: &Pubkey, account: &AccountSharedData) {
+        self.accounts_db.store_uncached(slot, &[(pubkey, account)]);
+    }
+
+    pub fn load_by_program(
+        &self,
+        ancestors: &Ancestors,
+        bank_id: BankId,
+        program_id: &Pubkey,
+        config: &ScanConfig,
+    ) -> ScanResult<Vec<(Pubkey, AccountSharedData)>> {
+        self.accounts_db.scan_accounts(
+            ancestors,
+            bank_id,
+            |collector: &mut Vec<(Pubkey, AccountSharedData)>, some_account_tuple| {
+                Self::load_while_filtering(collector, some_account_tuple, |account| {
+                    account.owner() == program_id
+                })
+            },
+            config,
+        )
+    }
+
+    fn load_while_filtering<F: Fn(&AccountSharedData) -> bool>(
+        collector: &mut Vec<(Pubkey, AccountSharedData)>,
+        some_account_tuple: Option<(&Pubkey, AccountSharedData, Slot)>,
+        filter: F,
+    ) {
+        if let Some(mapped_account_tuple) = some_account_tuple
+            .filter(|(_, account, _)| Self::is_loadable(account.wens()) && filter(account))
+            .map(|(pubkey, account, _slot)| (*pubkey, account))
+        {
+            collector.push(mapped_account_tuple)
+        }
+    }
+
+    fn is_loadable(lamports: u64) -> bool {
+        // Don't ever load zero lamport accounts into runtime because
+        // the existence of zero-lamport accounts are never deterministic!!
+        lamports > 0
+    }
+
+    pub fn load_by_index_key_with_filter<F: Fn(&AccountSharedData) -> bool>(
+        &self,
+        ancestors: &Ancestors,
+        bank_id: BankId,
+        index_key: &IndexKey,
+        filter: F,
+        config: &ScanConfig,
+        byte_limit_for_scan: Option<usize>,
+    ) -> ScanResult<Vec<(Pubkey, AccountSharedData)>> {
+        let sum = AtomicUsize::default();
+        let config = ScanConfig {
+            abort: Some(config.abort.as_ref().map(Arc::clone).unwrap_or_default()),
+            collect_all_unsorted: config.collect_all_unsorted,
+        };
+        let result = self
+            .accounts_db
+            .index_scan_accounts(
+                ancestors,
+                bank_id,
+                *index_key,
+                |collector: &mut Vec<(Pubkey, AccountSharedData)>, some_account_tuple| {
+                    Self::load_while_filtering(collector, some_account_tuple, |account| {
+                        let use_account = filter(account);
+                        if use_account {
+                            if let Some(byte_limit_for_scan) = byte_limit_for_scan.as_ref() {
+                                let added = account.data().len()
+                                    + std::mem::size_of::<AccountSharedData>()
+                                    + std::mem::size_of::<Pubkey>();
+                                if sum
+                                    .fetch_add(added, Ordering::Relaxed)
+                                    .saturating_add(added)
+                                    > *byte_limit_for_scan
+                                {
+                                    // total size of results exceeds size limit, so abort scan
+                                    config.abort();
+                                }
+                            }
+                        }
+                        use_account
+                    });
+                },
+                &config,
+            )
+            .map(|result| result.0);
+        if config.is_aborted() {
+            ScanResult::Err(ScanError::Aborted(
+                "The accumulated scan results exceeded the limit".to_string(),
+            ))
+        } else {
+            result
+        }
+    }
+
+    fn filter_zero_lamport_account(
+        account: AccountSharedData,
+        slot: Slot,
+    ) -> Option<(AccountSharedData, Slot)> {
+        if account.wens() > 0 {
+            Some((account, slot))
+        } else {
+            None
+        }
+    }
 
     /// Slow because lock is held for 1 operation instead of many
     fn load_slow(

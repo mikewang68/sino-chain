@@ -53,6 +53,7 @@ use {
         stakes::{StakesCache, Stakes},
         cost_tracker::CostTracker,
         // cost_tracker::CostTracker,
+        accounts_index::{IndexKey, ScanConfig, ScanResult}
     },
     program_runtime::{
         compute_budget::{ComputeBudget},
@@ -489,6 +490,38 @@ pub struct Bank {
 }
 
 impl Bank {
+
+    pub fn get_program_accounts(
+        &self,
+        program_id: &Pubkey,
+        config: &ScanConfig,
+    ) -> ScanResult<Vec<(Pubkey, AccountSharedData)>> {
+        self.rc
+            .accounts
+            .load_by_program(&self.ancestors, self.bank_id, program_id, config)
+    }
+
+    pub fn clock(&self) -> sysvar::clock::Clock {
+        from_account(&self.get_account(&sysvar::clock::id()).unwrap_or_default())
+            .unwrap_or_default()
+    }
+
+    pub fn get_filtered_indexed_accounts<F: Fn(&AccountSharedData) -> bool>(
+        &self,
+        index_key: &IndexKey,
+        filter: F,
+        config: &ScanConfig,
+        byte_limit_for_scan: Option<usize>,
+    ) -> ScanResult<Vec<(Pubkey, AccountSharedData)>> {
+        self.rc.accounts.load_by_index_key_with_filter(
+            &self.ancestors,
+            self.bank_id,
+            index_key,
+            filter,
+            config,
+            byte_limit_for_scan,
+        )
+    }
     /// given a slot, return the epoch and offset into the epoch this slot falls
     /// e.g. with a fixed number for slots_per_epoch, the calculation is simply:
     ///
