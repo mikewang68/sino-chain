@@ -10,23 +10,23 @@ use proc_macro::TokenStream;
 
 // Define dummy macro_attribute and macro_derive for stable rustc
 
-#[cfg(RUSTC_WITHOUT_SPECIALIZATION)]
-#[proc_macro_attribute]
-pub fn frozen_abi(_attrs: TokenStream, item: TokenStream) -> TokenStream {
-    item
-}
+// #[cfg(RUSTC_WITHOUT_SPECIALIZATION)]
+// #[proc_macro_attribute]
+// pub fn frozen_abi(_attrs: TokenStream, item: TokenStream) -> TokenStream {
+//     item
+// }
 
-#[cfg(RUSTC_WITHOUT_SPECIALIZATION)]
-#[proc_macro_derive(AbiExample)]
-pub fn derive_abi_sample(_item: TokenStream) -> TokenStream {
-    "".parse().unwrap()
-}
+// #[cfg(RUSTC_WITHOUT_SPECIALIZATION)]
+// #[proc_macro_derive(AbiExample)]
+// pub fn derive_abi_sample(_item: TokenStream) -> TokenStream {
+//     "".parse().unwrap()
+// }
 
-#[cfg(RUSTC_WITHOUT_SPECIALIZATION)]
-#[proc_macro_derive()]
-pub fn derive_abi_enum_visitor(_item: TokenStream) -> TokenStream {
-    "".parse().unwrap()
-}
+// #[cfg(RUSTC_WITHOUT_SPECIALIZATION)]
+// #[proc_macro_derive()]
+// pub fn derive_abi_enum_visitor(_item: TokenStream) -> TokenStream {
+//     "".parse().unwrap()
+// }
 
 #[cfg(RUSTC_WITH_SPECIALIZATION)]
 use proc_macro2::{Span, TokenStream as TokenStream2, TokenTree::Group};
@@ -202,7 +202,7 @@ fn derive_abi_sample_struct_type(input: ItemStruct) -> TokenStream {
 
 #[cfg(RUSTC_WITH_SPECIALIZATION)]
 #[proc_macro_derive(AbiExample)]
-pub fn derive_abi_sample(item: TokenStream) -> TokenStream {
+pub fn derive_abi_sample(_item: TokenStream) -> TokenStream {
     "".parse().unwrap()
     // let item = parse_macro_input!(item as Item);
 
@@ -255,7 +255,7 @@ fn do_derive_abi_enum_visitor(input: ItemEnum) -> TokenStream {
 
 #[cfg(RUSTC_WITH_SPECIALIZATION)]
 #[proc_macro_derive(AbiEnumVisitor)]
-pub fn derive_abi_enum_visitor(item: TokenStream) -> TokenStream {
+pub fn derive_abi_enum_visitor(_item: TokenStream) -> TokenStream {
     "".parse().unwrap()
     // let item = parse_macro_input!(item as Item);
 
