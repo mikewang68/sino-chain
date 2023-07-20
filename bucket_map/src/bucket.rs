@@ -1,6 +1,6 @@
 use {
     crate::{
-        // bucket_item::BucketItem,
+        bucket_item::BucketItem,
         bucket_map::BucketMapError,
         bucket_stats::BucketMapStats,
         bucket_storage::{
@@ -47,6 +47,78 @@ pub struct Bucket<T> {
 }
 
 impl<T: Clone + Copy> Bucket<T> {
+    pub fn items_in_range<R>(&self, range: &Option<&R>) -> Vec<BucketItem<T>>
+    where
+        R: RangeBounds<Pubkey>,
+    {
+        let mut result = Vec::with_capacity(self.index.used.load(Ordering::Relaxed) as usize);
+        for i in 0..self.index.capacity() {
+            let ii = i % self.index.capacity();
+            if self.index.uid(ii) == UID_UNLOCKED {
+                continue;
+            }
+            let ix: &IndexEntry = self.index.get(ii);
+            let key = ix.key;
+            if range.map(|r| r.contains(&key)).unwrap_or(true) {
+                let val = ix.read_value(self);
+                result.push(BucketItem {
+                    pubkey: key,
+                    ref_count: ix.ref_count(),
+                    slot_list: val.map(|(v, _ref_count)| v.to_vec()).unwrap_or_default(),
+                });
+            }
+        }
+        result
+    }
+
+    pub fn read_value(&self, key: &Pubkey) -> Option<(&[T], RefCount)> {
+        //debug!("READ_VALUE: {:?}", key);
+        let (elem, _) = self.find_entry(key)?;
+        elem.read_value(self)
+    }
+
+    pub fn find_entry(&self, key: &Pubkey) -> Option<(&IndexEntry, u64)> {
+        Self::bucket_find_entry(&self.index, key, self.random)
+    }
+
+    fn bucket_find_entry_mut<'a>(
+        index: &'a BucketStorage,
+        key: &Pubkey,
+        random: u64,
+    ) -> Option<(&'a mut IndexEntry, u64)> {
+        let ix = Self::bucket_index_ix(index, key, random);
+        for i in ix..ix + index.max_search() {
+            let ii = i % index.capacity();
+            if index.uid(ii) == UID_UNLOCKED {
+                continue;
+            }
+            let elem: &mut IndexEntry = index.get_mut(ii);
+            if elem.key == *key {
+                return Some((elem, ii));
+            }
+        }
+        None
+    }
+
+    fn bucket_find_entry<'a>(
+        index: &'a BucketStorage,
+        key: &Pubkey,
+        random: u64,
+    ) -> Option<(&'a IndexEntry, u64)> {
+        let ix = Self::bucket_index_ix(index, key, random);
+        for i in ix..ix + index.max_search() {
+            let ii = i % index.capacity();
+            if index.uid(ii) == UID_UNLOCKED {
+                continue;
+            }
+            let elem: &IndexEntry = index.get(ii);
+            if elem.key == *key {
+                return Some((elem, ii));
+            }
+        }
+        None
+    }
+
     pub fn try_write(
         &mut self,
         key: &Pubkey,
@@ -160,24 +232,24 @@ impl<T: Clone + Copy> Bucket<T> {
         self.index.used.load(Ordering::Relaxed)
     }
 
-    fn bucket_find_entry_mut<'a>(
-        index: &'a BucketStorage,
-        key: &Pubkey,
-        random: u64,
-    ) -> Option<(&'a mut IndexEntry, u64)> {
-        let ix = Self::bucket_index_ix(index, key, random);
-        for i in ix..ix + index.max_search() {
-            let ii = i % index.capacity();
-            if index.uid(ii) == UID_UNLOCKED {
-                continue;
-            }
-            let elem: &mut IndexEntry = index.get_mut(ii);
-            if elem.key == *key {
-                return Some((elem, ii));
-            }
-        }
-        None
-    }
+    // fn bucket_find_entry_mut<'a>(
+    //     index: &'a BucketStorage,
+    //     key: &Pubkey,
+    //     random: u64,
+    // ) -> Option<(&'a mut IndexEntry, u64)> {
+    //     let ix = Self::bucket_index_ix(index, key, random);
+    //     for i in ix..ix + index.max_search() {
+    //         let ii = i % index.capacity();
+    //         if index.uid(ii) == UID_UNLOCKED {
+    //             continue;
+    //         }
+    //         let elem: &mut IndexEntry = index.get_mut(ii);
+    //         if elem.key == *key {
+    //             return Some((elem, ii));
+    //         }
+    //     }
+    //     None
+    // }
 
     fn bucket_create_key(
         index: &BucketStorage,

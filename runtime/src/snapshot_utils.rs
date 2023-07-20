@@ -2259,7 +2259,7 @@ mod tests {
 
     #[test]
     fn test_parse_incremental_snapshot_archive_filename() {
-       logger::setup();
+       sino_logger::setup();
         assert_eq!(
             parse_incremental_snapshot_archive_filename(&format!(
                 "incremental-snapshot-42-123-{}.tar.bz2",
@@ -2322,7 +2322,7 @@ mod tests {
 
     #[test]
     fn test_check_are_snapshots_compatible() {
-       logger::setup();
+        sino_logger::setup();
         let slot1: Slot = 1234;
         let slot2: Slot = 5678;
         let slot3: Slot = 999_999;
@@ -2383,7 +2383,7 @@ mod tests {
 
     #[test]
     fn test_get_bank_snapshot_infos() {
-       logger::setup();
+        sino_logger::setup();
         let temp_snapshots_dir = tempfile::TempDir::new().unwrap();
         let min_slot = 10;
         let max_slot = 20;
@@ -2395,7 +2395,7 @@ mod tests {
 
     #[test]
     fn test_get_highest_bank_snapshot_info() {
-       logger::setup();
+        sino_logger::setup();
         let temp_snapshots_dir = tempfile::TempDir::new().unwrap();
         let min_slot = 99;
         let max_slot = 123;
@@ -2456,7 +2456,7 @@ mod tests {
 
     #[test]
     fn test_get_full_snapshot_archives() {
-       logger::setup();
+        sino_logger::setup();
         let temp_snapshot_archives_dir = tempfile::TempDir::new().unwrap();
         let min_slot = 123;
         let max_slot = 456;
@@ -2474,7 +2474,7 @@ mod tests {
 
     #[test]
     fn test_get_incremental_snapshot_archives() {
-       logger::setup();
+        sino_logger::setup();
         let temp_snapshot_archives_dir = tempfile::TempDir::new().unwrap();
         let min_full_snapshot_slot = 12;
         let max_full_snapshot_slot = 23;
@@ -2499,7 +2499,7 @@ mod tests {
 
     #[test]
     fn test_get_highest_full_snapshot_archive_slot() {
-       logger::setup();
+        sino_logger::setup();
         let temp_snapshot_archives_dir = tempfile::TempDir::new().unwrap();
         let min_slot = 123;
         let max_slot = 456;
@@ -2519,7 +2519,7 @@ mod tests {
 
     #[test]
     fn test_get_highest_incremental_snapshot_slot() {
-       logger::setup();
+        sino_logger::setup();
         let temp_snapshot_archives_dir = tempfile::TempDir::new().unwrap();
         let min_full_snapshot_slot = 12;
         let max_full_snapshot_slot = 23;
@@ -2803,7 +2803,7 @@ mod tests {
     /// bank possible, so the contents of the snapshot archive will be quite minimal.
     #[test]
     fn test_roundtrip_bank_to_and_from_full_snapshot_simple() {
-       logger::setup();
+        sino_logger::setup();
         let genesis_config = GenesisConfig::default();
         let original_bank = Bank::new_for_tests(&genesis_config);
 
@@ -2860,7 +2860,7 @@ mod tests {
     /// multiple transfers.  So this full snapshot should contain more data.
     #[test]
     fn test_roundtrip_bank_to_and_from_snapshot_complex() {
-       logger::setup();
+        sino_logger::setup();
         let collector = Pubkey::new_unique();
         let key1 = Keypair::new();
         let key2 = Keypair::new();
@@ -2961,7 +2961,7 @@ mod tests {
     /// of the accounts are not modified often, and are captured by the full snapshot.
     #[test]
     fn test_roundtrip_bank_to_and_from_incremental_snapshot() {
-       logger::setup();
+        sino_logger::setup();
         let collector = Pubkey::new_unique();
         let key1 = Keypair::new();
         let key2 = Keypair::new();
@@ -3067,7 +3067,7 @@ mod tests {
     /// Test rebuilding bank from the latest snapshot archives
     #[test]
     fn test_bank_from_latest_snapshot_archives() {
-       logger::setup();
+        sino_logger::setup();
         let collector = Pubkey::new_unique();
         let key1 = Keypair::new();
         let key2 = Keypair::new();
@@ -3192,7 +3192,7 @@ mod tests {
     #[test]
     #[ignore] // TODO: Add incremental snapshoting
     fn test_incremental_snapshots_handle_zero_lamport_accounts() {
-       logger::setup();
+        sino_logger::setup();
 
         let collector = Pubkey::new_unique();
         let key1 = Keypair::new();

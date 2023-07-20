@@ -3,6 +3,7 @@ use {
         accounts_index::{
             AccountMapEntry, 
             AccountMapEntryInner,
+            AccountMapEntryMeta,
             IndexValue,
         },
         bucket_map_holder::{Age, BucketMapHolder},
@@ -18,7 +19,7 @@ use {
             HashMap,
         },
         fmt::Debug,
-        ops::{RangeInclusive},
+        ops::{Bound, RangeBounds, RangeInclusive},
         sync::{
             atomic::{AtomicBool, AtomicU64, AtomicU8, Ordering},
             Arc, RwLock, 
@@ -28,7 +29,8 @@ use {
 type K = Pubkey;
 type CacheRangesHeld = RwLock<Vec<Option<RangeInclusive<Pubkey>>>>;
 pub type SlotT<T> = (Slot, T);
-
+pub type SlotList<T> = Vec<(Slot, T)>;
+pub type RefCount = u64;
 
 pub enum InsertNewEntryResults {
     DidNotExist,
@@ -65,6 +67,136 @@ impl<T: IndexValue> Debug for InMemAccountsIndex<T> {
 }
 
 impl<T: IndexValue> InMemAccountsIndex<T> {
+    // only called in debug code paths
+    pub fn keys(&self) -> Vec<Pubkey> {
+        Self::update_stat(&self.stats().keys, 1);
+        // easiest implementation is to load evrything from disk into cache and return the keys
+        self.start_stop_flush(true);
+        self.put_range_in_cache(&None::<&RangeInclusive<Pubkey>>);
+        let keys = self.map().read().unwrap().keys().cloned().collect();
+        self.start_stop_flush(false);
+        keys
+    }
+
+    pub fn hold_range_in_memory<R>(&self, range: &R, start_holding: bool)
+    where
+        R: RangeBounds<Pubkey> + Debug,
+    {
+        self.start_stop_flush(true);
+
+        if start_holding {
+            // put everything in the cache and it will be held there
+            self.put_range_in_cache(&Some(range));
+        }
+        // do this AFTER items have been put in cache - that way anyone who finds this range can know that the items are already in the cache
+        self.just_set_hold_range_in_memory(range, start_holding);
+
+        self.start_stop_flush(false);
+    }
+
+    pub fn just_set_hold_range_in_memory<R>(&self, range: &R, start_holding: bool)
+    where
+        R: RangeBounds<Pubkey>,
+    {
+        let start = match range.start_bound() {
+            Bound::Included(bound) | Bound::Excluded(bound) => *bound,
+            Bound::Unbounded => Pubkey::new(&[0; 32]),
+        };
+
+        let end = match range.end_bound() {
+            Bound::Included(bound) | Bound::Excluded(bound) => *bound,
+            Bound::Unbounded => Pubkey::new(&[0xff; 32]),
+        };
+
+        // this becomes inclusive - that is ok - we are just roughly holding a range of items.
+        // inclusive is bigger than exclusive so we may hold 1 extra item worst case
+        let inclusive_range = Some(start..=end);
+        let mut ranges = self.cache_ranges_held.write().unwrap();
+        if start_holding {
+            ranges.push(inclusive_range);
+        } else {
+            // find the matching range and delete it since we don't want to hold it anymore
+            let none = inclusive_range.is_none();
+            for (i, r) in ranges.iter().enumerate() {
+                if r.is_none() != none {
+                    continue;
+                }
+                if !none {
+                    // neither are none, so check values
+                    if let (Bound::Included(start_found), Bound::Included(end_found)) = r
+                        .as_ref()
+                        .map(|r| (r.start_bound(), r.end_bound()))
+                        .unwrap()
+                    {
+                        if start_found != &start || end_found != &end {
+                            continue;
+                        }
+                    }
+                }
+                // found a match. There may be dups, that's ok, we expect another call to remove the dup.
+                ranges.remove(i);
+                break;
+            }
+        }
+    }
+
+    pub fn items<R>(&self, range: &Option<&R>) -> Vec<(K, AccountMapEntry<T>)>
+    where
+        R: RangeBounds<Pubkey> + std::fmt::Debug,
+    {
+        self.start_stop_flush(true);
+        self.put_range_in_cache(range); // check range here to see if our items are already held in the cache
+        Self::update_stat(&self.stats().items, 1);
+        let map = self.map().read().unwrap();
+        let mut result = Vec::with_capacity(map.len());
+        map.iter().for_each(|(k, v)| {
+            if range.map(|range| range.contains(k)).unwrap_or(true) {
+                result.push((*k, Arc::clone(v)));
+            }
+        });
+        self.start_stop_flush(false);
+        result
+    }
+
+    fn put_range_in_cache<R>(&self, range: &Option<&R>)
+    where
+        R: RangeBounds<Pubkey>,
+    {
+        assert!(self.get_stop_flush()); // caller should be controlling the lifetime of how long this needs to be present
+        let m = Measure::start("range");
+
+        // load from disk
+        if let Some(disk) = self.bucket.as_ref() {
+            let mut map = self.map().write().unwrap();
+            let items = disk.items_in_range(range); // map's lock has to be held while we are getting items from disk
+            let future_age = self.storage.future_age_to_flush();
+            for item in items {
+                let entry = map.entry(item.pubkey);
+                match entry {
+                    Entry::Occupied(occupied) => {
+                        // item already in cache, bump age to future. This helps the current age flush to succeed.
+                        occupied.get().set_age(future_age);
+                    }
+                    Entry::Vacant(vacant) => {
+                        vacant.insert(self.disk_to_cache_entry(item.slot_list, item.ref_count));
+                        self.stats().insert_or_delete_mem(true, self.bin);
+                    }
+                }
+            }
+        }
+
+        Self::update_time_stat(&self.stats().get_range_us, m);
+    }
+
+    fn start_stop_flush(&self, stop: bool) {
+        if stop {
+            self.stop_flush.fetch_add(1, Ordering::Release);
+        } else if 1 == self.stop_flush.fetch_sub(1, Ordering::Release) {
+            // stop_flush went to 0, so this bucket could now be ready to be aged
+            self.storage.wait_dirty_or_aged.notify_one();
+        }
+    }
+
     pub fn new(storage: &Arc<BucketMapHolder<T>>, bin: usize) -> Self {
         Self {
             map_internal: RwLock::default(),
@@ -82,6 +214,101 @@ impl<T: IndexValue> InMemAccountsIndex<T> {
             // initialize this to max, to make it clear we have not flushed at age 0, the starting age
             last_age_flushed: AtomicU8::new(Age::MAX),
         }
+    }
+
+    /// lookup 'pubkey' in index (in mem or on disk)
+    pub fn get(&self, pubkey: &K) -> Option<AccountMapEntry<T>> {
+        self.get_internal(pubkey, |entry| (true, entry.map(Arc::clone)))
+    }
+
+    fn load_from_disk(&self, pubkey: &Pubkey) -> Option<(SlotList<T>, RefCount)> {
+        self.bucket.as_ref().and_then(|disk| {
+            let m = Measure::start("load_disk_found_count");
+            let entry_disk = disk.read_value(pubkey);
+            match &entry_disk {
+                Some(_) => {
+                    Self::update_time_stat(&self.stats().load_disk_found_us, m);
+                    Self::update_stat(&self.stats().load_disk_found_count, 1);
+                }
+                None => {
+                    Self::update_time_stat(&self.stats().load_disk_missing_us, m);
+                    Self::update_stat(&self.stats().load_disk_missing_count, 1);
+                }
+            }
+            entry_disk
+        })
+    }
+
+    fn load_account_entry_from_disk(&self, pubkey: &Pubkey) -> Option<AccountMapEntry<T>> {
+        let entry_disk = self.load_from_disk(pubkey)?; // returns None if not on disk
+
+        Some(self.disk_to_cache_entry(entry_disk.0, entry_disk.1))
+    }
+
+    /// lookup 'pubkey' in index (in_mem or disk).
+    /// call 'callback' whether found or not
+    pub(crate) fn get_internal<RT>(
+        &self,
+        pubkey: &K,
+        // return true if item should be added to in_mem cache
+        callback: impl for<'a> FnOnce(Option<&AccountMapEntry<T>>) -> (bool, RT),
+    ) -> RT {
+        self.get_only_in_mem(pubkey, |entry| {
+            if let Some(entry) = entry {
+                entry.set_age(self.storage.future_age_to_flush());
+                callback(Some(entry)).1
+            } else {
+                // not in cache, look on disk
+                let stats = &self.stats();
+                let disk_entry = self.load_account_entry_from_disk(pubkey);
+                if disk_entry.is_none() {
+                    return callback(None).1;
+                }
+                let disk_entry = disk_entry.unwrap();
+                let mut map = self.map().write().unwrap();
+                let entry = map.entry(*pubkey);
+                match entry {
+                    Entry::Occupied(occupied) => callback(Some(occupied.get())).1,
+                    Entry::Vacant(vacant) => {
+                        let (add_to_cache, rt) = callback(Some(&disk_entry));
+
+                        if add_to_cache {
+                            stats.insert_or_delete_mem(true, self.bin);
+                            vacant.insert(disk_entry);
+                        }
+                        rt
+                    }
+                }
+            }
+        })
+    }
+
+    /// lookup 'pubkey' by only looking in memory. Does not look on disk.
+    /// callback is called whether pubkey is found or not
+    fn get_only_in_mem<RT>(
+        &self,
+        pubkey: &K,
+        callback: impl for<'a> FnOnce(Option<&'a AccountMapEntry<T>>) -> RT,
+    ) -> RT {
+        let m = Measure::start("get");
+        let map = self.map().read().unwrap();
+        let result = map.get(pubkey);
+        let stats = self.stats();
+        let (count, time) = if result.is_some() {
+            (&stats.gets_from_mem, &stats.get_mem_us)
+        } else {
+            (&stats.gets_missing, &stats.get_missing_us)
+        };
+        Self::update_time_stat(time, m);
+        Self::update_stat(count, 1);
+
+        callback(if let Some(entry) = result {
+            entry.set_age(self.storage.future_age_to_flush());
+            Some(entry)
+        } else {
+            drop(map);
+            None
+        })
     }
 
     pub(crate) fn flush(&self) {
@@ -330,5 +557,18 @@ impl<T: IndexValue> InMemAccountsIndex<T> {
 
     fn get_stop_flush(&self) -> bool {
         self.stop_flush.load(Ordering::Relaxed) > 0
+    }
+
+    // convert from raw data on disk to AccountMapEntry, set to age in future
+    fn disk_to_cache_entry(
+        &self,
+        slot_list: SlotList<T>,
+        ref_count: RefCount,
+    ) -> AccountMapEntry<T> {
+        Arc::new(AccountMapEntryInner::new(
+            slot_list,
+            ref_count,
+            AccountMapEntryMeta::new_dirty(&self.storage),
+        ))
     }
 }

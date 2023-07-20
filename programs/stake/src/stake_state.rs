@@ -2857,7 +2857,7 @@ mod tests {
             ),
             Ok(())
         );
-        assert_eq!(stake_account.borrow().lamports(), 0);
+        assert_eq!(stake_account.borrow().wens(), 0);
         assert_eq!(stake_keyed_account.state(), Ok(StakeState::Uninitialized));
 
         // reset balance
@@ -2989,7 +2989,7 @@ mod tests {
             ),
             Ok(())
         );
-        assert_eq!(stake_account.borrow().lamports(), 0);
+        assert_eq!(stake_account.borrow().wens(), 0);
         assert_eq!(stake_keyed_account.state(), Ok(StakeState::Uninitialized));
 
         // overflow
@@ -4142,8 +4142,8 @@ mod tests {
             Ok(())
         );
         assert_eq!(
-            stake_keyed_account.account.borrow().lamports(),
-            split_stake_keyed_account.account.borrow().lamports()
+            stake_keyed_account.account.borrow().wens(),
+            split_stake_keyed_account.account.borrow().wens()
         );
     }
 
@@ -4311,11 +4311,11 @@ mod tests {
                     ))
                 );
                 assert_eq!(
-                    stake_keyed_account.account.borrow().lamports(),
+                    stake_keyed_account.account.borrow().wens(),
                     rent_exempt_reserve + 1
                 );
                 assert_eq!(
-                    split_stake_keyed_account.account.borrow().lamports(),
+                    split_stake_keyed_account.account.borrow().wens(),
                     10_000_000 + stake_lamports - rent_exempt_reserve - 1
                 );
             }
@@ -4368,8 +4368,8 @@ mod tests {
             );
             // no lamport leakage
             assert_eq!(
-                stake_keyed_account.account.borrow().lamports()
-                    + split_stake_keyed_account.account.borrow().lamports(),
+                stake_keyed_account.account.borrow().wens()
+                    + split_stake_keyed_account.account.borrow().wens(),
                 stake_lamports
             );
 
@@ -4506,8 +4506,8 @@ mod tests {
             );
             // no lamport leakage
             assert_eq!(
-                stake_keyed_account.account.borrow().lamports()
-                    + split_stake_keyed_account.account.borrow().lamports(),
+                stake_keyed_account.account.borrow().wens()
+                    + split_stake_keyed_account.account.borrow().wens(),
                 stake_lamports + initial_balance
             );
 
@@ -4529,7 +4529,7 @@ mod tests {
                     split_stake_keyed_account.state()
                 );
                 assert_eq!(
-                    split_stake_keyed_account.account.borrow().lamports(),
+                    split_stake_keyed_account.account.borrow().wens(),
                     expected_stake
                         + rent_exempt_reserve
                         + initial_balance.saturating_sub(rent_exempt_reserve)
@@ -4618,8 +4618,8 @@ mod tests {
             );
             // no lamport leakage
             assert_eq!(
-                stake_keyed_account.account.borrow().lamports()
-                    + split_stake_keyed_account.account.borrow().lamports(),
+                stake_keyed_account.account.borrow().wens()
+                    + split_stake_keyed_account.account.borrow().wens(),
                 stake_lamports + initial_balance
             );
 
@@ -4646,7 +4646,7 @@ mod tests {
                     split_stake_keyed_account.state()
                 );
                 assert_eq!(
-                    split_stake_keyed_account.account.borrow().lamports(),
+                    split_stake_keyed_account.account.borrow().wens(),
                     expected_stake
                         + expected_rent_exempt_reserve
                         + initial_balance.saturating_sub(expected_rent_exempt_reserve)
@@ -4781,8 +4781,8 @@ mod tests {
 
             // no lamport leakage
             assert_eq!(
-                stake_keyed_account.account.borrow().lamports()
-                    + split_stake_keyed_account.account.borrow().lamports(),
+                stake_keyed_account.account.borrow().wens()
+                    + split_stake_keyed_account.account.borrow().wens(),
                 stake_lamports
             );
 
@@ -4868,8 +4868,8 @@ mod tests {
 
             // no lamport leakage
             assert_eq!(
-                stake_keyed_account.account.borrow().lamports()
-                    + split_stake_keyed_account.account.borrow().lamports(),
+                stake_keyed_account.account.borrow().wens()
+                    + split_stake_keyed_account.account.borrow().wens(),
                 stake_lamports + initial_balance
             );
 
@@ -4964,7 +4964,7 @@ mod tests {
             );
 
             assert_eq!(
-                split_stake_keyed_account.account.borrow().lamports(),
+                split_stake_keyed_account.account.borrow().wens(),
                 stake_lamports
             );
 
@@ -5006,7 +5006,7 @@ mod tests {
                         split_stake_keyed_account.state()
                     );
                     assert_eq!(
-                        split_stake_keyed_account.account.borrow().lamports(),
+                        split_stake_keyed_account.account.borrow().wens(),
                         expected_stake
                             + expected_rent_exempt_reserve
                             + (rent_exempt_reserve - expected_rent_exempt_reserve)
@@ -5082,10 +5082,10 @@ mod tests {
 
                 // check lamports
                 assert_eq!(
-                    stake_keyed_account.account.borrow().lamports(),
+                    stake_keyed_account.account.borrow().wens(),
                     stake_lamports * 2
                 );
-                assert_eq!(source_stake_keyed_account.account.borrow().lamports(), 0);
+                assert_eq!(source_stake_keyed_account.account.borrow().wens(), 0);
 
                 // check state
                 match state {

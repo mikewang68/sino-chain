@@ -3,7 +3,7 @@
 #[macro_use]
 extern crate serde_derive;
 
-// pub mod parse_account_data;
+pub mod parse_account_data;
 // pub mod parse_bpf_loader;
 // pub mod parse_config;
 // pub mod parse_nonce;
@@ -27,6 +27,9 @@ pub mod parse_token;
 //     },
 // };
 
+use parse_account_data::ParsedAccount;
+use sdk::clock::Epoch;
+
 pub type StringAmount = String;
 pub type StringDecimals = String;
 pub const MAX_BASE58_BYTES: usize = 128;
@@ -44,13 +47,13 @@ pub struct UiAccount {
     pub rent_epoch: Epoch,
 }
 
-// #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
-// #[serde(rename_all = "camelCase", untagged)]
-// pub enum UiAccountData {
-//     LegacyBinary(String), // Legacy. Retained for RPC backwards compatibility
-//     Json(ParsedAccount),
-//     Binary(String, UiAccountEncoding),
-// }
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", untagged)]
+pub enum UiAccountData {
+    LegacyBinary(String), // Legacy. Retained for RPC backwards compatibility
+    Json(ParsedAccount),
+    Binary(String, UiAccountEncoding),
+}
 
 #[derive(Serialize, Deserialize, Clone, Copy, Debug, PartialEq, Eq, Hash)]
 #[serde(rename_all = "camelCase")]

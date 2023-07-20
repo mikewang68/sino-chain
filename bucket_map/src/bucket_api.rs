@@ -1,19 +1,20 @@
 use {
     crate::{
         bucket::Bucket, 
-        // bucket_item::BucketItem, 
+        bucket_item::BucketItem, 
         bucket_map::BucketMapError,
         bucket_stats::BucketMapStats, MaxSearch, RefCount,
     },
     sdk::pubkey::Pubkey,
     std::{
-        ops::RangeBounds,
+        // ops::RangeBounds,
         path::PathBuf,
         sync::{
             atomic::{AtomicU64, Ordering},
             Arc, RwLock, RwLockWriteGuard,
         },
     },
+    core::ops::RangeBounds,
 };
 
 type LockedBucket<T> = RwLock<Option<Bucket<T>>>;
@@ -25,7 +26,30 @@ pub struct BucketApi<T: Clone + Copy> {
     bucket: LockedBucket<T>,
     count: Arc<AtomicU64>,
 }
+
 impl<T: Clone + Copy> BucketApi<T> {
+    /// Get the items for bucket
+    pub fn items_in_range<R>(&self, range: &Option<&R>) -> Vec<BucketItem<T>>
+    where
+        R: RangeBounds<Pubkey>,
+    {
+        self.bucket
+            .read()
+            .unwrap()
+            .as_ref()
+            .map(|bucket| bucket.items_in_range(range))
+            .unwrap_or_default()
+    }
+
+        /// Get the values for Pubkey `key`
+    pub fn read_value(&self, key: &Pubkey) -> Option<(Vec<T>, RefCount)> {
+        self.bucket.read().unwrap().as_ref().and_then(|bucket| {
+            bucket
+                .read_value(key)
+                .map(|(value, ref_count)| (value.to_vec(), ref_count))
+        })
+    }
+
     pub fn try_write(
         &self,
         pubkey: &Pubkey,
