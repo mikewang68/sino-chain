@@ -19,13 +19,12 @@ use {
             HashMap,
         },
         fmt::Debug,
-        ops::{RangeInclusive},
+        ops::{Bound, RangeBounds, RangeInclusive},
         sync::{
             atomic::{AtomicBool, AtomicU64, AtomicU8, Ordering},
             Arc, RwLock, 
         },
     },
-    core::ops::RangeBounds,
 };
 type K = Pubkey;
 type CacheRangesHeld = RwLock<Vec<Option<RangeInclusive<Pubkey>>>>;
@@ -68,6 +67,79 @@ impl<T: IndexValue> Debug for InMemAccountsIndex<T> {
 }
 
 impl<T: IndexValue> InMemAccountsIndex<T> {
+    // only called in debug code paths
+    pub fn keys(&self) -> Vec<Pubkey> {
+        Self::update_stat(&self.stats().keys, 1);
+        // easiest implementation is to load evrything from disk into cache and return the keys
+        self.start_stop_flush(true);
+        self.put_range_in_cache(&None::<&RangeInclusive<Pubkey>>);
+        let keys = self.map().read().unwrap().keys().cloned().collect();
+        self.start_stop_flush(false);
+        keys
+    }
+
+    pub fn hold_range_in_memory<R>(&self, range: &R, start_holding: bool)
+    where
+        R: RangeBounds<Pubkey> + Debug,
+    {
+        self.start_stop_flush(true);
+
+        if start_holding {
+            // put everything in the cache and it will be held there
+            self.put_range_in_cache(&Some(range));
+        }
+        // do this AFTER items have been put in cache - that way anyone who finds this range can know that the items are already in the cache
+        self.just_set_hold_range_in_memory(range, start_holding);
+
+        self.start_stop_flush(false);
+    }
+
+    pub fn just_set_hold_range_in_memory<R>(&self, range: &R, start_holding: bool)
+    where
+        R: RangeBounds<Pubkey>,
+    {
+        let start = match range.start_bound() {
+            Bound::Included(bound) | Bound::Excluded(bound) => *bound,
+            Bound::Unbounded => Pubkey::new(&[0; 32]),
+        };
+
+        let end = match range.end_bound() {
+            Bound::Included(bound) | Bound::Excluded(bound) => *bound,
+            Bound::Unbounded => Pubkey::new(&[0xff; 32]),
+        };
+
+        // this becomes inclusive - that is ok - we are just roughly holding a range of items.
+        // inclusive is bigger than exclusive so we may hold 1 extra item worst case
+        let inclusive_range = Some(start..=end);
+        let mut ranges = self.cache_ranges_held.write().unwrap();
+        if start_holding {
+            ranges.push(inclusive_range);
+        } else {
+            // find the matching range and delete it since we don't want to hold it anymore
+            let none = inclusive_range.is_none();
+            for (i, r) in ranges.iter().enumerate() {
+                if r.is_none() != none {
+                    continue;
+                }
+                if !none {
+                    // neither are none, so check values
+                    if let (Bound::Included(start_found), Bound::Included(end_found)) = r
+                        .as_ref()
+                        .map(|r| (r.start_bound(), r.end_bound()))
+                        .unwrap()
+                    {
+                        if start_found != &start || end_found != &end {
+                            continue;
+                        }
+                    }
+                }
+                // found a match. There may be dups, that's ok, we expect another call to remove the dup.
+                ranges.remove(i);
+                break;
+            }
+        }
+    }
+
     pub fn items<R>(&self, range: &Option<&R>) -> Vec<(K, AccountMapEntry<T>)>
     where
         R: RangeBounds<Pubkey> + std::fmt::Debug,

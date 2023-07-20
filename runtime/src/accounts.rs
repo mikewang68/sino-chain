@@ -1,6 +1,7 @@
 use {
     crate::{
         accounts_db::{
+            AccountsAddRootTiming,
             /*AccountShrinkThreshold, AccountsAddRootTiming, AccountsDb, AccountsDbConfig,*/
             /*BankHashInfo,*/ LoadHint, /*LoadedAccount, ScanStorageResult,*/
             /*ACCOUNTS_DB_CONFIG_FOR_BENCHMARKS, ACCOUNTS_DB_CONFIG_FOR_TESTING,*/
@@ -18,6 +19,7 @@ use {
     },
 
     std::{
+        ops::RangeBounds,
         collections::{HashMap, HashSet},
         sync::{
             atomic::{AtomicUsize, Ordering},
@@ -44,6 +46,40 @@ pub struct Accounts {
 }
 
 impl Accounts{
+    /// Add a slot to root.  Root slots cannot be purged
+    pub fn add_root(&self, slot: Slot) -> AccountsAddRootTiming {
+        self.accounts_db.add_root(slot)
+    }
+
+    pub fn store_slow_cached(&self, slot: Slot, pubkey: &Pubkey, account: &AccountSharedData) {
+        self.accounts_db.store_cached(slot, &[(pubkey, account)]);
+    }
+
+    pub fn load_to_collect_rent_eagerly<R: RangeBounds<Pubkey> + std::fmt::Debug>(
+        &self,
+        ancestors: &Ancestors,
+        range: R,
+    ) -> Vec<(Pubkey, AccountSharedData)> {
+        self.accounts_db.range_scan_accounts(
+            "load_to_collect_rent_eagerly_scan_elapsed",
+            ancestors,
+            range,
+            &ScanConfig::new(true),
+            |collector: &mut Vec<(Pubkey, AccountSharedData)>, option| {
+                Self::load_while_filtering(collector, option, |_| true)
+            },
+        )
+    }
+
+    pub fn hold_range_in_memory<R>(&self, range: &R, start_holding: bool)
+    where
+        R: RangeBounds<Pubkey> + std::fmt::Debug,
+    {
+        self.accounts_db
+            .accounts_index
+            .hold_range_in_memory(range, start_holding)
+    }
+
     /// Slow because lock is held for 1 operation instead of many.
     /// WARNING: This noncached version is only to be used for tests/benchmarking
     /// as bypassing the cache in general is not supported

@@ -42,7 +42,7 @@ use {
             Accounts, 
         },
         accounts_db::{
-            /*AccountShrinkThreshold, AccountsDbConfig,*/ SnapshotStorages,
+            /*AccountShrinkThreshold,*/ AccountsAddRootTiming, SnapshotStorages,
             /*ACCOUNTS_DB_CONFIG_FOR_BENCHMARKS, ACCOUNTS_DB_CONFIG_FOR_TESTING,*/
         },
         builtins::{self, /*BuiltinAction,*/ BuiltinFeatureTransition, Builtins},
@@ -53,7 +53,9 @@ use {
         stakes::{StakesCache, Stakes},
         cost_tracker::CostTracker,
         // cost_tracker::CostTracker,
-        accounts_index::{IndexKey, ScanConfig, ScanResult}
+        accounts_index::{IndexKey, ScanConfig, ScanResult},
+        rent_collector::{CollectedInfo/* , RentCollector*/},
+        vote_account::VoteAccount,
     },
     program_runtime::{
         compute_budget::{ComputeBudget},
@@ -66,16 +68,25 @@ use {
     measure::measure::Measure,
     itertools::Itertools,
     sdk::{
+        incinerator,
+        slot_history::{Check, SlotHistory},
+        lamports::LamportsError,
         account::{
             create_account_shared_data_with_fields as create_account, from_account, Account,
             AccountSharedData, InheritableAccountFields, ReadableAccount, WritableAccount,
         },
         clock::{
-            BankId, Epoch, Slot, UnixTimestamp,SlotIndex,
+            BankId, Epoch, Slot, SlotCount, SlotIndex, UnixTimestamp, DEFAULT_TICKS_PER_SECOND,
+            INITIAL_RENT_EPOCH, MAX_PROCESSING_AGE, MAX_RECENT_BLOCKHASHES,
+            MAX_TRANSACTION_FORWARDING_DELAY, SECONDS_PER_DAY,
         },
         epoch_schedule::EpochSchedule,
+        // feature_set::{
+        //     disable_fee_calculator,FeatureSet,
+        // },
         feature_set::{
-            disable_fee_calculator,FeatureSet,
+            self, default_units_per_instruction, disable_fee_calculator, nonce_must_be_writable,
+            requestable_heap_size, tx_wide_compute_cap, FeatureSet,
         },
         sysvar::{self, Sysvar, SysvarId},
         fee::FeeStructure,
@@ -105,7 +116,7 @@ use {
         sync::{
             atomic::{
                 AtomicBool, AtomicU64,
-                Ordering::{/*AcqRel,*/ Acquire, Relaxed, /*Release*/},
+                Ordering::{AcqRel, Acquire, Relaxed, /*Release*/},
             },
             Arc, /*LockResult,*/ RwLock, /*RwLockReadGuard, RwLockWriteGuard,*/
         },
@@ -113,7 +124,16 @@ use {
     },
 };
 
+pub struct SquashTiming {
+    pub squash_accounts_ms: u64,
+    pub squash_accounts_cache_ms: u64,
+    pub squash_accounts_index_ms: u64,
+    pub squash_accounts_store_ms: u64,
 
+    pub squash_cache_ms: u64,
+}
+
+type EpochCount = u64;
 
 
 use crate::{status_cache::SlotDelta, ancestors::AncestorsForSerialization};
@@ -147,6 +167,14 @@ pub type TransactionLogMessages = Vec<String>;
 type PartitionIndex = u64;
 type PartitionsPerCycle = u64;
 type Partition = (PartitionIndex, PartitionIndex, PartitionsPerCycle);
+type RentCollectionCycleParams = (
+    Epoch,
+    SlotCount,
+    bool,
+    Epoch,
+    EpochCount,
+    PartitionsPerCycle,
+);
 
 #[derive(Debug, Default)]
 pub struct OptionalDropCallback(Option<Box<dyn DropCallback + Send + Sync>>);
@@ -290,6 +318,11 @@ impl StatusCacheRc {
             .collect()
     }
 
+    pub fn append(&self, slot_deltas: &[BankSlotDelta]) {
+        let mut sc = self.status_cache.write().unwrap();
+        sc.append(slot_deltas);
+    }
+
 }
 
 #[frozen_abi(digest = "HdYCU65Jwfv9sF3C8k6ZmjUAaXSkJwazebuur21v8JtY")]
@@ -315,8 +348,48 @@ pub struct RewardInfo {
     pub commission: Option<u8>, // Vote account commission when the reward was credited, only present for voting and staking rewards
 }
 
+#[derive(Clone, Debug, PartialEq)]
+pub struct RentDebit {
+    rent_collected: u64,
+    post_balance: u64,
+}
 
+impl RentDebit {
+    fn try_into_reward_info(self) -> Option<RewardInfo> {
+        let rent_debit = i64::try_from(self.rent_collected)
+            .ok()
+            .and_then(|r| r.checked_neg());
+        rent_debit.map(|rent_debit| RewardInfo {
+            reward_type: RewardType::Rent,
+            lamports: rent_debit,
+            post_balance: self.post_balance,
+            commission: None, // Not applicable
+        })
+    }
+}
 
+#[derive(Clone, Debug, Default, PartialEq)]
+pub struct RentDebits(HashMap<Pubkey, RentDebit>);
+
+impl RentDebits{
+    pub fn insert(&mut self, address: &Pubkey, rent_collected: u64, post_balance: u64) {
+        if rent_collected != 0 {
+            self.0.insert(
+                *address,
+                RentDebit {
+                    rent_collected,
+                    post_balance,
+                },
+            );
+        }
+    }
+
+    pub fn into_unordered_rewards_iter(self) -> impl Iterator<Item = (Pubkey, RewardInfo)> {
+        self.0
+            .into_iter()
+            .filter_map(|(address, rent_debit)| Some((address, rent_debit.try_into_reward_info()?)))
+    }
+}
 
 /// Manager for the state of all accounts and programs after processing its entries.
 /// AbiExample is needed even without Serialize/Deserialize; actual (de-)serialization
@@ -490,6 +563,1090 @@ pub struct Bank {
 }
 
 impl Bank {
+    pub fn update_accounts_hash(&self) -> Hash {
+        self.update_accounts_hash_with_index_option(true, false, None, false)
+    }
+
+    pub fn update_accounts_hash_with_index_option(
+        &self,
+        use_index: bool,
+        mut debug_verify: bool,
+        slots_per_epoch: Option<Slot>,
+        is_startup: bool,
+    ) -> Hash {
+        let (hash, total_lamports) = self
+            .rc
+            .accounts
+            .accounts_db
+            .update_accounts_hash_with_index_option(
+                use_index,
+                debug_verify,
+                self.slot(),
+                &self.ancestors,
+                Some(self.capitalization()),
+                false,
+                slots_per_epoch,
+                is_startup,
+            );
+        if total_lamports != self.capitalization() {
+            datapoint_info!(
+                "capitalization_mismatch",
+                ("slot", self.slot(), i64),
+                ("calculated_lamports", total_lamports, i64),
+                ("capitalization", self.capitalization(), i64),
+            );
+
+            if !debug_verify {
+                // cap mismatch detected. It has been logged to metrics above.
+                // Run both versions of the calculation to attempt to get more info.
+                debug_verify = true;
+                self.rc
+                    .accounts
+                    .accounts_db
+                    .update_accounts_hash_with_index_option(
+                        use_index,
+                        debug_verify,
+                        self.slot(),
+                        &self.ancestors,
+                        Some(self.capitalization()),
+                        false,
+                        slots_per_epoch,
+                        is_startup,
+                    );
+            }
+
+            panic!(
+                "capitalization_mismatch. slot: {}, calculated_lamports: {}, capitalization: {}",
+                self.slot(),
+                total_lamports,
+                self.capitalization()
+            );
+        }
+        hash
+    }
+
+    pub fn clean_accounts(
+        &self,
+        skip_last: bool,
+        is_startup: bool,
+        last_full_snapshot_slot: Option<Slot>,
+    ) {
+        // Don't clean the slot we're snapshotting because it may have zero-lamport
+        // accounts that were included in the bank delta hash when the bank was frozen,
+        // and if we clean them here, any newly created snapshot's hash for this bank
+        // may not match the frozen hash.
+        //
+        // So when we're snapshotting, set `skip_last` to true so the highest slot to clean is
+        // lowered by one.
+        let highest_slot_to_clean = skip_last.then(|| self.slot().saturating_sub(1));
+
+        self.rc.accounts.accounts_db.clean_accounts(
+            highest_slot_to_clean,
+            is_startup,
+            last_full_snapshot_slot,
+        );
+    }
+
+    pub fn force_flush_accounts_cache(&self) {
+        self.rc
+            .accounts
+            .accounts_db
+            .flush_accounts_cache(true, Some(self.slot()))
+    }
+
+
+    /// squash the parent's state up into this Bank,
+    ///   this Bank becomes a root
+    pub fn squash(&self) -> SquashTiming {
+        self.freeze();
+
+        //this bank and all its parents are now on the rooted path
+        let mut roots = vec![self.slot()];
+        roots.append(&mut self.parents().iter().map(|p| p.slot()).collect());
+
+        let mut total_index_us = 0;
+        let mut total_cache_us = 0;
+        let mut total_store_us = 0;
+
+        let mut squash_accounts_time = Measure::start("squash_accounts_time");
+        for slot in roots.iter().rev() {
+            // root forks cannot be purged
+            let add_root_timing = self.rc.accounts.add_root(*slot);
+            total_index_us += add_root_timing.index_us;
+            total_cache_us += add_root_timing.cache_us;
+            total_store_us += add_root_timing.store_us;
+        }
+        squash_accounts_time.stop();
+
+        *self.rc.parent.write().unwrap() = None;
+
+        let mut squash_cache_time = Measure::start("squash_cache_time");
+        roots
+            .iter()
+            .for_each(|slot| self.src.status_cache.write().unwrap().add_root(*slot));
+        squash_cache_time.stop();
+
+        SquashTiming {
+            squash_accounts_ms: squash_accounts_time.as_ms(),
+            squash_accounts_index_ms: total_index_us / 1000,
+            squash_accounts_cache_ms: total_cache_us / 1000,
+            squash_accounts_store_ms: total_store_us / 1000,
+
+            squash_cache_ms: squash_cache_time.as_ms(),
+        }
+    }
+
+    /// Compute all the parents of the bank in order
+    pub fn parents(&self) -> Vec<Arc<Bank>> {
+        let mut parents = vec![];
+        let mut bank = self.parent();
+        while let Some(parent) = bank {
+            parents.push(parent.clone());
+            bank = parent.parent();
+        }
+        parents
+    }
+
+    /// Return the more recent checkpoint of this bank instance.
+    pub fn parent(&self) -> Option<Arc<Bank>> {
+        self.rc.parent.read().unwrap().clone()
+    }
+
+    pub fn freeze(&self) {
+        // This lock prevents any new commits from BankingStage
+        // `process_and_record_transactions_locked()` from coming
+        // in after the last tick is observed. This is because in
+        // BankingStage, any transaction successfully recorded in
+        // `record_transactions()` is recorded after this `hash` lock
+        // is grabbed. At the time of the successful record,
+        // this means the PoH has not yet reached the last tick,
+        // so this means freeze() hasn't been called yet. And because
+        // BankingStage doesn't release this hash lock until both
+        // record and commit are finished, those transactions will be
+        // committed before this write lock can be obtained here.
+        let mut hash = self.hash.write().unwrap();
+        if *hash == Hash::default() {
+            // finish up any deferred changes to account state
+            self.collect_rent_eagerly();
+            self.collect_fees();
+            self.distribute_rent();
+            self.update_slot_history();
+            self.run_incinerator();
+            self.commit_evm();
+
+            // freeze is a one-way trip, idempotent
+            self.freeze_started.store(true, Relaxed);
+            // *hash = self.hash_internal_state();
+            // self.rc.accounts.accounts_db.mark_slot_frozen(self.slot());
+        }
+    }
+
+    fn run_incinerator(&self) {
+        if let Some((account, _)) =
+            self.get_account_modified_since_parent_with_fixed_root(&incinerator::id())
+        {
+            self.capitalization.fetch_sub(account.wens(), Relaxed);
+            self.store_account(&incinerator::id(), &AccountSharedData::default());
+        }
+    }
+
+    // if you want get_account_modified_since_parent without fixed_root, please define so...
+    fn get_account_modified_since_parent_with_fixed_root(
+        &self,
+        pubkey: &Pubkey,
+    ) -> Option<(AccountSharedData, Slot)> {
+        let just_self: Ancestors = Ancestors::from(vec![self.slot()]);
+        if let Some((account, slot)) = self.load_slow_with_fixed_root(&just_self, pubkey) {
+            if slot == self.slot() {
+                return Some((account, slot));
+            }
+        }
+        None
+    }
+
+    fn update_slot_history(&self) {
+        self.update_sysvar_account(&sysvar::slot_history::id(), |account| {
+            let mut slot_history = account
+                .as_ref()
+                .map(|account| from_account::<SlotHistory, _>(account).unwrap())
+                .unwrap_or_default();
+            slot_history.add(self.slot());
+            create_account(
+                &slot_history,
+                self.inherit_specially_retained_account_fields(account),
+            )
+        });
+    }
+
+    fn inherit_specially_retained_account_fields(
+        &self,
+        old_account: &Option<AccountSharedData>,
+    ) -> InheritableAccountFields {
+        const RENT_UNADJUSTED_INITIAL_BALANCE: u64 = 1;
+
+        (
+            old_account
+                .as_ref()
+                .map(|a| a.wens())
+                .unwrap_or(RENT_UNADJUSTED_INITIAL_BALANCE),
+            if !self.rent_for_sysvars() {
+                INITIAL_RENT_EPOCH
+            } else {
+                // start to inherit rent_epoch updated by rent collection to be consistent with
+                // other normal accounts
+                old_account
+                    .as_ref()
+                    .map(|a| a.rent_epoch())
+                    .unwrap_or(INITIAL_RENT_EPOCH)
+            },
+        )
+    }
+
+    fn update_sysvar_account<F>(&self, pubkey: &Pubkey, updater: F)
+    where
+        F: Fn(&Option<AccountSharedData>) -> AccountSharedData,
+    {
+        let old_account = if !self.rent_for_sysvars() {
+            // This old behavior is being retired for simpler reasoning for the benefits of all.
+            // Specifically, get_sysvar_account_with_fixed_root() doesn't work nicely with eager
+            // rent collection, which becomes significant for sysvars after rent_for_sysvars
+            // activation. That's because get_sysvar_account_with_fixed_root() invocations by both
+            // update_slot_history() and update_recent_blockhashes() ignores any updates
+            // by eager rent collection in this slot.
+            // Also, it turned out that get_sysvar_account_with_fixed_root()'s special
+            // behavior (idempotent) isn't needed to begin with, because we're fairly certain that
+            // we don't call new_from_parent() with same child slot multiple times in the
+            // production code (except after proper handling of duplicate slot dumping)...
+            self.get_sysvar_account_with_fixed_root(pubkey)
+        } else {
+            self.get_account_with_fixed_root(pubkey)
+        };
+        let mut new_account = updater(&old_account);
+
+        if self.rent_for_sysvars() {
+            // When new sysvar comes into existence (with RENT_UNADJUSTED_INITIAL_BALANCE lamports),
+            // this code ensures that the sysvar's balance is adjusted to be rent-exempt.
+            // Note that all of existing sysvar balances must be adjusted immediately (i.e. reset) upon
+            // the `rent_for_sysvars` feature activation (ref: reset_all_sysvar_balances).
+            //
+            // More generally, this code always re-calculates for possible sysvar data size change,
+            // although there is no such sysvars currently.
+            self.adjust_sysvar_balance_for_rent(&mut new_account);
+        }
+
+        self.store_account_and_update_capitalization(pubkey, &new_account);
+    }
+
+     /// Technically this issues (or even burns!) new lamports,
+    /// so be extra careful for its usage
+    fn store_account_and_update_capitalization(
+        &self,
+        pubkey: &Pubkey,
+        new_account: &AccountSharedData,
+    ) {
+        if let Some(old_account) = self.get_account_with_fixed_root(pubkey) {
+            match new_account.wens().cmp(&old_account.wens()) {
+                std::cmp::Ordering::Greater => {
+                    let increased = new_account.wens() - old_account.wens();
+                    trace!(
+                        "store_account_and_update_capitalization: increased: {} {}",
+                        pubkey,
+                        increased
+                    );
+                    self.capitalization.fetch_add(increased, Relaxed);
+                }
+                std::cmp::Ordering::Less => {
+                    let decreased = old_account.wens() - new_account.wens();
+                    trace!(
+                        "store_account_and_update_capitalization: decreased: {} {}",
+                        pubkey,
+                        decreased
+                    );
+                    self.capitalization.fetch_sub(decreased, Relaxed);
+                }
+                std::cmp::Ordering::Equal => {}
+            }
+        } else {
+            trace!(
+                "store_account_and_update_capitalization: created: {} {}",
+                pubkey,
+                new_account.wens()
+            );
+            self.capitalization
+                .fetch_add(new_account.wens(), Relaxed);
+        }
+
+        self.store_account(pubkey, new_account);
+    }
+
+    // Exclude self to really fetch the parent Bank's account hash and data.
+    //
+    // Being idempotent is needed to make the lazy initialization possible,
+    // especially for update_slot_hashes at the moment, which can be called
+    // multiple times with the same parent_slot in the case of forking.
+    //
+    // Generally, all of sysvar update granularity should be slot boundaries.
+    //
+    // This behavior is deprecated... See comment in update_sysvar_account() for details
+    fn get_sysvar_account_with_fixed_root(&self, pubkey: &Pubkey) -> Option<AccountSharedData> {
+        let mut ancestors = self.ancestors.clone();
+        ancestors.remove(&self.slot());
+        self.rc
+            .accounts
+            .load_with_fixed_root(&ancestors, pubkey)
+            .map(|(acc, _slot)| acc)
+    }
+
+    fn adjust_sysvar_balance_for_rent(&self, account: &mut AccountSharedData) {
+        account.set_wens(
+            self.get_minimum_balance_for_rent_exemption(account.data().len())
+                .max(account.wens()),
+        );
+    }
+
+    pub fn get_minimum_balance_for_rent_exemption(&self, data_len: usize) -> u64 {
+        self.rent_collector.rent.minimum_balance(data_len).max(1)
+    }
+
+    fn distribute_rent(&self) {
+        let total_rent_collected = self.collected_rent.load(Relaxed);
+
+        let (burned_portion, rent_to_be_distributed) = self
+            .rent_collector
+            .rent
+            .calculate_burn(total_rent_collected);
+
+        debug!(
+            "distributed rent: {} (rounded from: {}, burned: {})",
+            rent_to_be_distributed, total_rent_collected, burned_portion
+        );
+        self.capitalization.fetch_sub(burned_portion, Relaxed);
+
+        if rent_to_be_distributed == 0 {
+            return;
+        }
+
+        self.distribute_rent_to_validators(&self.vote_accounts(), rent_to_be_distributed);
+    }
+
+    /// current vote accounts for this bank along with the stake
+    ///   attributed to each account
+    pub fn vote_accounts(&self) -> Arc<HashMap<Pubkey, (/*stake:*/ u64, VoteAccount)>> {
+        let stakes = self.stakes_cache.stakes();
+        Arc::from(stakes.vote_accounts())
+    }
+
+
+    // Distribute collected rent fees for this slot to staked validators (excluding stakers)
+    // according to stake.
+    //
+    // The nature of rent fee is the cost of doing business, every validator has to hold (or have
+    // access to) the same list of accounts, so we pay according to stake, which is a rough proxy for
+    // value to the network.
+    //
+    // Currently, rent distribution doesn't consider given validator's uptime at all (this might
+    // change). That's because rent should be rewarded for the storage resource utilization cost.
+    // It's treated differently from transaction fees, which is for the computing resource
+    // utilization cost.
+    //
+    // We can't use collector_id (which is rotated according to stake-weighted leader schedule)
+    // as an approximation to the ideal rent distribution to simplify and avoid this per-slot
+    // computation for the distribution (time: N log N, space: N acct. stores; N = # of
+    // validators).
+    // The reason is that rent fee doesn't need to be incentivized for throughput unlike transaction
+    // fees
+    //
+    // Ref: collect_fees
+    #[allow(clippy::needless_collect)]
+    fn distribute_rent_to_validators(
+        &self,
+        vote_accounts: &HashMap<Pubkey, (/*stake:*/ u64, VoteAccount)>,
+        rent_to_be_distributed: u64,
+    ) {
+        let mut total_staked = 0;
+
+        // Collect the stake associated with each validator.
+        // Note that a validator may be present in this vector multiple times if it happens to have
+        // more than one staked vote account somehow
+        let mut validator_stakes = vote_accounts
+            .iter()
+            .filter_map(|(_vote_pubkey, (staked, account))| {
+                if *staked == 0 {
+                    None
+                } else {
+                    total_staked += *staked;
+                    let node_pubkey = account.vote_state().as_ref().ok()?.node_pubkey;
+                    Some((node_pubkey, *staked))
+                }
+            })
+            .collect::<Vec<(Pubkey, u64)>>();
+
+        #[cfg(test)]
+        if validator_stakes.is_empty() {
+            // some tests bank.freezes() with bad staking state
+            self.capitalization
+                .fetch_sub(rent_to_be_distributed, Relaxed);
+            return;
+        }
+        #[cfg(not(test))]
+        assert!(!validator_stakes.is_empty());
+
+        // Sort first by stake and then by validator identity pubkey for determinism
+        validator_stakes.sort_by(|(pubkey1, staked1), (pubkey2, staked2)| {
+            match staked2.cmp(staked1) {
+                std::cmp::Ordering::Equal => pubkey2.cmp(pubkey1),
+                other => other,
+            }
+        });
+
+        let enforce_fix = self.no_overflow_rent_distribution_enabled();
+
+        let mut rent_distributed_in_initial_round = 0;
+        let validator_rent_shares = validator_stakes
+            .into_iter()
+            .map(|(pubkey, staked)| {
+                let rent_share = if !enforce_fix {
+                    (((staked * rent_to_be_distributed) as f64) / (total_staked as f64)) as u64
+                } else {
+                    (((staked as u128) * (rent_to_be_distributed as u128)) / (total_staked as u128))
+                        .try_into()
+                        .unwrap()
+                };
+                rent_distributed_in_initial_round += rent_share;
+                (pubkey, rent_share)
+            })
+            .collect::<Vec<(Pubkey, u64)>>();
+
+        // Leftover lamports after fraction calculation, will be paid to validators starting from highest stake
+        // holder
+        let mut leftover_lamports = rent_to_be_distributed - rent_distributed_in_initial_round;
+
+        let mut rewards = vec![];
+        validator_rent_shares
+            .into_iter()
+            .for_each(|(pubkey, rent_share)| {
+                let rent_to_be_paid = if leftover_lamports > 0 {
+                    leftover_lamports -= 1;
+                    rent_share + 1
+                } else {
+                    rent_share
+                };
+                if !enforce_fix || rent_to_be_paid > 0 {
+                    let mut account = self
+                        .get_account_with_fixed_root(&pubkey)
+                        .unwrap_or_default();
+                    if account.checked_add_lamports(rent_to_be_paid).is_err() {
+                        // overflow adding lamports
+                        self.capitalization.fetch_sub(rent_to_be_paid, Relaxed);
+                        error!(
+                            "Burned {} rent lamports instead of sending to {}",
+                            rent_to_be_paid, pubkey
+                        );
+                        inc_new_counter_error!(
+                            "bank-burned_rent_lamports",
+                            rent_to_be_paid as usize
+                        );
+                    } else {
+                        self.store_account(&pubkey, &account);
+                        rewards.push((
+                            pubkey,
+                            RewardInfo {
+                                reward_type: RewardType::Rent,
+                                lamports: rent_to_be_paid as i64,
+                                post_balance: account.wens(),
+                                commission: None,
+                            },
+                        ));
+                    }
+                }
+            });
+        self.rewards.write().unwrap().append(&mut rewards);
+
+        if enforce_fix {
+            assert_eq!(leftover_lamports, 0);
+        } else if leftover_lamports != 0 {
+            warn!(
+                "There was leftover from rent distribution: {}",
+                leftover_lamports
+            );
+            self.capitalization.fetch_sub(leftover_lamports, Relaxed);
+        }
+    }
+
+    pub fn no_overflow_rent_distribution_enabled(&self) -> bool {
+        self.feature_set
+            .is_active(&feature_set::no_overflow_rent_distribution::id())
+    }
+
+    // Distribute collected transaction fees for this slot to collector_id (= current leader).
+    //
+    // Each validator is incentivized to process more transactions to earn more transaction fees.
+    // Transaction fees are rewarded for the computing resource utilization cost, directly
+    // proportional to their actual processing power.
+    //
+    // collector_id is rotated according to stake-weighted leader schedule. So the opportunity of
+    // earning transaction fees are fairly distributed by stake. And missing the opportunity
+    // (not producing a block as a leader) earns nothing. So, being online is incentivized as a
+    // form of transaction fees as well.
+    //
+    // On the other hand, rent fees are distributed under slightly different philosophy, while
+    // still being stake-weighted.
+    // Ref: distribute_rent_to_validators
+    fn collect_fees(&self) {
+        let collector_fees = self.collector_fees.load(Relaxed);
+
+        if collector_fees != 0 {
+            let (deposit, mut burn) = self.fee_rate_governor.burn(collector_fees);
+            // burn a portion of fees
+            debug!(
+                "distributed fee: {} (rounded from: {}, burned: {})",
+                deposit, collector_fees, burn
+            );
+
+            match self.deposit(&self.collector_id, deposit) {
+                Ok(post_balance) => {
+                    if deposit != 0 {
+                        self.rewards.write().unwrap().push((
+                            self.collector_id,
+                            RewardInfo {
+                                reward_type: RewardType::Fee,
+                                lamports: deposit as i64,
+                                post_balance,
+                                commission: None,
+                            },
+                        ));
+                    }
+                }
+                Err(_) => {
+                    error!(
+                        "Burning {} fee instead of crediting {}",
+                        deposit, self.collector_id
+                    );
+                    inc_new_counter_error!("bank-burned_fee_lamports", deposit as usize);
+                    burn += deposit;
+                }
+            }
+            self.capitalization.fetch_sub(burn, Relaxed);
+        }
+    }
+
+    pub fn deposit(
+        &self,
+        pubkey: &Pubkey,
+        lamports: u64,
+    ) -> std::result::Result<u64, LamportsError> {
+        // This doesn't collect rents intentionally.
+        // Rents should only be applied to actual TXes
+        let mut account = self.get_account_with_fixed_root(pubkey).unwrap_or_default();
+        account.checked_add_lamports(lamports)?;
+        self.store_account(pubkey, &account);
+        Ok(account.wens())
+    }
+
+    // Hi! leaky abstraction here....
+    // use this over get_account() if it's called ONLY from on-chain runtime account
+    // processing (i.e. from in-band replay/banking stage; that ensures root is *fixed* while
+    // running).
+    // pro: safer assertion can be enabled inside AccountsDb
+    // con: panics!() if called from off-chain processing
+    pub fn get_account_with_fixed_root(&self, pubkey: &Pubkey) -> Option<AccountSharedData> {
+        self.load_slow_with_fixed_root(&self.ancestors, pubkey)
+            .map(|(acc, _slot)| acc)
+    }
+
+    fn collect_rent_eagerly(&self) {
+        if self.lazy_rent_collection.load(Relaxed) {
+            return;
+        }
+
+        let mut measure = Measure::start("collect_rent_eagerly-ms");
+        let partitions = self.rent_collection_partitions();
+        let count = partitions.len();
+        let account_count: usize = partitions
+            .into_iter()
+            .map(|partition| self.collect_rent_in_partition(partition))
+            .sum();
+        measure.stop();
+        datapoint_info!(
+            "collect_rent_eagerly",
+            ("accounts", account_count, i64),
+            ("partitions", count, i64)
+        );
+        inc_new_counter_info!("collect_rent_eagerly-ms", measure.as_ms() as usize);
+    }
+
+    fn rent_collection_partitions(&self) -> Vec<Partition> {
+        if !self.use_fixed_collection_cycle() {
+            // This mode is for production/development/testing.
+            // In this mode, we iterate over the whole pubkey value range for each epochs
+            // including warm-up epochs.
+            // The only exception is the situation where normal epochs are relatively short
+            // (currently less than 2 day). In that case, we arrange a single collection
+            // cycle to be multiple of epochs so that a cycle could be greater than the 2 day.
+            self.variable_cycle_partitions()
+        } else {
+            // This mode is mainly for benchmarking only.
+            // In this mode, we always iterate over the whole pubkey value range with
+            // <slot_count_in_two_day> slots as a collection cycle, regardless warm-up or
+            // alignment between collection cycles and epochs.
+            // Thus, we can simulate stable processing load of eager rent collection,
+            // strictly proportional to the number of pubkeys since genesis.
+            self.fixed_cycle_partitions()
+        }
+    }
+
+    fn fixed_cycle_partitions(&self) -> Vec<Partition> {
+        let slot_count_in_two_day = self.slot_count_in_two_day();
+        Self::get_partitions(self.slot(), self.parent_slot(), slot_count_in_two_day)
+    }
+
+    pub fn parent_slot(&self) -> Slot {
+        self.parent_slot
+    }
+
+    pub fn get_partitions(
+        slot: Slot,
+        parent_slot: Slot,
+        slot_count_in_two_day: SlotCount,
+    ) -> Vec<Partition> {
+        let parent_cycle = parent_slot / slot_count_in_two_day;
+        let current_cycle = slot / slot_count_in_two_day;
+        let mut parent_cycle_index = parent_slot % slot_count_in_two_day;
+        let current_cycle_index = slot % slot_count_in_two_day;
+        let mut partitions = vec![];
+        if parent_cycle < current_cycle {
+            if current_cycle_index > 0 {
+                // generate and push gapped partitions because some slots are skipped
+                let parent_last_cycle_index = slot_count_in_two_day - 1;
+
+                // ... for parent cycle
+                partitions.push((
+                    parent_cycle_index,
+                    parent_last_cycle_index,
+                    slot_count_in_two_day,
+                ));
+
+                // ... for current cycle
+                partitions.push((0, 0, slot_count_in_two_day));
+            }
+            parent_cycle_index = 0;
+        }
+
+        partitions.push((
+            parent_cycle_index,
+            current_cycle_index,
+            slot_count_in_two_day,
+        ));
+
+        partitions
+    }
+
+    fn variable_cycle_partitions(&self) -> Vec<Partition> {
+        let (current_epoch, current_slot_index) = self.get_epoch_and_slot_index(self.slot());
+        let (parent_epoch, mut parent_slot_index) =
+            self.get_epoch_and_slot_index(self.parent_slot());
+
+        let mut partitions = vec![];
+        if parent_epoch < current_epoch {
+            let slot_skipped = (self.slot() - self.parent_slot()) > 1;
+            if slot_skipped {
+                // Generate special partitions because there are skipped slots
+                // exactly at the epoch transition.
+
+                let parent_last_slot_index = self.get_slots_in_epoch(parent_epoch) - 1;
+
+                // ... for parent epoch
+                partitions.push(self.partition_from_slot_indexes_with_gapped_epochs(
+                    parent_slot_index,
+                    parent_last_slot_index,
+                    parent_epoch,
+                ));
+
+                if current_slot_index > 0 {
+                    // ... for current epoch
+                    partitions.push(self.partition_from_slot_indexes_with_gapped_epochs(
+                        0,
+                        0,
+                        current_epoch,
+                    ));
+                }
+            }
+            parent_slot_index = 0;
+        }
+
+        partitions.push(self.partition_from_normal_slot_indexes(
+            parent_slot_index,
+            current_slot_index,
+            current_epoch,
+        ));
+
+        partitions
+    }
+
+    fn partition_from_normal_slot_indexes(
+        &self,
+        start_slot_index: SlotIndex,
+        end_slot_index: SlotIndex,
+        epoch: Epoch,
+    ) -> Partition {
+        self.do_partition_from_slot_indexes(start_slot_index, end_slot_index, epoch, false)
+    }
+
+    fn partition_from_slot_indexes_with_gapped_epochs(
+        &self,
+        start_slot_index: SlotIndex,
+        end_slot_index: SlotIndex,
+        epoch: Epoch,
+    ) -> Partition {
+        self.do_partition_from_slot_indexes(start_slot_index, end_slot_index, epoch, true)
+    }
+
+    fn do_partition_from_slot_indexes(
+        &self,
+        start_slot_index: SlotIndex,
+        end_slot_index: SlotIndex,
+        epoch: Epoch,
+        generated_for_gapped_epochs: bool,
+    ) -> Partition {
+        let cycle_params = self.determine_collection_cycle_params(epoch);
+        Self::get_partition_from_slot_indexes(
+            cycle_params,
+            start_slot_index,
+            end_slot_index,
+            generated_for_gapped_epochs,
+        )
+    }
+
+    fn get_partition_from_slot_indexes(
+        cycle_params: RentCollectionCycleParams,
+        start_slot_index: SlotIndex,
+        end_slot_index: SlotIndex,
+        generated_for_gapped_epochs: bool,
+    ) -> Partition {
+        let (_, _, in_multi_epoch_cycle, _, _, partition_count) = cycle_params;
+
+        // use common codepath for both very likely and very unlikely for the sake of minimized
+        // risk of any miscalculation instead of negligibly faster computation per slot for the
+        // likely case.
+        let mut start_partition_index =
+            Self::partition_index_from_slot_index(start_slot_index, cycle_params);
+        let mut end_partition_index =
+            Self::partition_index_from_slot_index(end_slot_index, cycle_params);
+
+        // Adjust partition index for some edge cases
+        let is_special_new_epoch = start_slot_index == 0 && end_slot_index != 1;
+        let in_middle_of_cycle = start_partition_index > 0;
+        if in_multi_epoch_cycle && is_special_new_epoch && in_middle_of_cycle {
+            // Adjust slot indexes so that the final partition ranges are continuous!
+            // This is need because the caller gives us off-by-one indexes when
+            // an epoch boundary is crossed.
+            // Usually there is no need for this adjustment because cycles are aligned
+            // with epochs. But for multi-epoch cycles, adjust the indexes if it
+            // happens in the middle of a cycle for both gapped and not-gapped cases:
+            //
+            // epoch (slot range)|slot idx.*1|raw part. idx.|adj. part. idx.|epoch boundary
+            // ------------------+-----------+--------------+---------------+--------------
+            // 3 (20..30)        | [7..8]    |   7.. 8      |   7.. 8
+            //                   | [8..9]    |   8.. 9      |   8.. 9
+            // 4 (30..40)        | [0..0]    |<10>..10      | <9>..10      <--- not gapped
+            //                   | [0..1]    |  10..11      |  10..12
+            //                   | [1..2]    |  11..12      |  11..12
+            //                   | [2..9   *2|  12..19      |  12..19      <-+
+            // 5 (40..50)        |  0..0   *2|<20>..<20>    |<19>..<19> *3 <-+- gapped
+            //                   |  0..4]    |<20>..24      |<19>..24      <-+
+            //                   | [4..5]    |  24..25      |  24..25
+            //                   | [5..6]    |  25..26      |  25..26
+            //
+            // NOTE: <..> means the adjusted slots
+            //
+            // *1: The range of parent_bank.slot() and current_bank.slot() is firstly
+            //     split by the epoch boundaries and then the split ones are given to us.
+            //     The original ranges are denoted as [...]
+            // *2: These are marked with generated_for_gapped_epochs = true.
+            // *3: This becomes no-op partition
+            start_partition_index -= 1;
+            if generated_for_gapped_epochs {
+                assert_eq!(start_slot_index, end_slot_index);
+                end_partition_index -= 1;
+            }
+        }
+
+        (start_partition_index, end_partition_index, partition_count)
+    }
+
+    fn partition_index_from_slot_index(
+        slot_index_in_epoch: SlotIndex,
+        (
+            epoch,
+            slot_count_per_epoch,
+            _,
+            base_epoch,
+            epoch_count_per_cycle,
+            _,
+        ): RentCollectionCycleParams,
+    ) -> PartitionIndex {
+        let epoch_offset = epoch - base_epoch;
+        let epoch_index_in_cycle = epoch_offset % epoch_count_per_cycle;
+        slot_index_in_epoch + epoch_index_in_cycle * slot_count_per_epoch
+    }
+
+    fn determine_collection_cycle_params(&self, epoch: Epoch) -> RentCollectionCycleParams {
+        let slot_count_per_epoch = self.get_slots_in_epoch(epoch);
+
+        if !self.use_multi_epoch_collection_cycle(epoch) {
+            // mnb should always go through this code path
+            Self::rent_single_epoch_collection_cycle_params(epoch, slot_count_per_epoch)
+        } else {
+            let epoch_count_in_cycle = self.slot_count_in_two_day() / slot_count_per_epoch;
+            let partition_count = slot_count_per_epoch * epoch_count_in_cycle;
+
+            (
+                epoch,
+                slot_count_per_epoch,
+                true,
+                self.first_normal_epoch(),
+                epoch_count_in_cycle,
+                partition_count,
+            )
+        }
+    }
+
+    pub fn first_normal_epoch(&self) -> Epoch {
+        self.epoch_schedule.first_normal_epoch
+    }
+
+    fn rent_single_epoch_collection_cycle_params(
+        epoch: Epoch,
+        slot_count_per_epoch: SlotCount,
+    ) -> RentCollectionCycleParams {
+        (
+            epoch,
+            slot_count_per_epoch,
+            false,
+            0,
+            1,
+            slot_count_per_epoch,
+        )
+    }
+
+    // Given short epochs, it's too costly to collect rent eagerly
+    // within an epoch, so lower the frequency of it.
+    // These logic isn't strictly eager anymore and should only be used
+    // for development/performance purpose.
+    // Absolutely not under ClusterType::MainnetBeta!!!!
+    fn use_multi_epoch_collection_cycle(&self, epoch: Epoch) -> bool {
+        // Force normal behavior, disabling multi epoch collection cycle for manual local testing
+        // #[cfg(not(test))]
+        // if self.slot_count_per_normal_epoch() == sdk::epoch_schedule::MINIMUM_SLOTS_PER_EPOCH
+        // {
+        //     return false;
+        // }
+
+        epoch >= self.first_normal_epoch()
+            && self.slot_count_per_normal_epoch() < self.slot_count_in_two_day()
+    }
+
+    fn slot_count_per_normal_epoch(&self) -> SlotCount {
+        self.get_slots_in_epoch(self.first_normal_epoch())
+    }
+
+    fn use_fixed_collection_cycle(&self) -> bool {
+        // Force normal behavior, disabling fixed collection cycle for manual local testing
+        // #[cfg(not(test))]
+        // if self.slot_count_per_normal_epoch() == sdk::epoch_schedule::MINIMUM_SLOTS_PER_EPOCH
+        // {
+        //     return false;
+        // }
+
+        self.cluster_type() != ClusterType::MainnetBeta
+            && self.slot_count_per_normal_epoch() < self.slot_count_in_two_day()
+    }
+
+    fn slot_count_in_two_day(&self) -> SlotCount {
+        Self::slot_count_in_two_day_helper(self.ticks_per_slot)
+    }
+
+    // This value is specially chosen to align with slots per epoch in mainnet-beta and testnet
+    // Also, assume 500GB account data set as the extreme, then for 2 day (=48 hours) to collect
+    // rent eagerly, we'll consume 5.7 MB/s IO bandwidth, bidirectionally.
+    pub fn slot_count_in_two_day_helper(ticks_per_slot: SlotCount) -> SlotCount {
+        2 * DEFAULT_TICKS_PER_SECOND * SECONDS_PER_DAY / ticks_per_slot
+    }
+
+    fn rent_for_sysvars(&self) -> bool {
+        self.feature_set
+            .is_active(&feature_set::rent_for_sysvars::id())
+    }
+
+    fn collect_rent_in_partition(&self, partition: Partition) -> usize {
+        let subrange = Self::pubkey_range_from_partition(partition);
+
+        self.rc.accounts.hold_range_in_memory(&subrange, true);
+
+        let accounts = self
+            .rc
+            .accounts
+            .load_to_collect_rent_eagerly(&self.ancestors, subrange.clone());
+        let account_count = accounts.len();
+
+        // parallelize?
+        let rent_for_sysvars = self.rent_for_sysvars();
+        let mut rent_debits = RentDebits::default();
+        let mut total_collected = CollectedInfo::default();
+        for (pubkey, mut account) in accounts {
+            let collected = self.rent_collector.collect_from_existing_account(
+                &pubkey,
+                &mut account,
+                rent_for_sysvars,
+                self.rc.accounts.accounts_db.filler_account_suffix.as_ref(),
+            );
+            total_collected += collected;
+            // Store all of them unconditionally to purge old AppendVec,
+            // even if collected rent is 0 (= not updated).
+            // Also, there's another subtle side-effect from this: this
+            // ensures we verify the whole on-chain state (= all accounts)
+            // via the account delta hash slowly once per an epoch.
+            self.store_account(&pubkey, &account);
+            rent_debits.insert(&pubkey, collected.rent_amount, account.wens());
+        }
+        self.collected_rent
+            .fetch_add(total_collected.rent_amount, Relaxed);
+        self.rewards
+            .write()
+            .unwrap()
+            .extend(rent_debits.into_unordered_rewards_iter());
+        if total_collected.account_data_len_reclaimed > 0 {
+            self.update_accounts_data_len(-(total_collected.account_data_len_reclaimed as i64));
+        }
+
+        self.rc.accounts.hold_range_in_memory(&subrange, false);
+        account_count
+    }
+
+    pub fn store_account(&self, pubkey: &Pubkey, account: &AccountSharedData) {
+        assert!(!self.freeze_started());
+        self.rc
+            .accounts
+            .store_slow_cached(self.slot(), pubkey, account);
+
+        self.stakes_cache.check_and_store(
+            pubkey,
+            account,
+            self.stakes_remove_delegation_if_inactive_enabled(),
+        );
+    }
+
+    pub fn stakes_remove_delegation_if_inactive_enabled(&self) -> bool {
+        self.feature_set
+            .is_active(&feature_set::stakes_remove_delegation_if_inactive::id())
+    }
+
+    pub fn freeze_started(&self) -> bool {
+        self.freeze_started.load(Relaxed)
+    }
+
+    /// Update the accounts data len by adding `delta`.  Since `delta` is signed, negative values
+    /// are allowed as the means to subtract from `accounts_data_len`.  The arithmetic saturates.
+    fn update_accounts_data_len(&self, delta: i64) {
+        /// Mixed integer ops currently not stable, so copying the impl.
+        /// Copied from: https://github.com/a1phyr/rust/blob/47edde1086412b36e9efd6098b191ec15a2a760a/library/core/src/num/uint_macros.rs#L1039-L1048
+        fn saturating_add_signed(lhs: u64, rhs: i64) -> u64 {
+            let (res, overflow) = lhs.overflowing_add(rhs as u64);
+            if overflow == (rhs < 0) {
+                res
+            } else if overflow {
+                u64::MAX
+            } else {
+                u64::MIN
+            }
+        }
+        self.accounts_data_len
+            .fetch_update(AcqRel, Acquire, |x| Some(saturating_add_signed(x, delta)))
+            // SAFETY: unwrap() is safe here since our update fn always returns `Some`
+            .unwrap();
+    }
+
+
+    /// A snapshot bank should be purged of 0 lamport accounts which are not part of the hash
+    /// calculation and could shield other real accounts.
+    // pub fn verify_snapshot_bank(
+    //     &self,
+    //     test_hash_calculation: bool,
+    //     accounts_db_skip_shrink: bool,
+    //     last_full_snapshot_slot: Option<Slot>,
+    // ) -> bool {
+    //     info!("cleaning..");
+    //     let mut clean_time = Measure::start("clean");
+    //     if self.slot() > 0 {
+    //         self.clean_accounts(true, true, last_full_snapshot_slot);
+    //     }
+    //     clean_time.stop();
+
+    //     self.rc
+    //         .accounts
+    //         .accounts_db
+    //         .accounts_index
+    //         .set_startup(true);
+    //     let mut shrink_all_slots_time = Measure::start("shrink_all_slots");
+    //     if !accounts_db_skip_shrink && self.slot() > 0 {
+    //         info!("shrinking..");
+    //         self.shrink_all_slots(true, last_full_snapshot_slot);
+    //     }
+    //     shrink_all_slots_time.stop();
+
+    //     info!("verify_bank_hash..");
+    //     let mut verify_time = Measure::start("verify_bank_hash");
+    //     let mut verify = self.verify_bank_hash(test_hash_calculation);
+    //     verify_time.stop();
+    //     self.rc
+    //         .accounts
+    //         .accounts_db
+    //         .accounts_index
+    //         .set_startup(false);
+
+    //     info!("verify_hash..");
+    //     let mut verify2_time = Measure::start("verify_hash");
+    //     // Order and short-circuiting is significant; verify_hash requires a valid bank hash
+    //     verify = verify && self.verify_hash();
+    //     verify2_time.stop();
+
+    //     datapoint_info!(
+    //         "verify_snapshot_bank",
+    //         ("clean_us", clean_time.as_us(), i64),
+    //         ("shrink_all_slots_us", shrink_all_slots_time.as_us(), i64),
+    //         ("verify_bank_hash_us", verify_time.as_us(), i64),
+    //         ("verify_hash_us", verify2_time.as_us(), i64),
+    //     );
+
+    //     verify
+    // }
+
+    // /// Return the number of hashes per tick
+    // pub fn hashes_per_tick(&self) -> &Option<u64> {
+    //     &self.hashes_per_tick
+    // }
+
+    // pub fn clean_accounts(
+    //     &self,
+    //     skip_last: bool,
+    //     is_startup: bool,
+    //     last_full_snapshot_slot: Option<Slot>,
+    // ) {
+    //     // Don't clean the slot we're snapshotting because it may have zero-lamport
+    //     // accounts that were included in the bank delta hash when the bank was frozen,
+    //     // and if we clean them here, any newly created snapshot's hash for this bank
+    //     // may not match the frozen hash.
+    //     //
+    //     // So when we're snapshotting, set `skip_last` to true so the highest slot to clean is
+    //     // lowered by one.
+    //     let highest_slot_to_clean = skip_last.then(|| self.slot().saturating_sub(1));
+
+    //     self.rc.accounts.accounts_db.clean_accounts(
+    //         highest_slot_to_clean,
+    //         is_startup,
+    //         last_full_snapshot_slot,
+    //     );
+    // }
 
     pub fn get_program_accounts(
         &self,

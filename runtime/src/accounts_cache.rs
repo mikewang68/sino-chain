@@ -39,6 +39,9 @@ pub struct SlotCacheInner {
 }
 
 impl SlotCacheInner {
+    pub fn get_all_pubkeys(&self) -> Vec<Pubkey> {
+        self.cache.iter().map(|item| *item.key()).collect()
+    }
 
     pub fn get_cloned(&self, pubkey: &Pubkey) -> Option<CachedAccount> {
         self.cache
@@ -62,6 +65,16 @@ pub struct AccountsCache {
 }
 
 impl AccountsCache {
+    pub fn add_root(&self, root: Slot) {
+        let max_flushed_root = self.fetch_max_flush_root();
+        if root > max_flushed_root || (root == max_flushed_root && root == 0) {
+            self.maybe_unflushed_roots.write().unwrap().insert(root);
+        }
+    }
+
+    pub fn fetch_max_flush_root(&self) -> Slot {
+        self.max_flushed_root.load(Ordering::Relaxed)
+    }
 
     pub fn load(&self, slot: Slot, pubkey: &Pubkey) -> Option<CachedAccount> {
         self.slot_cache(slot)

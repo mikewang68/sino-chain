@@ -7,13 +7,14 @@ use {
         de::{Deserialize, Deserializer},
     },
     sdk::{
-        account::{Account},
+        account::{Account, AccountSharedData},
         instruction::InstructionError,
         pubkey::Pubkey,
     },
     vote_program::vote_state::VoteState,
     std::{
-        collections::{HashMap},
+        cmp::Ordering,
+        collections::{hash_map::Entry, HashMap},
         sync::{Arc, Once, RwLock,RwLockReadGuard},
     },
 };
@@ -27,6 +28,10 @@ const INVALID_VOTE_STATE: Result<VoteState, InstructionError> =
 pub struct VoteAccount(Arc<VoteAccountInner>);
 
 impl VoteAccount {
+    pub fn account(&self) -> &Account {
+        &self.0.account
+    }
+
     pub fn vote_state(&self) -> RwLockReadGuard<Result<VoteState, InstructionError>> {
         let inner = &self.0;
         inner.vote_state_once.call_once(|| {
@@ -41,6 +46,22 @@ impl VoteAccount {
         Some(self.vote_state().as_ref().ok()?.node_pubkey)
     }
 
+    pub fn is_deserialized(&self) -> bool {
+        self.0.vote_state_once.is_completed()
+    }
+
+}
+
+impl From<AccountSharedData> for VoteAccount {
+    fn from(account: AccountSharedData) -> Self {
+        Self(Arc::new(VoteAccountInner::from(account)))
+    }
+}
+
+impl AsRef<VoteAccountInner> for VoteAccount {
+    fn as_ref(&self) -> &VoteAccountInner {
+        &self.0
+    }
 }
 
 impl Serialize for VoteAccount {
@@ -85,6 +106,12 @@ impl Default for VoteAccountInner {
     }
 }
 
+impl From<AccountSharedData> for VoteAccountInner {
+    fn from(account: AccountSharedData) -> Self {
+        Self::from(Account::from(account))
+    }
+}
+
 impl PartialEq<VoteAccountInner> for VoteAccountInner {
     fn eq(&self, other: &Self) -> bool {
         self.account == other.account
@@ -120,6 +147,75 @@ pub struct VoteAccounts {
 }
 
 impl VoteAccounts{
+    pub(crate) fn add_stake(&mut self, pubkey: &Pubkey, delta: u64) {
+        let vote_accounts = Arc::make_mut(&mut self.vote_accounts);
+        if let Some((stake, vote_account)) = vote_accounts.get_mut(pubkey) {
+            *stake += delta;
+            let vote_account = vote_account.clone();
+            self.add_node_stake(delta, &vote_account);
+        }
+    }
+
+    pub(crate) fn sub_stake(&mut self, pubkey: &Pubkey, delta: u64) {
+        let vote_accounts = Arc::make_mut(&mut self.vote_accounts);
+        if let Some((stake, vote_account)) = vote_accounts.get_mut(pubkey) {
+            *stake = stake
+                .checked_sub(delta)
+                .expect("subtraction value exceeds account's stake");
+            let vote_account = vote_account.clone();
+            self.sub_node_stake(delta, &vote_account);
+        }
+    }
+
+    pub(crate) fn insert(&mut self, pubkey: Pubkey, (stake, vote_account): (u64, VoteAccount)) {
+        self.add_node_stake(stake, &vote_account);
+        let vote_accounts = Arc::make_mut(&mut self.vote_accounts);
+        if let Some((stake, vote_account)) = vote_accounts.insert(pubkey, (stake, vote_account)) {
+            self.sub_node_stake(stake, &vote_account);
+        }
+    }
+
+    fn add_node_stake(&mut self, stake: u64, vote_account: &VoteAccount) {
+        if stake != 0 && self.staked_nodes_once.is_completed() {
+            if let Some(node_pubkey) = vote_account.node_pubkey() {
+                let mut staked_nodes = self.staked_nodes.write().unwrap();
+                let staked_nodes = Arc::make_mut(&mut staked_nodes);
+                staked_nodes
+                    .entry(node_pubkey)
+                    .and_modify(|s| *s += stake)
+                    .or_insert(stake);
+            }
+        }
+    }
+
+    pub(crate) fn remove(&mut self, pubkey: &Pubkey) -> Option<(u64, VoteAccount)> {
+        let vote_accounts = Arc::make_mut(&mut self.vote_accounts);
+        let entry = vote_accounts.remove(pubkey);
+        if let Some((stake, ref vote_account)) = entry {
+            self.sub_node_stake(stake, vote_account);
+        }
+        entry
+    }
+
+    fn sub_node_stake(&mut self, stake: u64, vote_account: &VoteAccount) {
+        if stake != 0 && self.staked_nodes_once.is_completed() {
+            if let Some(node_pubkey) = vote_account.node_pubkey() {
+                let mut staked_nodes = self.staked_nodes.write().unwrap();
+                let staked_nodes = Arc::make_mut(&mut staked_nodes);
+                match staked_nodes.entry(node_pubkey) {
+                    Entry::Vacant(_) => panic!("this should not happen!"),
+                    Entry::Occupied(mut entry) => match entry.get().cmp(&stake) {
+                        Ordering::Less => panic!("subtraction value exceeds node's stake"),
+                        Ordering::Equal => {
+                            entry.remove_entry();
+                        }
+                        Ordering::Greater => *entry.get_mut() -= stake,
+                    },
+                }
+            }
+        }
+    }
+
     pub fn get(&self, pubkey: &Pubkey) -> Option<&(/*stake:*/ u64, VoteAccount)> {
         self.vote_accounts.get(pubkey)
     }

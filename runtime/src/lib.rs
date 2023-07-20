@@ -40,6 +40,9 @@ pub mod shared_buffer_reader;
 pub mod snapshot_archive_info;
 pub mod snapshot_package;
 pub mod block_cost_limits;
+pub mod sorted_storages;
+pub mod accounts_hash;
+pub mod cache_hash_data;
 
 #[macro_use]
 extern crate metrics;

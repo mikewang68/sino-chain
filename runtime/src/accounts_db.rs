@@ -24,6 +24,9 @@ use std::{thread::sleep, time::Duration};
 use crate::{accounts_index::{AccountsIndexConfig, ACCOUNTS_INDEX_CONFIG_FOR_TESTING}, append_vec::{StoredMetaWriteVersion, StoredMeta}};
 use {
     crate::{
+        cache_hash_data::CacheHashData,
+        accounts_hash::{AccountsHash, CalculateHashIntermediate, HashStats, PreviousPass},
+        sorted_storages::SortedStorages,
         // accounts_background_service::{DroppedSlotsSender, SendDroppedBankCallback},
         accounts_cache::{
             AccountsCache, 
@@ -103,6 +106,13 @@ use {
 
 mod geyser_plugin_utils;
 
+pub type BinnedHashData = Vec<Vec<CalculateHashIntermediate>>;
+
+pub struct AccountsAddRootTiming {
+    pub index_us: u64,
+    pub cache_us: u64,
+    pub store_us: u64,
+}
 
 // A specially reserved storage id just for entries in the cache, so that
 // operations that take a storage entry can maintain a common interface
@@ -548,6 +558,37 @@ pub enum LoadedAccount<'a> {
 }
 
 impl<'a> LoadedAccount<'a> {
+    pub fn lamports(&self) -> u64 {
+        match self {
+            LoadedAccount::Stored(stored_account_meta) => stored_account_meta.account_meta.lamports,
+            LoadedAccount::Cached(cached_account) => cached_account.account.wens(),
+        }
+    }
+
+    pub fn pubkey(&self) -> &Pubkey {
+        match self {
+            LoadedAccount::Stored(stored_account_meta) => &stored_account_meta.meta.pubkey,
+            LoadedAccount::Cached(cached_account) => cached_account.pubkey(),
+        }
+    }
+
+    pub fn compute_hash(&self, slot: Slot, pubkey: &Pubkey) -> Hash {
+        match self {
+            LoadedAccount::Stored(stored_account_meta) => {
+                AccountsDb::hash_stored_account(slot, stored_account_meta)
+            }
+            LoadedAccount::Cached(cached_account) => {
+                AccountsDb::hash_account(slot, &cached_account.account, pubkey)
+            }
+        }
+    }
+
+    pub fn loaded_hash(&self) -> Hash {
+        match self {
+            LoadedAccount::Stored(stored_account_meta) => *stored_account_meta.hash,
+            LoadedAccount::Cached(cached_account) => cached_account.hash(),
+        }
+    }
 
     pub fn take_account(self) -> AccountSharedData {
         match self {
@@ -630,6 +671,14 @@ pub struct StoreAccountsTiming {
     store_accounts_elapsed: u64,
     update_index_elapsed: u64,
     handle_reclaims_elapsed: u64,
+}
+
+#[derive(Debug)]
+pub enum BankHashVerificationError {
+    MismatchedAccountHash,
+    MismatchedBankHash,
+    MissingBankHash,
+    MismatchedTotalLamports(u64, u64),
 }
 
 type AccountInfoAccountsIndex = AccountsIndex<AccountInfo>;
@@ -777,6 +826,775 @@ impl Default for AccountShrinkThreshold {
 }
 
 impl AccountsDb {
+    pub fn hash_stored_account(slot: Slot, account: &StoredAccountMeta) -> Hash {
+        Self::hash_account_data(
+            slot,
+            account.account_meta.lamports,
+            &account.account_meta.owner,
+            account.account_meta.executable,
+            account.account_meta.rent_epoch,
+            account.data,
+            &account.meta.pubkey,
+        )
+    }
+
+    pub fn update_accounts_hash_with_index_option(
+        &self,
+        use_index: bool,
+        debug_verify: bool,
+        slot: Slot,
+        ancestors: &Ancestors,
+        expected_capitalization: Option<u64>,
+        can_cached_slot_be_unflushed: bool,
+        slots_per_epoch: Option<Slot>,
+        is_startup: bool,
+    ) -> (Hash, u64) {
+        let check_hash = false;
+        let (hash, total_lamports) = self
+            .calculate_accounts_hash_helper_with_verify(
+                use_index,
+                debug_verify,
+                slot,
+                ancestors,
+                expected_capitalization,
+                can_cached_slot_be_unflushed,
+                check_hash,
+                slots_per_epoch,
+                is_startup,
+            )
+            .unwrap(); // unwrap here will never fail since check_hash = false
+        let mut bank_hashes = self.bank_hashes.write().unwrap();
+        let mut bank_hash_info = bank_hashes.get_mut(&slot).unwrap();
+        bank_hash_info.snapshot_hash = hash;
+        (hash, total_lamports)
+    }
+
+    #[allow(clippy::too_many_arguments)]
+    fn calculate_accounts_hash_helper_with_verify(
+        &self,
+        use_index: bool,
+        debug_verify: bool,
+        slot: Slot,
+        ancestors: &Ancestors,
+        expected_capitalization: Option<u64>,
+        can_cached_slot_be_unflushed: bool,
+        check_hash: bool,
+        slots_per_epoch: Option<Slot>,
+        is_startup: bool,
+    ) -> Result<(Hash, u64), BankHashVerificationError> {
+        let (hash, total_lamports) = self.calculate_accounts_hash_helper(
+            use_index,
+            slot,
+            ancestors,
+            check_hash,
+            can_cached_slot_be_unflushed,
+            slots_per_epoch,
+            is_startup,
+        )?;
+        if debug_verify {
+            // calculate the other way (store or non-store) and verify results match.
+            let (hash_other, total_lamports_other) = self.calculate_accounts_hash_helper(
+                !use_index,
+                slot,
+                ancestors,
+                check_hash,
+                can_cached_slot_be_unflushed,
+                None,
+                is_startup,
+            )?;
+
+            let success = hash == hash_other
+                && total_lamports == total_lamports_other
+                && total_lamports == expected_capitalization.unwrap_or(total_lamports);
+            assert!(success, "update_accounts_hash_with_index_option mismatch. hashes: {}, {}; lamports: {}, {}; expected lamports: {:?}, using index: {}, slot: {}", hash, hash_other, total_lamports, total_lamports_other, expected_capitalization, use_index, slot);
+        }
+        Ok((hash, total_lamports))
+    }
+
+    fn calculate_accounts_hash_helper(
+        &self,
+        use_index: bool,
+        slot: Slot,
+        ancestors: &Ancestors,
+        check_hash: bool, // this will not be supported anymore
+        can_cached_slot_be_unflushed: bool,
+        slots_per_epoch: Option<Slot>,
+        is_startup: bool,
+    ) -> Result<(Hash, u64), BankHashVerificationError> {
+        if !use_index {
+            let accounts_cache_and_ancestors = if can_cached_slot_be_unflushed {
+                Some((&self.accounts_cache, ancestors, &self.accounts_index))
+            } else {
+                None
+            };
+
+            let mut collect_time = Measure::start("collect");
+            let (combined_maps, slots) = self.get_snapshot_storages(slot, None, Some(ancestors));
+            collect_time.stop();
+
+            let mut sort_time = Measure::start("sort_storages");
+            let min_root = self.accounts_index.min_root();
+            let storages = SortedStorages::new_with_slots(
+                combined_maps.iter().zip(slots.iter()),
+                min_root,
+                Some(slot),
+            );
+
+            self.mark_old_slots_as_dirty(&storages, slots_per_epoch);
+            sort_time.stop();
+
+            let timings = HashStats {
+                collect_snapshots_us: collect_time.as_us(),
+                storage_sort_us: sort_time.as_us(),
+                ..HashStats::default()
+            };
+
+            let thread_pool = if is_startup {
+                None
+            } else {
+                Some(&self.thread_pool_clean)
+            };
+            Self::calculate_accounts_hash_without_index(
+                &self.accounts_hash_cache_path,
+                &storages,
+                thread_pool,
+                timings,
+                check_hash,
+                accounts_cache_and_ancestors,
+                if self.filler_account_count > 0 {
+                    self.filler_account_suffix.as_ref()
+                } else {
+                    None
+                },
+                self.num_hash_scan_passes,
+            )
+        } else {
+            self.calculate_accounts_hash(slot, ancestors, check_hash)
+        }
+    }
+
+    /// true if 'pubkey' is a filler account
+    pub fn is_filler_account(&self, pubkey: &Pubkey) -> bool {
+        Self::is_filler_account_helper(pubkey, self.filler_account_suffix.as_ref())
+    }
+
+    fn calculate_accounts_hash(
+        &self,
+        slot: Slot,
+        ancestors: &Ancestors,
+        check_hash: bool, // this will not be supported anymore
+    ) -> Result<(Hash, u64), BankHashVerificationError> {
+        use BankHashVerificationError::*;
+        let mut collect = Measure::start("collect");
+        let keys: Vec<_> = self
+            .accounts_index
+            .account_maps
+            .iter()
+            .flat_map(|map| {
+                let mut keys = map.read().unwrap().keys();
+                keys.sort_unstable(); // hashmap is not ordered, but bins are relative to each other
+                keys
+            })
+            .collect();
+        collect.stop();
+
+        let mut scan = Measure::start("scan");
+        let mismatch_found = AtomicU64::new(0);
+        // Pick a chunk size big enough to allow us to produce output vectors that are smaller than the overall size.
+        // We'll also accumulate the lamports within each chunk and fewer chunks results in less contention to accumulate the sum.
+        let chunks = crate::accounts_hash::MERKLE_FANOUT.pow(4);
+        let total_lamports = Mutex::<u64>::new(0);
+        let get_hashes = || {
+            keys.par_chunks(chunks)
+                .map(|pubkeys| {
+                    let mut sum = 0u128;
+                    let result: Vec<Hash> = pubkeys
+                        .iter()
+                        .filter_map(|pubkey| {
+                            if self.is_filler_account(pubkey) {
+                                return None;
+                            }
+                            if let AccountIndexGetResult::Found(lock, index) =
+                                self.accounts_index.get(pubkey, Some(ancestors), Some(slot))
+                            {
+                                let (slot, account_info) = &lock.slot_list()[index];
+                                if account_info.lamports != 0 {
+                                    // Because we're keeping the `lock' here, there is no need
+                                    // to use retry_to_get_account_accessor()
+                                    // In other words, flusher/shrinker/cleaner is blocked to
+                                    // cause any Accessor(None) situtation.
+                                    // Anyway this race condition concern is currently a moot
+                                    // point because calculate_accounts_hash() should not
+                                    // currently race with clean/shrink because the full hash
+                                    // is synchronous with clean/shrink in
+                                    // AccountsBackgroundService
+                                    self.get_account_accessor(
+                                        *slot,
+                                        pubkey,
+                                        account_info.store_id,
+                                        account_info.offset,
+                                    )
+                                    .get_loaded_account()
+                                    .and_then(
+                                        |loaded_account| {
+                                            let loaded_hash = loaded_account.loaded_hash();
+                                            let balance = account_info.lamports;
+                                            if check_hash && !self.is_filler_account(pubkey) {  // this will not be supported anymore
+                                                let computed_hash =
+                                                    loaded_account.compute_hash(*slot, pubkey);
+                                                if computed_hash != loaded_hash {
+                                                    info!("hash mismatch found: computed: {}, loaded: {}, pubkey: {}", computed_hash, loaded_hash, pubkey);
+                                                    mismatch_found
+                                                        .fetch_add(1, Ordering::Relaxed);
+                                                    return None;
+                                                }
+                                            }
+
+                                            sum += balance as u128;
+                                            Some(loaded_hash)
+                                        },
+                                    )
+                                } else {
+                                    None
+                                }
+                            } else {
+                                None
+                            }
+                        })
+                        .collect();
+                    let mut total = total_lamports.lock().unwrap();
+                    *total =
+                        AccountsHash::checked_cast_for_capitalization(*total as u128 + sum);
+                    result
+                }).collect()
+        };
+
+        let hashes: Vec<Vec<Hash>> = if check_hash {
+            get_hashes()
+        } else {
+            self.thread_pool_clean.install(get_hashes)
+        };
+        if mismatch_found.load(Ordering::Relaxed) > 0 {
+            warn!(
+                "{} mismatched account hash(es) found",
+                mismatch_found.load(Ordering::Relaxed)
+            );
+            return Err(MismatchedAccountHash);
+        }
+
+        scan.stop();
+        let total_lamports = *total_lamports.lock().unwrap();
+
+        let mut hash_time = Measure::start("hash");
+        let (accumulated_hash, hash_total) = AccountsHash::calculate_hash(hashes);
+        hash_time.stop();
+        datapoint_info!(
+            "update_accounts_hash",
+            ("accounts_scan", scan.as_us(), i64),
+            ("hash", hash_time.as_us(), i64),
+            ("hash_total", hash_total, i64),
+            ("collect", collect.as_us(), i64),
+        );
+        Ok((accumulated_hash, total_lamports))
+    }
+
+    // modeled after get_accounts_delta_hash
+    // intended to be faster than calculate_accounts_hash
+    pub fn calculate_accounts_hash_without_index(
+        accounts_hash_cache_path: &Path,
+        storages: &SortedStorages,
+        thread_pool: Option<&ThreadPool>,
+        mut stats: HashStats,
+        check_hash: bool,
+        accounts_cache_and_ancestors: Option<(
+            &AccountsCache,
+            &Ancestors,
+            &AccountInfoAccountsIndex,
+        )>,
+        filler_account_suffix: Option<&Pubkey>,
+        num_hash_scan_passes: Option<usize>,
+    ) -> Result<(Hash, u64), BankHashVerificationError> {
+        let (num_hash_scan_passes, bins_per_pass) = Self::bins_per_pass(num_hash_scan_passes);
+        let mut scan_and_hash = move || {
+            let mut previous_pass = PreviousPass::default();
+            let mut final_result = (Hash::default(), 0);
+
+            let cache_hash_data = CacheHashData::new(&accounts_hash_cache_path);
+
+            for pass in 0..num_hash_scan_passes {
+                let bounds = Range {
+                    start: pass * bins_per_pass,
+                    end: (pass + 1) * bins_per_pass,
+                };
+
+                let result = Self::scan_snapshot_stores_with_cache(
+                    &cache_hash_data,
+                    storages,
+                    &mut stats,
+                    PUBKEY_BINS_FOR_CALCULATING_HASHES,
+                    &bounds,
+                    check_hash,
+                    accounts_cache_and_ancestors,
+                    filler_account_suffix,
+                )?;
+
+                let hash = AccountsHash {
+                    filler_account_suffix: filler_account_suffix.cloned(),
+                };
+                let (hash, lamports, for_next_pass) = hash.rest_of_hash_calculation(
+                    result,
+                    &mut stats,
+                    pass == num_hash_scan_passes - 1,
+                    previous_pass,
+                    bins_per_pass,
+                );
+                previous_pass = for_next_pass;
+                final_result = (hash, lamports);
+            }
+
+            info!(
+                "calculate_accounts_hash_without_index: slot (exclusive): {} {:?}",
+                storages.range().end,
+                final_result
+            );
+            Ok(final_result)
+        };
+        if let Some(thread_pool) = thread_pool {
+            thread_pool.install(scan_and_hash)
+        } else {
+            scan_and_hash()
+        }
+    }
+
+    /// Scan through all the account storage in parallel
+    fn scan_account_storage_no_bank<F, F2>(
+        cache_hash_data: &CacheHashData,
+        accounts_cache_and_ancestors: Option<(
+            &AccountsCache,
+            &Ancestors,
+            &AccountInfoAccountsIndex,
+        )>,
+        snapshot_storages: &SortedStorages,
+        scan_func: F,
+        after_func: F2,
+        bin_range: &Range<usize>,
+        bin_calculator: &PubkeyBinCalculator24,
+    ) -> Vec<BinnedHashData>
+    where
+        F: Fn(LoadedAccount, &mut BinnedHashData, Slot) + Send + Sync,
+        F2: Fn(BinnedHashData) -> BinnedHashData + Send + Sync,
+    {
+        let start_bin_index = bin_range.start;
+
+        let width = snapshot_storages.range_width();
+        // 2 is for 2 special chunks - unaligned slots at the beginning and end
+        let chunks = 2 + (width as Slot / MAX_ITEMS_PER_CHUNK);
+        let range = snapshot_storages.range();
+        let slot0 = range.start;
+        let first_boundary =
+            ((slot0 + MAX_ITEMS_PER_CHUNK) / MAX_ITEMS_PER_CHUNK) * MAX_ITEMS_PER_CHUNK;
+        (0..chunks)
+            .into_par_iter()
+            .map(|chunk| {
+                let mut retval = vec![];
+                // calculate start, end
+                let (start, mut end) = if chunk == 0 {
+                    if slot0 == first_boundary {
+                        return after_func(retval); // if we evenly divide, nothing for special chunk 0 to do
+                    }
+                    // otherwise first chunk is not 'full'
+                    (slot0, first_boundary)
+                } else {
+                    // normal chunk in the middle or at the end
+                    let start = first_boundary + MAX_ITEMS_PER_CHUNK * (chunk - 1);
+                    let end = start + MAX_ITEMS_PER_CHUNK;
+                    (start, end)
+                };
+                end = std::cmp::min(end, range.end);
+                if start == end {
+                    return after_func(retval);
+                }
+
+                let mut file_name = String::default();
+                if accounts_cache_and_ancestors.is_none()
+                    && end.saturating_sub(start) == MAX_ITEMS_PER_CHUNK
+                {
+                    let mut load_from_cache = true;
+                    let mut hasher = std::collections::hash_map::DefaultHasher::new(); // wrong one?
+
+                    for slot in start..end {
+                        let sub_storages = snapshot_storages.get(slot);
+                        bin_range.start.hash(&mut hasher);
+                        bin_range.end.hash(&mut hasher);
+                        if let Some(sub_storages) = sub_storages {
+                            if sub_storages.len() > 1 {
+                                load_from_cache = false;
+                                break;
+                            }
+                            let storage_file = sub_storages.first().unwrap().accounts.get_path();
+                            slot.hash(&mut hasher);
+                            storage_file.hash(&mut hasher);
+                            // check alive_bytes, etc. here?
+                            let amod = std::fs::metadata(storage_file);
+                            if amod.is_err() {
+                                load_from_cache = false;
+                                break;
+                            }
+                            let amod = amod.unwrap().modified();
+                            if amod.is_err() {
+                                load_from_cache = false;
+                                break;
+                            }
+                            let amod = amod
+                                .unwrap()
+                                .duration_since(std::time::UNIX_EPOCH)
+                                .unwrap()
+                                .as_secs();
+                            amod.hash(&mut hasher);
+                        }
+                    }
+                    if load_from_cache {
+                        // we have a hash value for all the storages in this slot
+                        // so, build a file name:
+                        let hash = hasher.finish();
+                        file_name = format!(
+                            "{}.{}.{}.{}.{}",
+                            start, end, bin_range.start, bin_range.end, hash
+                        );
+                        if retval.is_empty() {
+                            let range = bin_range.end - bin_range.start;
+                            retval.append(&mut vec![Vec::new(); range]);
+                        }
+                        if cache_hash_data
+                            .load(
+                                &Path::new(&file_name),
+                                &mut retval,
+                                start_bin_index,
+                                bin_calculator,
+                            )
+                            .is_ok()
+                        {
+                            return retval;
+                        }
+
+                        // fall through and load normally - we failed to load
+                    }
+                }
+
+                for slot in start..end {
+                    let sub_storages = snapshot_storages.get(slot);
+                    let valid_slot = sub_storages.is_some();
+                    if let Some((cache, ancestors, accounts_index)) = accounts_cache_and_ancestors {
+                        if let Some(slot_cache) = cache.slot_cache(slot) {
+                            if valid_slot
+                                || ancestors.contains_key(&slot)
+                                || accounts_index.is_root(slot)
+                            {
+                                let keys = slot_cache.get_all_pubkeys();
+                                for key in keys {
+                                    if let Some(cached_account) = slot_cache.get_cloned(&key) {
+                                        let mut accessor = LoadedAccountAccessor::Cached(Some(
+                                            Cow::Owned(cached_account),
+                                        ));
+                                        let account = accessor.get_loaded_account().unwrap();
+                                        scan_func(account, &mut retval, slot);
+                                    };
+                                }
+                            }
+                        }
+                    }
+
+                    if let Some(sub_storages) = sub_storages {
+                        Self::scan_multiple_account_storages_one_slot(
+                            sub_storages,
+                            &scan_func,
+                            slot,
+                            &mut retval,
+                        );
+                    }
+                }
+                let r = after_func(retval);
+                if !file_name.is_empty() {
+                    let result = cache_hash_data.save(Path::new(&file_name), &r);
+
+                    if result.is_err() {
+                        info!(
+                            "FAILED_TO_SAVE: {}-{}, {}, first_boundary: {}, {:?}",
+                            range.start, range.end, width, first_boundary, file_name,
+                        );
+                    }
+                }
+                r
+            })
+            .filter(|x| !x.is_empty())
+            .collect()
+    }
+
+    fn scan_multiple_account_storages_one_slot<F, B>(
+        storages: &[Arc<AccountStorageEntry>],
+        scan_func: &F,
+        slot: Slot,
+        retval: &mut B,
+    ) where
+        F: Fn(LoadedAccount, &mut B, Slot) + Send + Sync,
+        B: Send + Default,
+    {
+        // we have to call the scan_func in order of write_version within a slot if there are multiple storages per slot
+        let mut len = storages.len();
+        let mut progress = Vec::with_capacity(len);
+        let mut current = Vec::with_capacity(len);
+        for storage in storages {
+            let accounts = storage.accounts.accounts(0);
+            let mut iterator: std::vec::IntoIter<StoredAccountMeta<'_>> = accounts.into_iter();
+            if let Some(item) = iterator
+                .next()
+                .map(|stored_account| (stored_account.meta.write_version, Some(stored_account)))
+            {
+                current.push(item);
+                progress.push(iterator);
+            }
+        }
+        while !progress.is_empty() {
+            let mut min = current[0].0;
+            let mut min_index = 0;
+            for (i, (item, _)) in current.iter().enumerate().take(len).skip(1) {
+                if item < &min {
+                    min_index = i;
+                    min = *item;
+                }
+            }
+            let mut account = (0, None);
+            std::mem::swap(&mut account, &mut current[min_index]);
+            scan_func(LoadedAccount::Stored(account.1.unwrap()), retval, slot);
+            let next = progress[min_index]
+                .next()
+                .map(|stored_account| (stored_account.meta.write_version, Some(stored_account)));
+            match next {
+                Some(item) => {
+                    current[min_index] = item;
+                }
+                None => {
+                    current.remove(min_index);
+                    progress.remove(min_index);
+                    len -= 1;
+                }
+            }
+        }
+    }
+
+    fn scan_snapshot_stores_with_cache(
+        cache_hash_data: &CacheHashData,
+        storage: &SortedStorages,
+        mut stats: &mut crate::accounts_hash::HashStats,
+        bins: usize,
+        bin_range: &Range<usize>,
+        check_hash: bool,
+        accounts_cache_and_ancestors: Option<(
+            &AccountsCache,
+            &Ancestors,
+            &AccountInfoAccountsIndex,
+        )>,
+        filler_account_suffix: Option<&Pubkey>,
+    ) -> Result<Vec<BinnedHashData>, BankHashVerificationError> {
+        let bin_calculator = PubkeyBinCalculator24::new(bins);
+        assert!(bin_range.start < bins && bin_range.end <= bins && bin_range.start < bin_range.end);
+        let mut time = Measure::start("scan all accounts");
+        stats.num_snapshot_storage = storage.storage_count();
+        stats.num_slots = storage.slot_count();
+        let mismatch_found = AtomicU64::new(0);
+        let range = bin_range.end - bin_range.start;
+        let sort_time = AtomicU64::new(0);
+
+        let result: Vec<BinnedHashData> = Self::scan_account_storage_no_bank(
+            cache_hash_data,
+            accounts_cache_and_ancestors,
+            storage,
+            |loaded_account: LoadedAccount, accum: &mut BinnedHashData, slot: Slot| {
+                let pubkey = loaded_account.pubkey();
+                let mut pubkey_to_bin_index = bin_calculator.bin_from_pubkey(pubkey);
+                if !bin_range.contains(&pubkey_to_bin_index) {
+                    return;
+                }
+
+                // when we are scanning with bin ranges, we don't need to use exact bin numbers. Subtract to make first bin we care about at index 0.
+                pubkey_to_bin_index -= bin_range.start;
+
+                let raw_lamports = loaded_account.lamports();
+                let zero_raw_lamports = raw_lamports == 0;
+                let balance = if zero_raw_lamports {
+                    crate::accounts_hash::ZERO_RAW_LAMPORTS_SENTINEL
+                } else {
+                    raw_lamports
+                };
+
+                let source_item =
+                    CalculateHashIntermediate::new(loaded_account.loaded_hash(), balance, *pubkey);
+
+                if check_hash && !Self::is_filler_account_helper(pubkey, filler_account_suffix) {
+                    // this will not be supported anymore
+                    let computed_hash = loaded_account.compute_hash(slot, pubkey);
+                    if computed_hash != source_item.hash {
+                        info!(
+                            "hash mismatch found: computed: {}, loaded: {}, pubkey: {}",
+                            computed_hash, source_item.hash, pubkey
+                        );
+                        mismatch_found.fetch_add(1, Ordering::Relaxed);
+                    }
+                }
+                if accum.is_empty() {
+                    accum.append(&mut vec![Vec::new(); range]);
+                }
+                accum[pubkey_to_bin_index].push(source_item);
+            },
+            |x| {
+                let (result, timing) = Self::sort_slot_storage_scan(x);
+                sort_time.fetch_add(timing, Ordering::Relaxed);
+                result
+            },
+            bin_range,
+            &bin_calculator,
+        );
+
+        stats.sort_time_total_us += sort_time.load(Ordering::Relaxed);
+
+        if check_hash && mismatch_found.load(Ordering::Relaxed) > 0 {
+            warn!(
+                "{} mismatched account hash(es) found",
+                mismatch_found.load(Ordering::Relaxed)
+            );
+            return Err(BankHashVerificationError::MismatchedAccountHash);
+        }
+
+        time.stop();
+        stats.scan_time_total_us += time.as_us();
+
+        Ok(result)
+    }
+
+    fn sort_slot_storage_scan(accum: BinnedHashData) -> (BinnedHashData, u64) {
+        let time = AtomicU64::new(0);
+        (
+            accum
+                .into_iter()
+                .map(|mut items| {
+                    let mut sort_time = Measure::start("sort");
+                    {
+                        // sort_by vs unstable because slot and write_version are already in order
+                        items.sort_by(AccountsHash::compare_two_hash_entries);
+                    }
+                    sort_time.stop();
+                    time.fetch_add(sort_time.as_us(), Ordering::Relaxed);
+                    items
+                })
+                .collect(),
+            time.load(Ordering::Relaxed),
+        )
+    }
+
+    // storages are sorted by slot and have range info.
+    // if we know slots_per_epoch, then add all stores older than slots_per_epoch to dirty_stores so clean visits these slots
+    fn mark_old_slots_as_dirty(&self, storages: &SortedStorages, slots_per_epoch: Option<Slot>) {
+        if let Some(slots_per_epoch) = slots_per_epoch {
+            let max = storages.range().end;
+            let acceptable_straggler_slot_count = 100; // do nothing special for these old stores which will likely get cleaned up shortly
+            let sub = slots_per_epoch + acceptable_straggler_slot_count;
+            let in_epoch_range_start = max.saturating_sub(sub);
+            for slot in storages.range().start..in_epoch_range_start {
+                if let Some(storages) = storages.get(slot) {
+                    storages.iter().for_each(|store| {
+                        self.dirty_stores
+                            .insert((slot, store.append_vec_id()), store.clone());
+                    });
+                }
+            }
+        }
+    }
+
+    pub fn add_root(&self, slot: Slot) -> AccountsAddRootTiming {
+        let mut index_time = Measure::start("index_add_root");
+        self.accounts_index.add_root(slot, self.caching_enabled);
+        index_time.stop();
+        let mut cache_time = Measure::start("cache_add_root");
+        if self.caching_enabled {
+            self.accounts_cache.add_root(slot);
+        }
+        cache_time.stop();
+        let mut store_time = Measure::start("store_add_root");
+        if let Some(slot_stores) = self.storage.get_slot_stores(slot) {
+            for (store_id, store) in slot_stores.read().unwrap().iter() {
+                self.dirty_stores.insert((slot, *store_id), store.clone());
+            }
+        }
+        store_time.stop();
+
+        AccountsAddRootTiming {
+            index_us: index_time.as_us(),
+            cache_us: cache_time.as_us(),
+            store_us: store_time.as_us(),
+        }
+    }
+
+    pub fn store_cached(&self, slot: Slot, accounts: &[(&Pubkey, &AccountSharedData)]) {
+        self.store(slot, accounts, self.caching_enabled);
+    }
+
+    pub fn is_filler_account_helper(
+        pubkey: &Pubkey,
+        filler_account_suffix: Option<&Pubkey>,
+    ) -> bool {
+        let offset = Self::filler_prefix_bytes();
+        filler_account_suffix
+            .as_ref()
+            .map(|filler_account_suffix| {
+                pubkey.as_ref()[offset..] == filler_account_suffix.as_ref()[offset..]
+            })
+            .unwrap_or_default()
+    }
+
+    fn filler_prefix_bytes() -> usize {
+        Self::filler_unique_id_bytes() + Self::filler_rent_partition_prefix_bytes()
+    }
+
+    pub fn range_scan_accounts<F, A, R>(
+        &self,
+        metric_name: &'static str,
+        ancestors: &Ancestors,
+        range: R,
+        config: &ScanConfig,
+        scan_func: F,
+    ) -> A
+    where
+        F: Fn(&mut A, Option<(&Pubkey, AccountSharedData, Slot)>),
+        A: Default,
+        R: RangeBounds<Pubkey> + std::fmt::Debug,
+    {
+        let mut collector = A::default();
+        self.accounts_index.range_scan_accounts(
+            metric_name,
+            ancestors,
+            range,
+            config,
+            |pubkey, (account_info, slot)| {
+                // unlike other scan fns, this is called from Bank::collect_rent_eagerly(),
+                // which is on-consensus processing in the banking/replaying stage.
+                // This requires infallible and consistent account loading.
+                // So, we unwrap Option<LoadedAccount> from get_loaded_account() here.
+                // This is safe because this closure is invoked with the account_info,
+                // while we lock the index entry at AccountsIndex::do_scan_accounts() ultimately,
+                // meaning no other subsystems can invalidate the account_info before making their
+                // changes to the index entry.
+                // For details, see the comment in retry_to_get_account_accessor()
+                let account_slot = self
+                    .get_account_accessor(slot, pubkey, account_info.store_id, account_info.offset)
+                    .get_loaded_account()
+                    .map(|loaded_account| (pubkey, loaded_account.take_account(), slot))
+                    .unwrap();
+                scan_func(&mut collector, Some(account_slot))
+            },
+        );
+        collector
+    }
+
     /// Store the account update.
     /// only called by tests
     pub fn store_uncached(&self, slot: Slot, accounts: &[(&Pubkey, &AccountSharedData)]) {

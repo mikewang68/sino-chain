@@ -87,6 +87,14 @@ pub struct ScanConfig {
 }
 
 impl ScanConfig{
+
+    pub fn new(collect_all_unsorted: bool) -> Self {
+        Self {
+            collect_all_unsorted,
+            ..ScanConfig::default()
+        }
+    }
+
     pub fn abort(&self) {
         if let Some(abort) = self.abort.as_ref() {
             abort.store(true, Ordering::Relaxed)
@@ -495,6 +503,10 @@ impl Default for RootsTracker {
     }
 }
 impl RootsTracker {
+    pub fn min_root(&self) -> Option<Slot> {
+        self.roots.min()
+    }
+
     pub fn new(max_width: u64) -> Self {
         Self {
             roots: RollingBitField::new(max_width),
@@ -553,6 +565,23 @@ impl<'a, T: IndexValue> Iterator for AccountsIndexIterator<'a, T> {
 }
 
 impl<'a, T: IndexValue> AccountsIndexIterator<'a, T> {
+    pub fn hold_range_in_memory<R>(&self, range: &R, start_holding: bool)
+    where
+        R: RangeBounds<Pubkey> + Debug,
+    {
+        // forward this hold request ONLY to the bins which contain keys in the specified range
+        let (start_bin, bin_range) = self.bin_start_and_range();
+        self.account_maps
+            .iter()
+            .skip(start_bin)
+            .take(bin_range)
+            .for_each(|map| {
+                map.read()
+                    .unwrap()
+                    .hold_range_in_memory(range, start_holding);
+            });
+    }
+
     fn range<R>(
         map: &AccountMapsReadLock<T>,
         range: R,
@@ -670,6 +699,60 @@ pub struct AccountsIndex<T: IndexValue> {
 }
 
 impl<T: IndexValue> AccountsIndex<T> {
+    pub fn min_root(&self) -> Option<Slot> {
+        self.roots_tracker.read().unwrap().min_root()
+    }
+
+    pub fn add_root(&self, slot: Slot, caching_enabled: bool) {
+        let mut w_roots_tracker = self.roots_tracker.write().unwrap();
+        w_roots_tracker.roots.insert(slot);
+        // we delay cleaning until flushing!
+        if !caching_enabled {
+            w_roots_tracker.uncleaned_roots.insert(slot);
+        }
+        // `AccountsDb::flush_accounts_cache()` relies on roots being added in order
+        assert!(slot >= w_roots_tracker.max_root);
+        w_roots_tracker.max_root = slot;
+    }
+
+    /// call func with every pubkey and index visible from a given set of ancestors with range
+    pub(crate) fn range_scan_accounts<F, R>(
+        &self,
+        metric_name: &'static str,
+        ancestors: &Ancestors,
+        range: R,
+        config: &ScanConfig,
+        func: F,
+    ) where
+        F: FnMut(&Pubkey, (&T, Slot)),
+        R: RangeBounds<Pubkey> + std::fmt::Debug,
+    {
+        // Only the rent logic should be calling this, which doesn't need the safety checks
+        self.do_unchecked_scan_accounts(metric_name, ancestors, func, Some(range), config);
+    }
+
+    fn do_unchecked_scan_accounts<F, R>(
+        &self,
+        metric_name: &'static str,
+        ancestors: &Ancestors,
+        func: F,
+        range: Option<R>,
+        config: &ScanConfig,
+    ) where
+        F: FnMut(&Pubkey, (&T, Slot)),
+        R: RangeBounds<Pubkey> + std::fmt::Debug,
+    {
+        self.do_scan_accounts(metric_name, ancestors, func, range, None, config);
+    }
+
+    pub fn hold_range_in_memory<R>(&self, range: &R, start_holding: bool)
+    where
+        R: RangeBounds<Pubkey> + Debug,
+    {
+        let iter = self.iter(Some(range), true);
+        iter.hold_range_in_memory(range, start_holding);
+    }
+
     /// call func with every pubkey and index visible from a given set of ancestors
     pub(crate) fn index_scan_accounts<F>(
         &self,
