@@ -17,7 +17,7 @@ use {
         account::{Account, AccountSharedData, ReadableAccount, WritableAccount},
         pubkey::Pubkey,
     },
-
+    log::*,
     std::{
         ops::RangeBounds,
         collections::{HashMap, HashSet},
@@ -46,6 +46,29 @@ pub struct Accounts {
 }
 
 impl Accounts{
+    /// Only called from startup or test code.
+    #[must_use]
+    pub fn verify_bank_hash_and_lamports(
+        &self,
+        slot: Slot,
+        ancestors: &Ancestors,
+        total_lamports: u64,
+        test_hash_calculation: bool,
+    ) -> bool {
+        if let Err(err) = self.accounts_db.verify_bank_hash_and_lamports(
+            slot,
+            ancestors,
+            total_lamports,
+            test_hash_calculation,
+        ) {
+            warn!("verify_bank_hash failed: {:?}", err);
+            false
+        } else {
+            true
+        }
+    }
+
+
     /// Add a slot to root.  Root slots cannot be purged
     pub fn add_root(&self, slot: Slot) -> AccountsAddRootTiming {
         self.accounts_db.add_root(slot)

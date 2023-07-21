@@ -77,6 +77,151 @@ pub struct AppendVec {
 }
 
 impl AppendVec {
+    /// Copy each account metadata, account and hash to the internal buffer.
+    /// Return the starting offset of each account metadata.
+    /// After each account is appended, the internal `current_len` is updated
+    /// and will be available to other threads.
+    pub fn append_accounts(
+        &self,
+        accounts: &[(StoredMeta, Option<&impl ReadableAccount>)],
+        hashes: &[impl Borrow<Hash>],
+    ) -> Vec<usize> {
+        let _lock = self.append_lock.lock().unwrap();
+        let mut offset = self.len();
+        let mut rv = Vec::with_capacity(accounts.len());
+        for ((stored_meta, account), hash) in accounts.iter().zip(hashes) {
+            let meta_ptr = stored_meta as *const StoredMeta;
+            let account_meta = AccountMeta::from(*account);
+            let account_meta_ptr = &account_meta as *const AccountMeta;
+            let data_len = stored_meta.data_len as usize;
+            let data_ptr = account
+                .map(|account| account.data())
+                .unwrap_or_default()
+                .as_ptr();
+            let hash_ptr = hash.borrow().as_ref().as_ptr();
+            let ptrs = [
+                (meta_ptr as *const u8, mem::size_of::<StoredMeta>()),
+                (account_meta_ptr as *const u8, mem::size_of::<AccountMeta>()),
+                (hash_ptr as *const u8, mem::size_of::<Hash>()),
+                (data_ptr, data_len),
+            ];
+            if let Some(res) = self.append_ptrs_locked(&mut offset, &ptrs) {
+                rv.push(res)
+            } else {
+                break;
+            }
+        }
+
+        // The last entry in this offset needs to be the u64 aligned offset, because that's
+        // where the *next* entry will begin to be stored.
+        rv.push(u64_align!(offset));
+
+        rv
+    }
+
+    /// Copy each value in `vals`, in order, to the first 64-byte boundary after position `offset`.
+    /// If there is sufficient space, then update `offset` and the internal `current_len` to the
+    /// first byte after the copied data and return the starting position of the copied data.
+    /// Otherwise return None and leave `offset` unchanged.
+    fn append_ptrs_locked(&self, offset: &mut usize, vals: &[(*const u8, usize)]) -> Option<usize> {
+        let mut end = *offset;
+        for val in vals {
+            end = u64_align!(end);
+            end += val.1;
+        }
+
+        if (self.file_size as usize) < end {
+            return None;
+        }
+
+        let pos = u64_align!(*offset);
+        for val in vals {
+            self.append_ptr(offset, val.0, val.1)
+        }
+        self.current_len.store(*offset, Ordering::Relaxed);
+        Some(pos)
+    }
+
+    /// Copy `len` bytes from `src` to the first 64-byte boundary after position `offset` of
+    /// the internal buffer. Then update `offset` to the first byte after the copied data.
+    fn append_ptr(&self, offset: &mut usize, src: *const u8, len: usize) {
+        let pos = u64_align!(*offset);
+        let data = &self.map[pos..(pos + len)];
+        //UNSAFE: This mut append is safe because only 1 thread can append at a time
+        //Mutex<()> guarantees exclusive write access to the memory occupied in
+        //the range.
+        unsafe {
+            let dst = data.as_ptr() as *mut u8;
+            std::ptr::copy(src, dst, len);
+        };
+        *offset = pos + len;
+    }
+
+    pub fn reset(&self) {
+        // This mutex forces append to be single threaded, but concurrent with reads
+        // See UNSAFE usage in `append_ptr`
+        let _lock = self.append_lock.lock().unwrap();
+        self.current_len.store(0, Ordering::Relaxed);
+    }
+
+    pub fn new(file: &Path, create: bool, size: usize) -> Self {
+        let initial_len = 0;
+        AppendVec::sanitize_len_and_size(initial_len, size).unwrap();
+
+        if create {
+            let _ignored = remove_file(file);
+        }
+
+        let mut data = OpenOptions::new()
+            .read(true)
+            .write(true)
+            .create(create)
+            .open(file)
+            .map_err(|e| {
+                panic!(
+                    "Unable to {} data file {} in current dir({:?}): {:?}",
+                    if create { "create" } else { "open" },
+                    file.display(),
+                    std::env::current_dir(),
+                    e
+                );
+            })
+            .unwrap();
+
+        // Theoretical performance optimization: write a zero to the end of
+        // the file so that we won't have to resize it later, which may be
+        // expensive.
+        data.seek(SeekFrom::Start((size - 1) as u64)).unwrap();
+        data.write_all(&[0]).unwrap();
+        data.seek(SeekFrom::Start(0)).unwrap();
+        data.flush().unwrap();
+
+        //UNSAFE: Required to create a Mmap
+        let map = unsafe { MmapMut::map_mut(&data) };
+        let map = map.unwrap_or_else(|e| {
+            error!(
+                "Failed to map the data file (size: {}): {}.\n
+                    Please increase sysctl vm.max_map_count or equivalent for your platform.",
+                size, e
+            );
+            std::process::exit(1);
+        });
+
+        AppendVec {
+            path: file.to_path_buf(),
+            map,
+            // This mutex forces append to be single threaded, but concurrent with reads
+            // See UNSAFE usage in `append_ptr`
+            append_lock: Mutex::new(()),
+            current_len: AtomicUsize::new(initial_len),
+            file_size: size as u64,
+            remove_on_drop: true,
+        }
+    }
+
+    pub fn capacity(&self) -> u64 {
+        self.file_size
+    }
 
     pub fn flush(&self) -> io::Result<()> {
         self.map.flush()
@@ -317,4 +462,24 @@ pub struct AccountMeta {
     pub executable: bool,
     /// the epoch at which this account will next owe rent
     pub rent_epoch: Epoch,
+}
+
+impl<'a, T: ReadableAccount> From<&'a T> for AccountMeta {
+    fn from(account: &'a T) -> Self {
+        Self {
+            lamports: account.wens(),
+            owner: *account.owner(),
+            executable: account.executable(),
+            rent_epoch: account.rent_epoch(),
+        }
+    }
+}
+
+impl<'a, T: ReadableAccount> From<Option<&'a T>> for AccountMeta {
+    fn from(account: Option<&'a T>) -> Self {
+        match account {
+            Some(account) => AccountMeta::from(account),
+            None => AccountMeta::default(),
+        }
+    }
 }

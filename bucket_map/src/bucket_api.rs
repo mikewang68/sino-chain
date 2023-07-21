@@ -4,15 +4,19 @@ use {
         bucket_item::BucketItem, 
         bucket_map::BucketMapError,
         bucket_stats::BucketMapStats, MaxSearch, RefCount,
+        index_entry::IndexEntry,
+        bucket_storage::{BucketStorage, Uid, DEFAULT_CAPACITY_POW2, UID_UNLOCKED},
     },
     sdk::pubkey::Pubkey,
     std::{
         // ops::RangeBounds,
+        collections::hash_map::DefaultHasher,
         path::PathBuf,
         sync::{
             atomic::{AtomicU64, Ordering},
             Arc, RwLock, RwLockWriteGuard,
         },
+        hash::{Hash, Hasher},
     },
     core::ops::RangeBounds,
 };
@@ -28,6 +32,53 @@ pub struct BucketApi<T: Clone + Copy> {
 }
 
 impl<T: Clone + Copy> BucketApi<T> {
+    pub fn delete_key(&self, key: &Pubkey) {
+        let mut bucket = self.get_write_bucket();
+        if let Some(bucket) = bucket.as_mut() {
+            bucket.delete_key(key)
+        }
+    }
+
+    fn bucket_find_entry<'a>(
+        index: &'a BucketStorage,
+        key: &Pubkey,
+        random: u64,
+    ) -> Option<(&'a IndexEntry, u64)> {
+        let ix = Self::bucket_index_ix(index, key, random);
+        for i in ix..ix + index.max_search() {
+            let ii = i % index.capacity();
+            if index.uid(ii) == UID_UNLOCKED {
+                continue;
+            }
+            let elem: &IndexEntry = index.get(ii);
+            if elem.key == *key {
+                return Some((elem, ii));
+            }
+        }
+        None
+    }
+
+    fn bucket_index_ix(index: &BucketStorage, key: &Pubkey, random: u64) -> u64 {
+        let uid = IndexEntry::key_uid(key);
+        let mut s = DefaultHasher::new();
+        uid.hash(&mut s);
+        //the locally generated random will make it hard for an attacker
+        //to deterministically cause all the pubkeys to land in the same
+        //location in any bucket on all validators
+        random.hash(&mut s);
+        let ix = s.finish();
+        ix % index.capacity()
+        //debug!(            "INDEX_IX: {:?} uid:{} loc: {} cap:{}",            key,            uid,            location,            index.capacity()        );
+    }
+
+    pub fn update<F>(&self, key: &Pubkey, updatefn: F)
+    where
+        F: FnMut(Option<(&[T], RefCount)>) -> Option<(Vec<T>, RefCount)>,
+    {
+        let mut bucket = self.get_write_bucket();
+        bucket.as_mut().unwrap().update(key, updatefn)
+    }
+
     /// Get the items for bucket
     pub fn items_in_range<R>(&self, range: &Option<&R>) -> Vec<BucketItem<T>>
     where

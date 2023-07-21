@@ -39,6 +39,46 @@ pub struct SlotCacheInner {
 }
 
 impl SlotCacheInner {
+    pub fn insert(
+        &self,
+        pubkey: &Pubkey,
+        account: AccountSharedData,
+        hash: Option<impl Borrow<Hash>>,
+        slot: Slot,
+    ) -> CachedAccount {
+        let data_len = account.data().len() as u64;
+        let item = Arc::new(CachedAccountInner {
+            account,
+            hash: RwLock::new(hash.map(|h| *h.borrow())),
+            slot,
+            pubkey: *pubkey,
+        });
+        if let Some(old) = self.cache.insert(*pubkey, item.clone()) {
+            self.same_account_writes.fetch_add(1, Ordering::Relaxed);
+            self.same_account_writes_size
+                .fetch_add(data_len, Ordering::Relaxed);
+
+            let old_len = old.account.data().len() as u64;
+            let grow = old_len.saturating_sub(data_len);
+            if grow > 0 {
+                self.size.fetch_add(grow, Ordering::Relaxed);
+                self.total_size.fetch_add(grow, Ordering::Relaxed);
+            } else {
+                let shrink = data_len.saturating_sub(old_len);
+                if shrink > 0 {
+                    self.size.fetch_add(shrink, Ordering::Relaxed);
+                    self.total_size.fetch_sub(shrink, Ordering::Relaxed);
+                }
+            }
+        } else {
+            self.size.fetch_add(data_len, Ordering::Relaxed);
+            self.total_size.fetch_add(data_len, Ordering::Relaxed);
+            self.unique_account_writes_size
+                .fetch_add(data_len, Ordering::Relaxed);
+        }
+        item
+    }
+
     pub fn get_all_pubkeys(&self) -> Vec<Pubkey> {
         self.cache.iter().map(|item| *item.key()).collect()
     }
@@ -65,6 +105,39 @@ pub struct AccountsCache {
 }
 
 impl AccountsCache {
+    pub fn new_inner(&self) -> SlotCache {
+        Arc::new(SlotCacheInner {
+            cache: DashMap::default(),
+            same_account_writes: AtomicU64::default(),
+            same_account_writes_size: AtomicU64::default(),
+            unique_account_writes_size: AtomicU64::default(),
+            size: AtomicU64::default(),
+            total_size: Arc::clone(&self.total_size),
+            is_frozen: AtomicBool::default(),
+        })
+    }
+
+    pub fn store(
+        &self,
+        slot: Slot,
+        pubkey: &Pubkey,
+        account: AccountSharedData,
+        hash: Option<impl Borrow<Hash>>,
+    ) -> CachedAccount {
+        let slot_cache = self.slot_cache(slot).unwrap_or_else(||
+            // DashMap entry.or_insert() returns a RefMut, essentially a write lock,
+            // which is dropped after this block ends, minimizing time held by the lock.
+            // However, we still want to persist the reference to the `SlotStores` behind
+            // the lock, hence we clone it out, (`SlotStores` is an Arc so is cheap to clone).
+            self
+                .cache
+                .entry(slot)
+                .or_insert(self.new_inner())
+                .clone());
+
+        slot_cache.insert(pubkey, account, hash, slot)
+    }
+
     pub fn add_root(&self, root: Slot) {
         let max_flushed_root = self.fetch_max_flush_root();
         if root > max_flushed_root || (root == max_flushed_root && root == 0) {

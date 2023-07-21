@@ -47,6 +47,49 @@ pub struct Bucket<T> {
 }
 
 impl<T: Clone + Copy> Bucket<T> {
+    pub fn update<F>(&mut self, key: &Pubkey, mut updatefn: F)
+    where
+        F: FnMut(Option<(&[T], RefCount)>) -> Option<(Vec<T>, RefCount)>,
+    {
+        let current = self.read_value(key);
+        let new = updatefn(current);
+        if new.is_none() {
+            self.delete_key(key);
+            return;
+        }
+        let (new, refct) = new.unwrap();
+        self.insert(key, (&new, refct));
+    }
+
+    pub fn insert(&mut self, key: &Pubkey, value: (&[T], RefCount)) {
+        let (new, refct) = value;
+        loop {
+            let rv = self.try_write(key, new, refct);
+            match rv {
+                Ok(_) => return,
+                Err(err) => {
+                    self.grow(err);
+                    self.handle_delayed_grows();
+                }
+            }
+        }
+    }
+
+
+    pub fn delete_key(&mut self, key: &Pubkey) {
+        if let Some((elem, elem_ix)) = self.find_entry(key) {
+            let elem_uid = self.index.uid(elem_ix);
+            if elem.num_slots > 0 {
+                let data_bucket = &self.data[elem.data_bucket_ix() as usize];
+                let loc = elem.data_loc(data_bucket);
+                //debug!(                    "DATA FREE {:?} {} {} {}",                    key, elem.data_location, data_bucket.capacity, elem_uid                );
+                data_bucket.free(loc, elem_uid);
+            }
+            //debug!("INDEX FREE {:?} {}", key, elem_uid);
+            self.index.free(elem_ix, elem_uid);
+        }
+    }
+
     pub fn items_in_range<R>(&self, range: &Option<&R>) -> Vec<BucketItem<T>>
     where
         R: RangeBounds<Pubkey>,

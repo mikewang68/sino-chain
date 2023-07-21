@@ -43,6 +43,8 @@ pub mod block_cost_limits;
 pub mod sorted_storages;
 pub mod accounts_hash;
 pub mod cache_hash_data;
+pub mod inline_spl_token_2022;
+pub mod contains;
 
 #[macro_use]
 extern crate metrics;

@@ -5,6 +5,9 @@ use {
             AccountMapEntryInner,
             AccountMapEntryMeta,
             IndexValue,
+            PreAllocatedAccountMapEntry,
+            ZeroLamport,
+            SlotSlice,
         },
         bucket_map_holder::{Age, BucketMapHolder},
         bucket_map_holder_stats::BucketMapHolderStats,
@@ -15,14 +18,14 @@ use {
     sdk::{clock::Slot, pubkey::Pubkey},
     std::{
         collections::{
-            hash_map::{Entry},
+            hash_map::{Entry, VacantEntry},
             HashMap,
         },
         fmt::Debug,
         ops::{Bound, RangeBounds, RangeInclusive},
         sync::{
             atomic::{AtomicBool, AtomicU64, AtomicU8, Ordering},
-            Arc, RwLock, 
+            Arc, RwLock, RwLockWriteGuard,
         },
     },
 };
@@ -67,6 +70,352 @@ impl<T: IndexValue> Debug for InMemAccountsIndex<T> {
 }
 
 impl<T: IndexValue> InMemAccountsIndex<T> {
+    pub fn unref(&self, pubkey: &Pubkey) {
+        self.get_internal(pubkey, |entry| {
+            if let Some(entry) = entry {
+                entry.add_un_ref(false)
+            }
+            (true, ())
+        })
+    }
+
+    pub fn upsert(
+        &self,
+        pubkey: &Pubkey,
+        new_value: PreAllocatedAccountMapEntry<T>,
+        reclaims: &mut SlotList<T>,
+        previous_slot_entry_was_cached: bool,
+    ) {
+        // try to get it just from memory first using only a read lock
+        self.get_only_in_mem(pubkey, |entry| {
+            if let Some(entry) = entry {
+                Self::lock_and_update_slot_list(
+                    entry,
+                    new_value.into(),
+                    reclaims,
+                    previous_slot_entry_was_cached,
+                );
+                Self::update_stat(&self.stats().updates_in_mem, 1);
+            } else {
+                let mut m = Measure::start("entry");
+                let mut map = self.map().write().unwrap();
+                let entry = map.entry(*pubkey);
+                m.stop();
+                let found = matches!(entry, Entry::Occupied(_));
+                match entry {
+                    Entry::Occupied(mut occupied) => {
+                        let current = occupied.get_mut();
+                        Self::lock_and_update_slot_list(
+                            current,
+                            new_value.into(),
+                            reclaims,
+                            previous_slot_entry_was_cached,
+                        );
+                        current.set_age(self.storage.future_age_to_flush());
+                        Self::update_stat(&self.stats().updates_in_mem, 1);
+                    }
+                    Entry::Vacant(vacant) => {
+                        // not in cache, look on disk
+                        let directly_to_disk = self.storage.get_startup();
+                        if directly_to_disk {
+                            // We may like this to always run, but it is unclear.
+                            // If disk bucket needs to resize, then this call can stall for a long time.
+                            // Right now, we know it is safe during startup.
+                            let already_existed = self.upsert_on_disk(
+                                vacant,
+                                new_value,
+                                reclaims,
+                                previous_slot_entry_was_cached,
+                            );
+                            if !already_existed {
+                                self.stats().insert_or_delete(true, self.bin);
+                            }
+                        } else {
+                            // go to in-mem cache first
+                            let disk_entry = self.load_account_entry_from_disk(vacant.key());
+                            let new_value = if let Some(disk_entry) = disk_entry {
+                                // on disk, so merge new_value with what was on disk
+                                Self::lock_and_update_slot_list(
+                                    &disk_entry,
+                                    new_value.into(),
+                                    reclaims,
+                                    previous_slot_entry_was_cached,
+                                );
+                                disk_entry
+                            } else {
+                                // not on disk, so insert new thing
+                                self.stats().insert_or_delete(true, self.bin);
+                                new_value.into_account_map_entry(&self.storage)
+                            };
+                            assert!(new_value.dirty());
+                            vacant.insert(new_value);
+                            self.stats().insert_or_delete_mem(true, self.bin);
+                        }
+                    }
+                }
+
+                drop(map);
+                self.update_entry_stats(m, found);
+            };
+        })
+    }
+
+    pub fn slot_list_mut<RT>(
+        &self,
+        pubkey: &Pubkey,
+        user: impl for<'a> FnOnce(&mut RwLockWriteGuard<'a, SlotList<T>>) -> RT,
+    ) -> Option<RT> {
+        self.get_internal(pubkey, |entry| {
+            (
+                true,
+                entry.map(|entry| {
+                    let result = user(&mut entry.slot_list.write().unwrap());
+                    entry.set_dirty(true);
+                    result
+                }),
+            )
+        })
+    }
+
+    // If the slot list for pubkey exists in the index and is empty, remove the index entry for pubkey and return true.
+    // Return false otherwise.
+    pub fn remove_if_slot_list_empty(&self, pubkey: Pubkey) -> bool {
+        let mut m = Measure::start("entry");
+        let mut map = self.map().write().unwrap();
+        let entry = map.entry(pubkey);
+        m.stop();
+        let found = matches!(entry, Entry::Occupied(_));
+        let result = self.remove_if_slot_list_empty_entry(entry);
+        drop(map);
+
+        self.update_entry_stats(m, found);
+        result
+    }
+
+    fn remove_if_slot_list_empty_entry(&self, entry: Entry<K, AccountMapEntry<T>>) -> bool {
+        match entry {
+            Entry::Occupied(occupied) => {
+                let result =
+                    self.remove_if_slot_list_empty_value(&occupied.get().slot_list.read().unwrap());
+                if result {
+                    // note there is a potential race here that has existed.
+                    // if someone else holds the arc,
+                    //  then they think the item is still in the index and can make modifications.
+                    // We have to have a write lock to the map here, which means nobody else can get
+                    //  the arc, but someone may already have retreived a clone of it.
+                    // account index in_mem flushing is one such possibility
+                    self.delete_disk_key(occupied.key());
+                    self.stats().insert_or_delete_mem(false, self.bin);
+                    occupied.remove();
+                }
+                result
+            }
+            Entry::Vacant(vacant) => {
+                // not in cache, look on disk
+                let entry_disk = self.load_from_disk(vacant.key());
+                match entry_disk {
+                    Some(entry_disk) => {
+                        // on disk
+                        if self.remove_if_slot_list_empty_value(&entry_disk.0) {
+                            // not in cache, but on disk, so just delete from disk
+                            self.delete_disk_key(vacant.key());
+                            true
+                        } else {
+                            // could insert into cache here, but not required for correctness and value is unclear
+                            false
+                        }
+                    }
+                    None => false, // not in cache or on disk
+                }
+            }
+        }
+    }
+
+    fn remove_if_slot_list_empty_value(&self, slot_list: SlotSlice<T>) -> bool {
+        if slot_list.is_empty() {
+            self.stats().insert_or_delete(false, self.bin);
+            true
+        } else {
+            false
+        }
+    }
+
+    fn delete_disk_key(&self, pubkey: &Pubkey) {
+        if let Some(disk) = self.bucket.as_ref() {
+            disk.delete_key(pubkey)
+        }
+    }
+
+    // Try to update an item in the slot list the given `slot` If an item for the slot
+    // already exists in the list, remove the older item, add it to `reclaims`, and insert
+    // the new item.
+    pub fn lock_and_update_slot_list(
+        current: &AccountMapEntryInner<T>,
+        new_value: (Slot, T),
+        reclaims: &mut SlotList<T>,
+        previous_slot_entry_was_cached: bool,
+    ) {
+        let mut slot_list = current.slot_list.write().unwrap();
+        let (slot, new_entry) = new_value;
+        let addref = Self::update_slot_list(
+            &mut slot_list,
+            slot,
+            new_entry,
+            reclaims,
+            previous_slot_entry_was_cached,
+        );
+        if addref {
+            current.add_un_ref(true);
+        }
+        current.set_dirty(true);
+    }
+
+    // modifies slot_list
+    // returns true if caller should addref
+    fn update_slot_list(
+        list: &mut SlotList<T>,
+        slot: Slot,
+        account_info: T,
+        reclaims: &mut SlotList<T>,
+        previous_slot_entry_was_cached: bool,
+    ) -> bool {
+        let mut addref = !account_info.is_cached();
+
+        // find other dirty entries from the same slot
+        for list_index in 0..list.len() {
+            let (s, previous_update_value) = &list[list_index];
+            if *s == slot {
+                let previous_was_cached = previous_update_value.is_cached();
+                addref = addref && previous_was_cached;
+
+                let mut new_item = (slot, account_info);
+                std::mem::swap(&mut new_item, &mut list[list_index]);
+                if previous_slot_entry_was_cached {
+                    assert!(previous_was_cached);
+                } else {
+                    reclaims.push(new_item);
+                }
+                list[(list_index + 1)..]
+                    .iter()
+                    .for_each(|item| assert!(item.0 != slot));
+                return addref;
+            }
+        }
+
+        // if we make it here, we did not find the slot in the list
+        list.push((slot, account_info));
+        addref
+    }
+
+    pub fn insert_new_entry_if_missing_with_lock(
+        &self,
+        pubkey: Pubkey,
+        new_entry: PreAllocatedAccountMapEntry<T>,
+    ) -> InsertNewEntryResults {
+        let mut m = Measure::start("entry");
+        let mut map = self.map().write().unwrap();
+        let entry = map.entry(pubkey);
+        m.stop();
+        let new_entry_zero_lamports = new_entry.is_zero_lamport();
+        let (found_in_mem, already_existed) = match entry {
+            Entry::Occupied(occupied) => {
+                // in cache, so merge into cache
+                let (slot, account_info) = new_entry.into();
+                InMemAccountsIndex::lock_and_update_slot_list(
+                    occupied.get(),
+                    (slot, account_info),
+                    &mut Vec::default(),
+                    false,
+                );
+                (
+                    true, /* found in mem */
+                    true, /* already existed */
+                )
+            }
+            Entry::Vacant(vacant) => {
+                // not in cache, look on disk
+                let already_existed =
+                    self.upsert_on_disk(vacant, new_entry, &mut Vec::default(), false);
+                (false, already_existed)
+            }
+        };
+        drop(map);
+        self.update_entry_stats(m, found_in_mem);
+        let stats = self.stats();
+        if !already_existed {
+            stats.insert_or_delete(true, self.bin);
+        } else {
+            Self::update_stat(&stats.updates_in_mem, 1);
+        }
+        if !already_existed {
+            InsertNewEntryResults::DidNotExist
+        } else if new_entry_zero_lamports {
+            InsertNewEntryResults::ExistedNewEntryZeroLamports
+        } else {
+            InsertNewEntryResults::ExistedNewEntryNonZeroLamports
+        }
+    }
+
+    fn update_entry_stats(&self, stopped_measure: Measure, found: bool) {
+        let stats = &self.stats();
+        let (count, time) = if found {
+            (&stats.entries_from_mem, &stats.entry_mem_us)
+        } else {
+            (&stats.entries_missing, &stats.entry_missing_us)
+        };
+        Self::update_stat(time, stopped_measure.as_us());
+        Self::update_stat(count, 1);
+    }
+
+    /// return tuple:
+    /// true if item already existed in the index
+    fn upsert_on_disk(
+        &self,
+        vacant: VacantEntry<K, AccountMapEntry<T>>,
+        new_entry: PreAllocatedAccountMapEntry<T>,
+        reclaims: &mut SlotList<T>,
+        previous_slot_entry_was_cached: bool,
+    ) -> bool {
+        if let Some(disk) = self.bucket.as_ref() {
+            let mut existed = false;
+            let (slot, account_info) = new_entry.into();
+            disk.update(vacant.key(), |current| {
+                if let Some((slot_list, mut ref_count)) = current {
+                    // on disk, so merge and update disk
+                    let mut slot_list = slot_list.to_vec();
+                    let addref = Self::update_slot_list(
+                        &mut slot_list,
+                        slot,
+                        account_info,
+                        reclaims,
+                        previous_slot_entry_was_cached,
+                    );
+                    if addref {
+                        ref_count += 1
+                    };
+                    existed = true; // found on disk, so it did exist
+                    Some((slot_list, ref_count))
+                } else {
+                    // doesn't exist on disk yet, so insert it
+                    let ref_count = u64::from(!account_info.is_cached());
+                    Some((vec![(slot, account_info)], ref_count))
+                }
+            });
+            existed
+        } else {
+            // not using disk, so insert into mem
+            self.stats().insert_or_delete_mem(true, self.bin);
+            let new_entry: AccountMapEntry<T> = new_entry.into_account_map_entry(&self.storage);
+            assert!(new_entry.dirty());
+            vacant.insert(new_entry);
+            false // not using disk, not in mem, so did not exist
+        }
+    }
+
+    pub fn len_for_stats(&self) -> usize {
+        self.stats().count_in_bucket(self.bin)
+    }
+
     // only called in debug code paths
     pub fn keys(&self) -> Vec<Pubkey> {
         Self::update_stat(&self.stats().keys, 1);

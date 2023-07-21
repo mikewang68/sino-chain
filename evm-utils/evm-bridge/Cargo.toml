@@ -7,10 +7,10 @@ edition = "2018"
 [dependencies]
 evm-rpc = { path = "../evm-rpc" }
 sdk = { path = "../../sdk", version = "1.9.13" }
-client = { path = "../../client", version = "1.9.13" }
+client = { path = "../../client", version = "1.9.29" }
 cli-config = { path = "../../cli-config", version = "1.9.13" }
-runtime = { path = "../../runtime", version = "1.9.13" }
-transaction-status = { path = "../../transaction-status", version = "1.9.13" }
+runtime = { path = "../../runtime", version = "1.9.29" }
+transaction-status = { path = "../../transaction-status", version = "1.9.29" }
 account-decoder = { path = "../../account-decoder", version = "1.9.13" }
 logger = { path = "../../logger", version = "1.9.13" }
 evm-loader-program = { path = "../programs/evm_loader" }

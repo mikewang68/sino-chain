@@ -59,8 +59,8 @@ zstd = "0.9.0"
 evm-state = { path = "../evm-utils/evm-state" }
 evm-rpc = { path = "../evm-utils/evm-rpc" }
 evm-loader-program = { path = "../evm-utils/programs/evm_loader" }
-#account-program = { path = "../programs/velas-account-program" }
-#relying-party-program = { path = "../programs/velas-relying-party-program" }
+account-program = { path = "../programs/account-program" }
+relying-party-program = { path = "../programs/relying-party-program" }
 anyhow = "1.0.34"
 
 
