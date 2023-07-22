@@ -16,12 +16,12 @@ extern crate serde_derive;
 // pub mod parse_vote;
 // pub mod token_balances;
 
-pub use {crate::extract_memos::extract_and_fmt_memos, solana_runtime::bank::RewardType};
+pub use {/*crate::extract_memos::extract_and_fmt_memos, */runtime::bank::RewardType};
 use {
-    crate::{
-        parse_accounts::{parse_accounts, ParsedAccount},
-        parse_instruction::{parse, ParsedInstruction},
-    },
+    // crate::{
+    //     parse_accounts::{parse_accounts, ParsedAccount},
+    //     parse_instruction::{parse, ParsedInstruction},
+    // },
     account_decoder::parse_token::UiTokenAmount,
     sdk::{
         clock::{Slot, UnixTimestamp},
@@ -354,6 +354,27 @@ pub struct Reward {
     pub commission: Option<u8>, // Vote account commission when the reward was credited, only present for voting and staking rewards
 }
 
+#[derive(Clone, Debug, PartialEq)]
+pub struct TransactionWithMetadata {
+    pub transaction: Transaction,
+    pub meta: TransactionStatusMeta,
+}
+
+impl From<TransactionWithMetadata> for TransactionWithOptionalMetadata {
+    fn from(tx_with_meta: TransactionWithMetadata) -> Self {
+        Self {
+            transaction: tx_with_meta.transaction,
+            meta: Some(tx_with_meta.meta),
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct TransactionWithOptionalMetadata {
+    pub transaction: Transaction,
+    pub meta: Option<TransactionStatusMeta>,
+}
+
 pub type Rewards = Vec<Reward>;
 
 #[derive(Clone, Debug, PartialEq)]
@@ -464,6 +485,13 @@ impl From<ConfirmedBlock> for ConfirmedBlockWithOptionalMetadata {
 //     pub block_time: Option<UnixTimestamp>,
 //     pub block_height: Option<u64>,
 // }
+
+#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct EncodedTransactionWithStatusMeta {
+    // pub transaction: EncodedTransaction,
+    // pub meta: Option<UiTransactionStatusMeta>,
+}
 
 #[derive(Debug, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -865,10 +893,3 @@ pub enum UiTransactionEncoding {
 //     }
 // }
 
-#[derive(Debug, PartialEq, Serialize, Deserialize, AbiExample, AbiEnumVisitor, Clone, Copy)]
-pub enum RewardType {
-    Fee,
-    Rent,
-    Staking,
-    Voting,
-}
