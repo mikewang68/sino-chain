@@ -45,6 +45,7 @@ pub mod accounts_hash;
 pub mod cache_hash_data;
 pub mod inline_spl_token_2022;
 pub mod contains;
+pub mod inline_spl_associated_token_account;
 
 #[macro_use]
 extern crate metrics;

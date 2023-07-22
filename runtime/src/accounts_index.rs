@@ -800,6 +800,14 @@ pub struct AccountsIndex<T: IndexValue> {
 }
 
 impl<T: IndexValue> AccountsIndex<T> {
+    pub fn add_uncleaned_roots<I>(&self, roots: I)
+    where
+        I: IntoIterator<Item = Slot>,
+    {
+        let mut w_roots_tracker = self.roots_tracker.write().unwrap();
+        w_roots_tracker.uncleaned_roots.extend(roots);
+    }
+
     /// Given a list of slots, return a new list of only the slots that are rooted
     pub fn get_rooted_from_list<'a>(&self, slots: impl Iterator<Item = &'a Slot>) -> Vec<Slot> {
         let roots_tracker = self.roots_tracker.read().unwrap();

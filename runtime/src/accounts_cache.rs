@@ -39,6 +39,10 @@ pub struct SlotCacheInner {
 }
 
 impl SlotCacheInner {
+    pub fn is_frozen(&self) -> bool {
+        self.is_frozen.load(Ordering::SeqCst)
+    }
+
     pub fn insert(
         &self,
         pubkey: &Pubkey,
@@ -104,7 +108,64 @@ pub struct AccountsCache {
     total_size: Arc<AtomicU64>,
 }
 
+impl Drop for SlotCacheInner {
+    fn drop(&mut self) {
+        // broader cache no longer holds our size in memory
+        self.total_size
+            .fetch_sub(self.size.load(Ordering::Relaxed), Ordering::Relaxed);
+    }
+}
+
 impl AccountsCache {
+    pub fn num_slots(&self) -> usize {
+        self.cache.len()
+    }
+
+    pub fn cached_frozen_slots(&self) -> Vec<Slot> {
+        let mut slots: Vec<_> = self
+            .cache
+            .iter()
+            .filter_map(|item| {
+                let (slot, slot_cache) = item.pair();
+                if slot_cache.is_frozen() {
+                    Some(*slot)
+                } else {
+                    None
+                }
+            })
+            .collect();
+        slots.sort_unstable();
+        slots
+    }
+
+    pub fn set_max_flush_root(&self, root: Slot) {
+        self.max_flushed_root.fetch_max(root, Ordering::Relaxed);
+    }
+
+    pub fn remove_slot(&self, slot: Slot) -> Option<SlotCache> {
+        self.cache.remove(&slot).map(|(_, slot_cache)| slot_cache)
+    }
+
+    #[allow(clippy::mem_replace_with_default)]
+    pub fn clear_roots(&self, max_root: Option<Slot>) -> BTreeSet<Slot> {
+        let mut w_maybe_unflushed_roots = self.maybe_unflushed_roots.write().unwrap();
+        if let Some(max_root) = max_root {
+            // `greater_than_max_root` contains all slots >= `max_root + 1`, or alternatively,
+            // all slots > `max_root`. Meanwhile, `w_maybe_unflushed_roots` is left with all slots
+            // <= `max_root`.
+            let greater_than_max_root = w_maybe_unflushed_roots.split_off(&(max_root + 1));
+            // After the replace, `w_maybe_unflushed_roots` contains slots > `max_root`, and
+            // we return all slots <= `max_root`
+            std::mem::replace(&mut w_maybe_unflushed_roots, greater_than_max_root)
+        } else {
+            std::mem::take(&mut *w_maybe_unflushed_roots)
+        }
+    }
+
+    pub fn size(&self) -> u64 {
+        self.total_size.load(Ordering::Relaxed)
+    }
+
     pub fn new_inner(&self) -> SlotCache {
         Arc::new(SlotCacheInner {
             cache: DashMap::default(),
@@ -158,6 +219,13 @@ impl AccountsCache {
         self.cache.get(&slot).map(|result| result.value().clone())
     }
 
+}
+
+impl Deref for SlotCacheInner {
+    type Target = DashMap<Pubkey, CachedAccount>;
+    fn deref(&self) -> &Self::Target {
+        &self.cache
+    }
 }
 
 impl CachedAccountInner {

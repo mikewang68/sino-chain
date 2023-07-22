@@ -105,8 +105,52 @@ enum InnerBuiltinFeatureTransition {
     },
 }
 
+/// Actions taken by a bank when managing the list of active builtin programs.
+#[derive(Debug, Clone)]
+pub enum BuiltinAction {
+    Add(Builtin),
+    Remove(Pubkey),
+}
+
 #[derive(AbiExample, Clone, Debug)]
 pub struct BuiltinFeatureTransition(InnerBuiltinFeatureTransition);
+
+unsafe impl Send for BuiltinFeatureTransition {}
+unsafe impl Sync for BuiltinFeatureTransition {}
+
+impl BuiltinFeatureTransition{
+    pub fn to_action(
+        &self,
+        should_apply_action_for_feature: &impl Fn(&Pubkey) -> bool,
+    ) -> Option<BuiltinAction> {
+        match &self.0 {
+            InnerBuiltinFeatureTransition::Add {
+                builtin,
+                ref feature_id,
+            } => {
+                if should_apply_action_for_feature(feature_id) {
+                    Some(BuiltinAction::Add(builtin.clone()))
+                } else {
+                    None
+                }
+            }
+            InnerBuiltinFeatureTransition::RemoveOrRetain {
+                previously_added_builtin,
+                ref addition_feature_id,
+                ref removal_feature_id,
+            } => {
+                if should_apply_action_for_feature(removal_feature_id) {
+                    Some(BuiltinAction::Remove(previously_added_builtin.id))
+                } else if should_apply_action_for_feature(addition_feature_id) {
+                    // Retaining is no different from adding a new builtin.
+                    Some(BuiltinAction::Add(previously_added_builtin.clone()))
+                } else {
+                    None
+                }
+            }
+        }
+    }
+}
 
 #[derive(Clone, Debug)]
 pub struct Builtins {

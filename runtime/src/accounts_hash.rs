@@ -164,6 +164,16 @@ pub struct AccountsHash {
 }
 
 impl AccountsHash{
+    pub fn accumulate_account_hashes(mut hashes: Vec<(Pubkey, Hash)>) -> Hash {
+        Self::sort_hashes_by_pubkey(&mut hashes);
+
+        Self::compute_merkle_root_loop(hashes, MERKLE_FANOUT, |i| i.1)
+    }
+
+    pub fn sort_hashes_by_pubkey(hashes: &mut Vec<(Pubkey, Hash)>) {
+        hashes.par_sort_unstable_by(|a, b| a.0.cmp(&b.0));
+    }
+
     pub fn compare_two_hash_entries(
         a: &CalculateHashIntermediate,
         b: &CalculateHashIntermediate,

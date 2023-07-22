@@ -34,18 +34,19 @@
 //! on behalf of the caller, and a low-level API for when they have
 //! already been signed and verified.
 #[allow(deprecated)]
-// use sdk::{recent_blockhashes_account, recent_evm_blockhashes_account};
+use sdk::{recent_blockhashes_account, recent_evm_blockhashes_account};
 use {
     crate::{
+        inline_spl_token,inline_spl_associated_token_account,
+        builtins::{self, BuiltinAction, BuiltinFeatureTransition, Builtins},
         blockhash_queue::{BlockHashEvm, BlockhashQueue},
         accounts::{
             Accounts, 
         },
         accounts_db::{
-            /*AccountShrinkThreshold,*/ AccountsAddRootTiming, SnapshotStorages,
+            AccountShrinkThreshold, AccountsAddRootTiming, SnapshotStorages,
             /*ACCOUNTS_DB_CONFIG_FOR_BENCHMARKS, ACCOUNTS_DB_CONFIG_FOR_TESTING,*/
         },
-        builtins::{self, /*BuiltinAction,*/ BuiltinFeatureTransition, Builtins},
         ancestors::{Ancestors},
         status_cache::{StatusCache},
         rent_collector::{RentCollector},
@@ -53,9 +54,9 @@ use {
         stakes::{StakesCache, Stakes},
         cost_tracker::CostTracker,
         // cost_tracker::CostTracker,
-        accounts_index::{IndexKey, ScanConfig, ScanResult},
         rent_collector::{CollectedInfo/* , RentCollector*/},
         vote_account::VoteAccount,
+        accounts_index::{AccountSecondaryIndexes, IndexKey, ScanConfig, ScanResult},
     },
     program_runtime::{
         compute_budget::{ComputeBudget},
@@ -64,10 +65,15 @@ use {
             BuiltinProgram, Executor, ProcessInstructionWithContext
         },
     },
+    evm_state::{AccountProvider, FromKey},
+    byteorder::{ByteOrder, LittleEndian},
     log::*,
     measure::measure::Measure,
     itertools::Itertools,
     sdk::{
+        native_token::sol_to_lamports,
+        feature,
+        native_loader,
         incinerator,
         slot_history::{Check, SlotHistory},
         lamports::LamportsError,
@@ -93,7 +99,6 @@ use {
         fee_calculator::{FeeCalculator, FeeRateGovernor},
         genesis_config::{ClusterType, GenesisConfig},
         hard_forks::HardForks,
-        hash::{Hash},
         inflation::Inflation,
         pubkey::Pubkey,
         signature::{Signature},
@@ -102,6 +107,7 @@ use {
         },
         timing::years_as_slots,
         precompiles::get_precompiles,
+        hash::{extend_and_hash, hashv, Hash},
     },
     std::{
         // borrow::Cow,
@@ -110,7 +116,7 @@ use {
         // convert::{TryFrom, TryInto},
         fmt, mem,
         ops::{/*Div,*/ RangeInclusive},
-        // path::{Path, PathBuf},
+        path::{Path, PathBuf},
         // ptr,
         // rc::Rc,
         sync::{
@@ -284,6 +290,17 @@ impl Default for CachedExecutors {
 }
 
 impl CachedExecutors {
+    fn remove(&mut self, pubkey: &Pubkey) -> Option<CachedExecutorsEntry> {
+        let maybe_entry = self.executors.remove(pubkey);
+        if let Some(entry) = maybe_entry.as_ref() {
+            if entry.hit_count.load(Relaxed) == 1 {
+                self.stats.one_hit_wonders.fetch_add(1, Relaxed);
+            }
+        }
+        maybe_entry
+    }
+
+
     fn new(max_capacity: usize, current_epoch: Epoch) -> Self {
         Self {
             capacity: max_capacity,
@@ -563,6 +580,16 @@ pub struct Bank {
 }
 
 impl Bank {
+    pub fn rehash(&self) {
+        let mut hash = self.hash.write().unwrap();
+        let new = self.hash_internal_state();
+
+        if new != *hash {
+            warn!("Updating bank hash to {}", new);
+            *hash = new;
+        }
+    }
+
     /// A snapshot bank should be purged of 0 lamport accounts which are not part of the hash
     /// calculation and could shield other real accounts.
     pub fn verify_snapshot_bank(
@@ -615,6 +642,83 @@ impl Bank {
         );
 
         verify
+    }
+
+    /// Hash the `accounts` HashMap. This represents a validator's interpretation
+    ///  of the delta of the ledger since the last vote and up to now
+    fn hash_internal_state(&self) -> Hash {
+        // If there are no accounts, return the hash of the previous state and the latest blockhash
+        let accounts_delta_hash = self.rc.accounts.bank_hash_info_at(self.slot());
+        let mut signature_count_buf = [0u8; 8];
+        LittleEndian::write_u64(&mut signature_count_buf[..], self.signature_count());
+
+        let evm_state_root = self
+            .evm_state
+            .read()
+            .expect("EVM state poisoned")
+            .last_root();
+
+        let mut hash = hashv(&[
+            self.parent_hash.as_ref(),
+            accounts_delta_hash.hash.as_ref(),
+            &signature_count_buf,
+            self.last_blockhash().as_ref(),
+            evm_state_root.as_ref(),
+        ]);
+
+        let buf = self
+            .hard_forks
+            .read()
+            .unwrap()
+            .get_hash_data(self.slot(), self.parent_slot());
+        if let Some(buf) = buf {
+            let hard_forked_hash = extend_and_hash(&hash, &buf);
+            warn!(
+                "hard fork at slot {} by hashing {:?}: {} => {}",
+                self.slot(),
+                buf,
+                hash,
+                hard_forked_hash
+            );
+            hash = hard_forked_hash;
+        }
+
+        info!(
+            "bank frozen: {slot} \
+             hash: {hash} \
+             accounts_delta: {accounts_delta} \
+             signature_count: {signature_count} \
+             last_blockhash: {last_blockhash} \
+             capitalization: {capitalization} \
+             evm_state_root: {evm_state_root:?}",
+            slot = self.slot(),
+            hash = hash,
+            accounts_delta = accounts_delta_hash.hash,
+            signature_count = self.signature_count(),
+            last_blockhash = self.last_blockhash(),
+            capitalization = self.capitalization(),
+            evm_state_root = evm_state_root,
+        );
+
+        info!(
+            "accounts hash slot: {} stats: {:?}",
+            self.slot(),
+            accounts_delta_hash.stats,
+        );
+        hash
+    }
+
+    pub fn signature_count(&self) -> u64 {
+        self.signature_count.load(Relaxed)
+    }
+
+    /// Return the last block hash registered.
+    pub fn last_blockhash(&self) -> Hash {
+        self.blockhash_queue.read().unwrap().last_hash()
+    }
+
+    pub fn hash(&self) -> Hash {
+        *self.hash.read().unwrap()
     }
 
     #[must_use]
@@ -839,6 +943,69 @@ impl Bank {
             // *hash = self.hash_internal_state();
             // self.rc.accounts.accounts_db.mark_slot_frozen(self.slot());
         }
+    }
+
+    pub fn commit_evm(&self) {
+        let mut measure = Measure::start("commit-evm-block-ms");
+
+        let old_root = self.evm_state.read().unwrap().last_root();
+        let hash = self
+            .evm_state
+            .write()
+            .expect("evm state was poisoned")
+            .try_commit(self.slot(), self.last_blockhash().to_bytes())
+            .expect("failed to commit evm");
+
+        measure.stop();
+        debug!("EVM state commit took {}", measure);
+
+        inc_new_counter_info!("commit-evm-block-ms", measure.as_ms() as usize);
+
+        debug!(
+            "Set evm state root to {:?} at block {}",
+            self.evm_state.read().unwrap().last_root(),
+            self.evm_state.read().unwrap().block_number()
+        );
+
+        let mut w_evm_blockhash_queue = self
+            .evm_blockhashes
+            .write()
+            .expect("evm blockchashes poisoned");
+
+        if let Some((hash, changes)) = hash {
+            *self
+                .evm_changed_list
+                .write()
+                .expect("change list was poisoned") = Some((old_root, changes));
+
+            self.evm_state
+                .write()
+                .expect("evm state was poisoned")
+                .reregister_slot(self.slot())
+                .expect("Failed to change slot");
+            w_evm_blockhash_queue.insert_hash(hash);
+            if self.fix_recent_blockhashes_sysvar_evm() {
+                self.update_recent_evm_blockhashes_locked(&w_evm_blockhash_queue);
+            }
+        }
+    }
+
+    fn update_recent_evm_blockhashes_locked(&self, locked_blockhash_queue: &BlockHashEvm) {
+        self.update_sysvar_account(&sysvar::recent_evm_blockhashes::id(), |account| {
+            let mut hashes = [Hash::default(); crate::blockhash_queue::MAX_EVM_BLOCKHASHES];
+            for (i, hash) in locked_blockhash_queue.get_hashes().iter().enumerate() {
+                hashes[i] = Hash::new_from_array(*hash.as_fixed_bytes())
+            }
+            recent_evm_blockhashes_account::create_account_with_data_and_fields(
+                self.inherit_specially_retained_account_fields(account),
+                hashes,
+            )
+        });
+    }
+
+    fn fix_recent_blockhashes_sysvar_evm(&self) -> bool {
+        self.feature_set
+            .is_active(&feature_set::sino::hardfork_pack::id())
     }
 
     fn run_incinerator(&self) {
@@ -2375,6 +2542,359 @@ impl Bank {
         self.apply_feature_activations(true, debug_do_not_add_builtins);
     }
 
+    fn replace_program_account(
+        &mut self,
+        old_address: &Pubkey,
+        new_address: &Pubkey,
+        datapoint_name: &'static str,
+    ) {
+        if let Some(old_account) = self.get_account_with_fixed_root(old_address) {
+            if let Some(new_account) = self.get_account_with_fixed_root(new_address) {
+                datapoint_info!(datapoint_name, ("slot", self.slot, i64));
+
+                // Burn wens in the old account
+                self.capitalization
+                    .fetch_sub(old_account.wens(), Relaxed);
+
+                // Transfer new account to old account
+                self.store_account(old_address, &new_account);
+
+                // Clear new account
+                self.store_account(new_address, &AccountSharedData::default());
+
+                self.remove_executor(old_address);
+            }
+        }
+    }
+
+    /// Remove an executor from the bank's cache
+    fn remove_executor(&self, pubkey: &Pubkey) {
+        let _ = self.cached_executors.write().unwrap().remove(pubkey);
+    }
+
+    // Compute the active feature set based on the current bank state, and return the set of newly activated features
+    fn compute_active_feature_set(&mut self, allow_new_activations: bool) -> HashSet<Pubkey> {
+        let mut active = self.feature_set.active.clone();
+        let mut inactive = HashSet::new();
+        let mut newly_activated = HashSet::new();
+        let slot = self.slot();
+
+        for feature_id in &self.feature_set.inactive {
+            let mut activated = None;
+            if let Some(mut account) = self.get_account_with_fixed_root(feature_id) {
+                if let Some(mut feature) = feature::from_account(&account) {
+                    match feature.activated_at {
+                        None => {
+                            if allow_new_activations {
+                                // Feature has been requested, activate it now
+                                feature.activated_at = Some(slot);
+                                if feature::to_account(&feature, &mut account).is_some() {
+                                    self.store_account(feature_id, &account);
+                                }
+                                newly_activated.insert(*feature_id);
+                                activated = Some(slot);
+                                info!("Feature {} activated at slot {}", feature_id, slot);
+                            }
+                        }
+                        Some(activation_slot) => {
+                            if slot >= activation_slot {
+                                // Feature is already active
+                                activated = Some(activation_slot);
+                            }
+                        }
+                    }
+                }
+            }
+            if let Some(slot) = activated {
+                active.insert(*feature_id, slot);
+            } else {
+                inactive.insert(*feature_id);
+            }
+        }
+
+        self.feature_set = Arc::new(FeatureSet { active, inactive });
+        newly_activated
+    }
+
+    // This is called from snapshot restore AND for each epoch boundary
+    // The entire code path herein must be idempotent
+    fn apply_feature_activations(
+        &mut self,
+        init_finish_or_warp: bool,
+        debug_do_not_add_builtins: bool,
+    ) {
+        let new_feature_activations = self.compute_active_feature_set(!init_finish_or_warp);
+
+        if new_feature_activations.contains(&feature_set::pico_inflation::id()) {
+            *self.inflation.write().unwrap() = Inflation::pico();
+            self.fee_rate_governor.burn_percent = 50; // 50% fee burn
+            self.rent_collector.rent.burn_percent = 50; // 50% rent burn
+        }
+
+        if !new_feature_activations.is_disjoint(&self.feature_set.full_inflation_features_enabled())
+        {
+            *self.inflation.write().unwrap() = Inflation::full();
+            self.fee_rate_governor.burn_percent = 50; // 50% fee burn
+            self.rent_collector.rent.burn_percent = 50; // 50% rent burn
+        }
+
+        if new_feature_activations.contains(&feature_set::spl_token_v3_3_0_release::id()) {
+            self.replace_program_account(
+                &inline_spl_token::id(),
+                &inline_spl_token::new_token_program::id(),
+                "bank-apply_spl_token_v3_3_0_release",
+            );
+        }
+
+        if new_feature_activations.contains(&feature_set::spl_associated_token_account_v1_0_4::id())
+        {
+            self.replace_program_account(
+                &inline_spl_associated_token_account::id(),
+                &inline_spl_associated_token_account::program_v1_0_4::id(),
+                "bank-apply_spl_associated_token_account_v1_4_0",
+            );
+        }
+        if new_feature_activations.contains(&feature_set::rent_for_sysvars::id()) {
+            // when this feature is activated, immediately all of existing sysvars are susceptible
+            // to rent collection and account data removal due to insufficient balance due to only
+            // having 1 lamport.
+            // so before any is accessed, reset the balance to be rent-exempt here at the same
+            // timing when perpetual balance adjustment is started in update_sysvar_account().
+            self.reset_all_sysvar_balances();
+        }
+
+        if !debug_do_not_add_builtins {
+            let apply_transitions_for_new_features = !init_finish_or_warp;
+            self.apply_builtin_program_feature_transitions(
+                apply_transitions_for_new_features,
+                &new_feature_activations,
+            );
+            self.reconfigure_token2_native_mint(
+                new_feature_activations.contains(&feature_set::sino::hardfork_pack::id()),
+            );
+        }
+        self.ensure_no_storage_rewards_pool();
+    }
+
+    fn reconfigure_token2_native_mint(&mut self, reconfigure_token2_native_mint_velas: bool) {
+        let reconfigure_token2_native_mint_old = match self.cluster_type() {
+            ClusterType::Development => true,
+            ClusterType::Devnet => true,
+            ClusterType::Testnet => self.epoch() == 93,
+            ClusterType::MainnetBeta => self.epoch() == 75,
+        };
+
+        // It's okay if we trigget two activations sequentionally.
+        let reconfigure_token2_native_mint =
+            reconfigure_token2_native_mint_old || reconfigure_token2_native_mint_velas;
+
+        if reconfigure_token2_native_mint {
+            let mut native_mint_account = sdk::account::AccountSharedData::from(Account {
+                owner: inline_spl_token::id(),
+                data: inline_spl_token::native_mint::ACCOUNT_DATA.to_vec(),
+                lamports: sol_to_lamports(1.),
+                executable: false,
+                rent_epoch: self.epoch() + 1,
+            });
+
+            // As a workaround for
+            // https://github.com/solana-labs/solana-program-library/issues/374, ensure that the
+            // spl-token 2 native mint account is owned by the spl-token 2 program.
+            let store = if let Some(existing_native_mint_account) =
+                self.get_account_with_fixed_root(&inline_spl_token::native_mint::id())
+            {
+                if existing_native_mint_account.owner() == &sdk::system_program::id() {
+                    native_mint_account.set_wens(existing_native_mint_account.wens());
+                    true
+                } else {
+                    false
+                }
+            } else {
+                self.capitalization
+                    .fetch_add(native_mint_account.wens(), Relaxed);
+                true
+            };
+
+            if store {
+                self.store_account(&inline_spl_token::native_mint::id(), &native_mint_account);
+            }
+        }
+    } 
+
+    fn ensure_no_storage_rewards_pool(&mut self) {
+        let purge_window_epoch = match self.cluster_type() {
+            ClusterType::Development => false,
+            // never do this for devnet; we're pristine here. :)
+            ClusterType::Devnet => false,
+            // tds is not exist in velas so dont do this
+            ClusterType::Testnet => false,
+            // never do this for stable; we're pristine here. :)
+            ClusterType::MainnetBeta => false,
+        };
+
+        if purge_window_epoch {
+            for reward_pubkey in self.rewards_pool_pubkeys.iter() {
+                if let Some(mut reward_account) = self.get_account_with_fixed_root(reward_pubkey) {
+                    if reward_account.wens() == u64::MAX {
+                        reward_account.set_wens(0);
+                        self.store_account(reward_pubkey, &reward_account);
+                        // Adjust capitalization.... it has been wrapping, reducing the real capitalization by 1-lamport
+                        self.capitalization.fetch_add(1, Relaxed);
+                        info!(
+                            "purged rewards pool account: {}, new capitalization: {}",
+                            reward_pubkey,
+                            self.capitalization()
+                        );
+                    }
+                };
+            }
+        }
+    }
+
+    fn apply_builtin_program_feature_transitions(
+        &mut self,
+        only_apply_transitions_for_new_features: bool,
+        new_feature_activations: &HashSet<Pubkey>,
+    ) {
+        let feature_set = self.feature_set.clone();
+        let should_apply_action_for_feature_transition = |feature_id: &Pubkey| -> bool {
+            if only_apply_transitions_for_new_features {
+                new_feature_activations.contains(feature_id)
+            } else {
+                feature_set.is_active(feature_id)
+            }
+        };
+
+        let builtin_feature_transitions = self.builtin_feature_transitions.clone();
+        for transition in builtin_feature_transitions.iter() {
+            if let Some(builtin_action) =
+                transition.to_action(&should_apply_action_for_feature_transition)
+            {
+                match builtin_action {
+                    BuiltinAction::Add(builtin) => self.add_builtin(
+                        &builtin.name,
+                        &builtin.id,
+                        builtin.process_instruction_with_context,
+                    ),
+                    BuiltinAction::Remove(program_id) => self.remove_builtin(&program_id),
+                }
+            }
+        }
+
+        for precompile in get_precompiles() {
+            #[allow(clippy::blocks_in_if_conditions)]
+            if precompile.feature.map_or(false, |ref feature_id| {
+                self.feature_set.is_active(feature_id)
+            }) {
+                self.add_precompile(&precompile.program_id);
+            }
+        }
+    }
+
+    /// Remove a builtin instruction processor if it already exists
+    pub fn remove_builtin(&mut self, program_id: &Pubkey) {
+        debug!("Removing program {}", program_id);
+        // Don't remove the account since the bank expects the account state to
+        // be idempotent
+        if let Some(position) = self
+            .builtin_programs
+            .vec
+            .iter()
+            .position(|entry| entry.program_id == *program_id)
+        {
+            self.builtin_programs.vec.remove(position);
+        }
+        debug!("Removed program {}", program_id);
+    }
+
+
+    fn reset_all_sysvar_balances(&self) {
+        for sysvar_id in &[
+            sysvar::clock::id(),
+            sysvar::epoch_schedule::id(),
+            #[allow(deprecated)]
+            sysvar::fees::id(),
+            sysvar::recent_evm_blockhashes::id(),
+            #[allow(deprecated)]
+            sysvar::recent_blockhashes::id(),
+            sysvar::rent::id(),
+            sysvar::rewards::id(),
+            sysvar::slot_hashes::id(),
+            sysvar::slot_history::id(),
+            sysvar::stake_history::id(),
+        ] {
+            if let Some(mut account) = self.get_account(sysvar_id) {
+                let (old_data_len, old_lamports) = (account.data().len(), account.wens());
+                self.adjust_sysvar_balance_for_rent(&mut account);
+                info!(
+                    "reset_all_sysvar_balances (slot: {}): {} ({} bytes) is reset from {} to {}",
+                    self.slot(),
+                    sysvar_id,
+                    old_data_len,
+                    old_lamports,
+                    account.wens()
+                );
+                self.store_account_and_update_capitalization(sysvar_id, &account);
+            }
+        }
+    }
+
+    // NOTE: must hold idempotent for the same set of arguments
+    /// Add a builtin program account
+    pub fn add_builtin_account(&self, name: &str, program_id: &Pubkey, must_replace: bool) {
+        let existing_genuine_program =
+            self.get_account_with_fixed_root(program_id)
+                .and_then(|account| {
+                    // it's very unlikely to be squatted at program_id as non-system account because of burden to
+                    // find victim's pubkey/hash. So, when account.owner is indeed native_loader's, it's
+                    // safe to assume it's a genuine program.
+                    if native_loader::check_id(account.owner()) {
+                        Some(account)
+                    } else {
+                        // malicious account is pre-occupying at program_id
+                        self.burn_and_purge_account(program_id, account);
+                        None
+                    }
+                });
+
+        if must_replace {
+            // updating builtin program
+            match &existing_genuine_program {
+                None => panic!(
+                    "There is no account to replace with builtin program ({}, {}).",
+                    name, program_id
+                ),
+                Some(account) => {
+                    if *name == String::from_utf8_lossy(account.data()) {
+                        // The existing account is well formed
+                        return;
+                    }
+                }
+            }
+        } else {
+            // introducing builtin program
+            if existing_genuine_program.is_some() {
+                // The existing account is sufficient
+                return;
+            }
+        }
+
+        assert!(
+            !self.freeze_started(),
+            "Can't change frozen bank by adding not-existing new builtin program ({}, {}). \
+            Maybe, inconsistent program activation is detected on snapshot restore?",
+            name,
+            program_id
+        );
+
+        // Add a bogus executable builtin account, which will be loaded and ignored.
+        let account = native_loader::create_loadable_account_with_fields(
+            name,
+            self.inherit_specially_retained_account_fields(&existing_genuine_program),
+        );
+        self.store_account_and_update_capitalization(program_id, &account);
+    }
+
     /// Add an instruction processor to intercept instructions before the dynamic loader.
     pub fn add_builtin(
         &mut self,
@@ -2406,6 +2926,49 @@ impl Bank {
         debug!("Added precompiled program {:?}", program_id);
     }
 
+    /// Add a precompiled program account
+    pub fn add_precompiled_account(&self, program_id: &Pubkey) {
+        self.add_precompiled_account_with_owner(program_id, native_loader::id())
+    }
+
+    // Used by tests to simulate clusters with precompiles that aren't owned by the native loader
+    fn add_precompiled_account_with_owner(&self, program_id: &Pubkey, owner: Pubkey) {
+        if let Some(account) = self.get_account_with_fixed_root(program_id) {
+            if account.executable() {
+                // The account is already executable, that's all we need
+                return;
+            } else {
+                // malicious account is pre-occupying at program_id
+                self.burn_and_purge_account(program_id, account);
+            }
+        };
+
+        assert!(
+            !self.freeze_started(),
+            "Can't change frozen bank by adding not-existing new precompiled program ({}). \
+                Maybe, inconsistent program activation is detected on snapshot restore?",
+            program_id
+        );
+
+        // Add a bogus executable account, which will be loaded and ignored.
+        let (lamports, rent_epoch) = self.inherit_specially_retained_account_fields(&None);
+        let account = AccountSharedData::from(Account {
+            lamports,
+            owner,
+            data: vec![],
+            executable: true,
+            rent_epoch,
+        });
+        self.store_account_and_update_capitalization(program_id, &account);
+    }
+
+    fn burn_and_purge_account(&self, program_id: &Pubkey, mut account: AccountSharedData) {
+        self.capitalization.fetch_sub(account.wens(), Relaxed);
+        // Resetting account balance to 0 is needed to really purge from AccountsDb and
+        // flush the Stakes cache
+        account.set_wens(0);
+        self.store_account(program_id, &account);
+    }
 }
 
 #[derive(Debug)]
@@ -2420,6 +2983,12 @@ pub struct BankRc {
     pub(crate) slot: Slot,
 
     pub(crate) bank_id_generator: Arc<AtomicU64>,
+}
+
+impl Default for BlockhashQueue {
+    fn default() -> Self {
+        Self::new(MAX_RECENT_BLOCKHASHES)
+    }
 }
 
 impl BankRc {

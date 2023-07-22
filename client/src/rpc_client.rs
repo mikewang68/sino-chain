@@ -25,11 +25,11 @@ use {
     bincode::serialize,
     log::*,
     serde_json::{json, Value},
-    solana_account_decoder::{
+    account_decoder::{
         parse_token::{TokenAccountType, UiTokenAccount, UiTokenAmount},
         UiAccount, UiAccountData, UiAccountEncoding,
     },
-    solana_sdk::{
+    sdk::{
         account::Account,
         clock::{Epoch, Slot, UnixTimestamp, DEFAULT_MS_PER_SLOT, MAX_HASH_AGE_IN_SECONDS},
         commitment_config::{CommitmentConfig, CommitmentLevel},

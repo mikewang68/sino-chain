@@ -3,7 +3,7 @@ use {
         accounts_db::{
             AccountsAddRootTiming,
             /*AccountShrinkThreshold, AccountsAddRootTiming, AccountsDb, AccountsDbConfig,*/
-            /*BankHashInfo,*/ LoadHint, /*LoadedAccount, ScanStorageResult,*/
+            BankHashInfo, LoadHint, /*LoadedAccount, ScanStorageResult,*/
             /*ACCOUNTS_DB_CONFIG_FOR_BENCHMARKS, ACCOUNTS_DB_CONFIG_FOR_TESTING,*/
         },
         accounts_db::{
@@ -46,6 +46,17 @@ pub struct Accounts {
 }
 
 impl Accounts{
+    pub fn bank_hash_info_at(&self, slot: Slot) -> BankHashInfo {
+        let delta_hash = self.accounts_db.get_accounts_delta_hash(slot);
+        let bank_hashes = self.accounts_db.bank_hashes.read().unwrap();
+        let mut hash_info = bank_hashes
+            .get(&slot)
+            .expect("No bank hash was found for this bank, that should not be possible")
+            .clone();
+        hash_info.hash = delta_hash;
+        hash_info
+    }
+
     /// Only called from startup or test code.
     #[must_use]
     pub fn verify_bank_hash_and_lamports(

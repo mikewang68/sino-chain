@@ -3,7 +3,7 @@ use sdk::{
     account::{AccountSharedData, ReadableAccount, WritableAccount},
     clock::Epoch,
     epoch_schedule::EpochSchedule,
-    // genesis_config::GenesisConfig,
+    genesis_config::GenesisConfig,
     incinerator,
     pubkey::Pubkey,
     rent::{Rent, RentDue},
@@ -16,6 +16,18 @@ pub struct RentCollector {
     pub epoch_schedule: EpochSchedule,
     pub slots_per_year: f64,
     pub rent: Rent,
+}
+
+impl Default for RentCollector {
+    fn default() -> Self {
+        Self {
+            epoch: Epoch::default(),
+            epoch_schedule: EpochSchedule::default(),
+            // derive default value using GenesisConfig::default()
+            slots_per_year: GenesisConfig::default().slots_per_year(),
+            rent: Rent::default(),
+        }
+    }
 }
 
 impl RentCollector {
