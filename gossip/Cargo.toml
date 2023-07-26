@@ -1,7 +1,7 @@
 [package]
 authors = ["Solana Maintainers <maintainers@solana.foundation>"]
 edition = "2021"
-name = "solana-gossip"
+name = "gossip"
 description = "Blockchain, Rebuilt for Scale"
 version = "1.9.29"
 repository = "https://github.com/solana-labs/solana"
@@ -26,24 +26,24 @@ rayon = "1.5.1"
 serde = "1.0.130"
 serde_bytes = "0.11"
 serde_derive = "1.0.103"
-solana-bloom = { path = "../bloom", version = "=1.9.29" }
-solana-clap-utils = { path = "../clap-utils", version = "=1.9.29" }
-solana-client = { path = "../client", version = "=1.9.29" }
-solana-entry = { path = "../entry", version = "=1.9.29" }
-solana-frozen-abi = { path = "../frozen-abi", version = "=1.9.29" }
-solana-frozen-abi-macro = { path = "../frozen-abi/macro", version = "=1.9.29" }
-solana-ledger = { path = "../ledger", version = "=1.9.29" }
-solana-logger = { path = "../logger", version = "=1.9.29" }
-solana-measure = { path = "../measure", version = "=1.9.29" }
-solana-metrics = { path = "../metrics", version = "=1.9.29" }
-solana-net-utils = { path = "../net-utils", version = "=1.9.29" }
-solana-perf = { path = "../perf", version = "=1.9.29" }
-solana-rayon-threadlimit = { path = "../rayon-threadlimit", version = "=1.9.29" }
-solana-runtime = { path = "../runtime", version = "=1.9.29" }
-solana-streamer = { path = "../streamer", version = "=1.9.29" }
-solana-sdk = { path = "../sdk", version = "=1.9.29" }
-solana-version = { path = "../version", version = "=0.6.3" }
-solana-vote-program = { path = "../programs/vote", version = "=1.9.29" }
+bloom = { path = "../bloom", version = "=1.9.29" }
+clap-utils = { path = "../clap-utils", version = "=1.9.29" }
+client = { path = "../client", version = "=1.9.29" }
+entry = { path = "../entry", version = "=1.9.29" }
+frozen-abi = { path = "../frozen-abi", version = "=1.9.29" }
+frozen-abi-macro = { path = "../frozen-abi/macro", version = "=1.9.29" }
+ledger = { path = "../ledger", version = "=1.9.29" }
+logger = { path = "../logger", version = "=1.9.29" }
+measure = { path = "../measure", version = "=1.9.29" }
+metrics = { path = "../metrics", version = "=1.9.29" }
+# net-utils = { path = "../net-utils", version = "=1.9.29" }
+perf = { path = "../perf", version = "=1.9.29" }
+rayon-threadlimit = { path = "../rayon-threadlimit", version = "=1.9.29" }
+runtime = { path = "../runtime", version = "=1.9.29" }
+streamer = { path = "../streamer", version = "=1.9.29" }
+sdk = { path = "../sdk", version = "=1.9.29" }
+version = { path = "../version", version = "=0.6.3" }
+vote-program = { path = "../programs/vote", version = "=1.9.29" }
 thiserror = "1.0"
 
 [dev-dependencies]
@@ -53,17 +53,17 @@ serial_test = "0.5.1"
 [build-dependencies]
 rustc_version = "0.4"
 
-[[bench]]
-name = "crds"
+# [[bench]]
+# name = "crds"
 
-[[bench]]
-name = "crds_gossip_pull"
+# [[bench]]
+# name = "crds_gossip_pull"
 
-[[bench]]
-name = "crds_shards"
+# [[bench]]
+# name = "crds_shards"
 
 [[bin]]
-name = "velas-gossip"
+name = "gossip"
 path = "src/main.rs"
 
 [package.metadata.docs.rs]

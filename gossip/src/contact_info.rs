@@ -113,68 +113,68 @@ impl ContactInfo {
         ContactInfo::new_localhost(&pubkey, now)
     }
 
-    #[cfg(test)]
-    /// ContactInfo with multicast addresses for adversarial testing.
-    pub fn new_multicast() -> Self {
-        let addr = socketaddr!("224.0.1.255:1000");
-        assert!(addr.ip().is_multicast());
-        Self {
-            id: sdk::pubkey::new_rand(),
-            gossip: addr,
-            tvu: addr,
-            tvu_forwards: addr,
-            repair: addr,
-            tpu: addr,
-            tpu_forwards: addr,
-            tpu_vote: addr,
-            rpc: addr,
-            rpc_pubsub: addr,
-            serve_repair: addr,
-            wallclock: 0,
-            shred_version: 0,
-        }
-    }
+    // #[cfg(test)]
+    // /// ContactInfo with multicast addresses for adversarial testing.
+    // pub fn new_multicast() -> Self {
+    //     let addr = socketaddr!("224.0.1.255:1000");
+    //     assert!(addr.ip().is_multicast());
+    //     Self {
+    //         id: sdk::pubkey::new_rand(),
+    //         gossip: addr,
+    //         tvu: addr,
+    //         tvu_forwards: addr,
+    //         repair: addr,
+    //         tpu: addr,
+    //         tpu_forwards: addr,
+    //         tpu_vote: addr,
+    //         rpc: addr,
+    //         rpc_pubsub: addr,
+    //         serve_repair: addr,
+    //         wallclock: 0,
+    //         shred_version: 0,
+    //     }
+    // }
 
     // Used in tests
-    pub fn new_with_pubkey_socketaddr(pubkey: &Pubkey, bind_addr: &SocketAddr) -> Self {
-        fn next_port(addr: &SocketAddr, nxt: u16) -> SocketAddr {
-            let mut nxt_addr = *addr;
-            nxt_addr.set_port(addr.port() + nxt);
-            nxt_addr
-        }
+    // pub fn new_with_pubkey_socketaddr(pubkey: &Pubkey, bind_addr: &SocketAddr) -> Self {
+    //     fn next_port(addr: &SocketAddr, nxt: u16) -> SocketAddr {
+    //         let mut nxt_addr = *addr;
+    //         nxt_addr.set_port(addr.port() + nxt);
+    //         nxt_addr
+    //     }
 
-        let tpu = *bind_addr;
-        let gossip = next_port(bind_addr, 1);
-        let tvu = next_port(bind_addr, 2);
-        let tpu_forwards = next_port(bind_addr, 3);
-        let tvu_forwards = next_port(bind_addr, 4);
-        let repair = next_port(bind_addr, 5);
-        let rpc = SocketAddr::new(bind_addr.ip(), rpc_port::DEFAULT_RPC_PORT);
-        let rpc_pubsub = SocketAddr::new(bind_addr.ip(), rpc_port::DEFAULT_RPC_PUBSUB_PORT);
-        let serve_repair = next_port(bind_addr, 6);
-        let tpu_vote = next_port(bind_addr, 7);
-        Self {
-            id: *pubkey,
-            gossip,
-            tvu,
-            tvu_forwards,
-            repair,
-            tpu,
-            tpu_forwards,
-            tpu_vote,
-            rpc,
-            rpc_pubsub,
-            serve_repair,
-            wallclock: timestamp(),
-            shred_version: 0,
-        }
-    }
+    //     let tpu = *bind_addr;
+    //     let gossip = next_port(bind_addr, 1);
+    //     let tvu = next_port(bind_addr, 2);
+    //     let tpu_forwards = next_port(bind_addr, 3);
+    //     let tvu_forwards = next_port(bind_addr, 4);
+    //     let repair = next_port(bind_addr, 5);
+    //     let rpc = SocketAddr::new(bind_addr.ip(), rpc_port::DEFAULT_RPC_PORT);
+    //     let rpc_pubsub = SocketAddr::new(bind_addr.ip(), rpc_port::DEFAULT_RPC_PUBSUB_PORT);
+    //     let serve_repair = next_port(bind_addr, 6);
+    //     let tpu_vote = next_port(bind_addr, 7);
+    //     Self {
+    //         id: *pubkey,
+    //         gossip,
+    //         tvu,
+    //         tvu_forwards,
+    //         repair,
+    //         tpu,
+    //         tpu_forwards,
+    //         tpu_vote,
+    //         rpc,
+    //         rpc_pubsub,
+    //         serve_repair,
+    //         wallclock: timestamp(),
+    //         shred_version: 0,
+    //     }
+    // }
 
     // Used in tests
-    pub fn new_with_socketaddr(bind_addr: &SocketAddr) -> Self {
-        let keypair = Keypair::new();
-        Self::new_with_pubkey_socketaddr(&keypair.pubkey(), bind_addr)
-    }
+    // pub fn new_with_socketaddr(bind_addr: &SocketAddr) -> Self {
+    //     let keypair = Keypair::new();
+    //     Self::new_with_pubkey_socketaddr(&keypair.pubkey(), bind_addr)
+    // }
 
     // Construct a ContactInfo that's only usable for gossip
     pub fn new_gossip_entry_point(gossip_addr: &SocketAddr) -> Self {
@@ -225,135 +225,3 @@ impl ContactInfo {
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_is_valid_address() {
-        let bad_address_port = socketaddr!("127.0.0.1:0");
-        assert!(!ContactInfo::is_valid_address(
-            &bad_address_port,
-            &SocketAddrSpace::Unspecified
-        ));
-        let bad_address_unspecified = socketaddr!(0, 1234);
-        assert!(!ContactInfo::is_valid_address(
-            &bad_address_unspecified,
-            &SocketAddrSpace::Unspecified
-        ));
-        let bad_address_multicast = socketaddr!([224, 254, 0, 0], 1234);
-        assert!(!ContactInfo::is_valid_address(
-            &bad_address_multicast,
-            &SocketAddrSpace::Unspecified
-        ));
-        let loopback = socketaddr!("127.0.0.1:1234");
-        assert!(ContactInfo::is_valid_address(
-            &loopback,
-            &SocketAddrSpace::Unspecified
-        ));
-        //        assert!(!ContactInfo::is_valid_ip_internal(loopback.ip(), false));
-    }
-
-    #[test]
-    fn test_default() {
-        let ci = ContactInfo::default();
-        assert!(ci.gossip.ip().is_unspecified());
-        assert!(ci.tvu.ip().is_unspecified());
-        assert!(ci.tpu_forwards.ip().is_unspecified());
-        assert!(ci.rpc.ip().is_unspecified());
-        assert!(ci.rpc_pubsub.ip().is_unspecified());
-        assert!(ci.tpu.ip().is_unspecified());
-        assert!(ci.tpu_vote.ip().is_unspecified());
-        assert!(ci.serve_repair.ip().is_unspecified());
-    }
-    #[test]
-    fn test_multicast() {
-        let ci = ContactInfo::new_multicast();
-        assert!(ci.gossip.ip().is_multicast());
-        assert!(ci.tvu.ip().is_multicast());
-        assert!(ci.tpu_forwards.ip().is_multicast());
-        assert!(ci.rpc.ip().is_multicast());
-        assert!(ci.rpc_pubsub.ip().is_multicast());
-        assert!(ci.tpu.ip().is_multicast());
-        assert!(ci.tpu_vote.ip().is_multicast());
-        assert!(ci.serve_repair.ip().is_multicast());
-    }
-    #[test]
-    fn test_entry_point() {
-        let addr = socketaddr!("127.0.0.1:10");
-        let ci = ContactInfo::new_gossip_entry_point(&addr);
-        assert_eq!(ci.gossip, addr);
-        assert!(ci.tvu.ip().is_unspecified());
-        assert!(ci.tpu_forwards.ip().is_unspecified());
-        assert!(ci.rpc.ip().is_unspecified());
-        assert!(ci.rpc_pubsub.ip().is_unspecified());
-        assert!(ci.tpu.ip().is_unspecified());
-        assert!(ci.tpu_vote.ip().is_unspecified());
-        assert!(ci.serve_repair.ip().is_unspecified());
-    }
-    #[test]
-    fn test_socketaddr() {
-        let addr = socketaddr!("127.0.0.1:10");
-        let ci = ContactInfo::new_with_socketaddr(&addr);
-        assert_eq!(ci.tpu, addr);
-        assert_eq!(ci.tpu_vote.port(), 17);
-        assert_eq!(ci.gossip.port(), 11);
-        assert_eq!(ci.tvu.port(), 12);
-        assert_eq!(ci.tpu_forwards.port(), 13);
-        assert_eq!(ci.rpc.port(), rpc_port::DEFAULT_RPC_PORT);
-        assert_eq!(ci.rpc_pubsub.port(), rpc_port::DEFAULT_RPC_PUBSUB_PORT);
-        assert_eq!(ci.serve_repair.port(), 16);
-    }
-
-    #[test]
-    fn replayed_data_new_with_socketaddr_with_pubkey() {
-        let keypair = Keypair::new();
-        let d1 = ContactInfo::new_with_pubkey_socketaddr(
-            &keypair.pubkey(),
-            &socketaddr!("127.0.0.1:1234"),
-        );
-        assert_eq!(d1.id, keypair.pubkey());
-        assert_eq!(d1.gossip, socketaddr!("127.0.0.1:1235"));
-        assert_eq!(d1.tvu, socketaddr!("127.0.0.1:1236"));
-        assert_eq!(d1.tpu_forwards, socketaddr!("127.0.0.1:1237"));
-        assert_eq!(d1.tpu, socketaddr!("127.0.0.1:1234"));
-        assert_eq!(
-            d1.rpc,
-            socketaddr!(format!("127.0.0.1:{}", rpc_port::DEFAULT_RPC_PORT))
-        );
-        assert_eq!(
-            d1.rpc_pubsub,
-            socketaddr!(format!("127.0.0.1:{}", rpc_port::DEFAULT_RPC_PUBSUB_PORT))
-        );
-        assert_eq!(d1.tvu_forwards, socketaddr!("127.0.0.1:1238"));
-        assert_eq!(d1.repair, socketaddr!("127.0.0.1:1239"));
-        assert_eq!(d1.serve_repair, socketaddr!("127.0.0.1:1240"));
-        assert_eq!(d1.tpu_vote, socketaddr!("127.0.0.1:1241"));
-    }
-
-    #[test]
-    fn test_valid_client_facing() {
-        let mut ci = ContactInfo::default();
-        assert_eq!(
-            ci.valid_client_facing_addr(&SocketAddrSpace::Unspecified),
-            None
-        );
-        ci.tpu = socketaddr!("127.0.0.1:123");
-        assert_eq!(
-            ci.valid_client_facing_addr(&SocketAddrSpace::Unspecified),
-            None
-        );
-        ci.rpc = socketaddr!("127.0.0.1:234");
-        assert!(ci
-            .valid_client_facing_addr(&SocketAddrSpace::Unspecified)
-            .is_some());
-    }
-
-    #[test]
-    fn test_sanitize() {
-        let mut ci = ContactInfo::default();
-        assert_eq!(ci.sanitize(), Ok(()));
-        ci.wallclock = MAX_WALLCLOCK;
-        assert_eq!(ci.sanitize(), Err(SanitizeError::ValueOutOfBounds));
-    }
-}

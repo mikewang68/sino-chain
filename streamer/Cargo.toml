@@ -1,8 +1,8 @@
 [package]
 name = "streamer"
 version = "1.9.29"
-description = "Solana Streamer"
-authors = ["Solana Maintainers <maintainers@solana.foundation>"]
+description = "Streamer"
+authors = ["Maintainers <maintainers@solana.foundation>"]
 repository = "https://github.com/solana-labs/solana"
 license = "Apache-2.0"
 homepage = "https://solana.com/"
@@ -34,7 +34,7 @@ tokio = { version = "~1.14.1", features = ["full"] }
 
 [lib]
 crate-type = ["lib"]
-name = "solana_streamer"
+name = "streamer"
 
 [package.metadata.docs.rs]
 targets = ["x86_64-unknown-linux-gnu"]

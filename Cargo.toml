@@ -36,7 +36,8 @@ members = [
     "transaction-status",
     "client",
     "txpool",
-    "streamer"
+    "streamer",
+    "gossip"
     
     
 ]
