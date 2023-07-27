@@ -40,7 +40,7 @@ use {
     ledger::shred::Shred,
     measure::measure::Measure,
     metrics::{inc_new_counter_debug, inc_new_counter_error},
-    net_utils::{
+    sino_net_utils::{
         bind_common, bind_common_in_range, bind_in_range, bind_two_consecutive_in_range,
         find_available_port_in_range, multi_bind_in_range, PortRange,
     },

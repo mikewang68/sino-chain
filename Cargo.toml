@@ -37,7 +37,8 @@ members = [
     "client",
     "txpool",
     "streamer",
-    "gossip"
+    "gossip",
+    "net-utils"
     
     
 ]

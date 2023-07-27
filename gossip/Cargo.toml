@@ -1,13 +1,13 @@
 [package]
-authors = ["Solana Maintainers <maintainers@solana.foundation>"]
+authors = [""]
 edition = "2021"
 name = "gossip"
 description = "Blockchain, Rebuilt for Scale"
 version = "1.9.29"
-repository = "https://github.com/solana-labs/solana"
+repository = ""
 license = "Apache-2.0"
-homepage = "https://solana.com/"
-documentation = "https://docs.rs/solana-gossip"
+homepage = ""
+documentation = ""
 
 [dependencies]
 bincode = "1.3.3"
@@ -36,7 +36,7 @@ ledger = { path = "../ledger", version = "=1.9.29" }
 logger = { path = "../logger", version = "=1.9.29" }
 measure = { path = "../measure", version = "=1.9.29" }
 metrics = { path = "../metrics", version = "=1.9.29" }
-# net-utils = { path = "../net-utils", version = "=1.9.29" }
+net-utils = { path = "../net-utils", version = "=1.9.29" }
 perf = { path = "../perf", version = "=1.9.29" }
 rayon-threadlimit = { path = "../rayon-threadlimit", version = "=1.9.29" }
 runtime = { path = "../runtime", version = "=1.9.29" }
