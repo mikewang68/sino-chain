@@ -1,0 +1,34 @@
+[package]
+authors = [""]
+edition = "2021"
+name = "sys-tuner"
+description = "cluster system tuner daemon"
+version = "1.9.29"
+repository = ""
+license = "Apache-2.0"
+homepage = ""
+documentation = ""
+publish = true
+
+[dependencies]
+clap = "2.33.1"
+log = "0.4.14"
+libc = "0.2.108"
+logger = { path = "../logger", version = "=1.9.29" }
+version = { path = "../version", version = "=0.6.3" }
+
+[target."cfg(unix)".dependencies]
+unix_socket2 = "0.5.4"
+users = "0.10.0"
+nix = "0.23.0"
+sysctl = "0.4.3"
+
+[lib]
+name = "sys_tuner"
+
+[[bin]]
+name = "sys-tuner"
+path = "src/main.rs"
+
+[package.metadata.docs.rs]
+targets = ["x86_64-unknown-linux-gnu"]

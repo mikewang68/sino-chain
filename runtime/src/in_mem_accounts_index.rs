@@ -1,20 +1,15 @@
 use {
     crate::{
         accounts_index::{
-            AccountMapEntry, 
-            AccountMapEntryInner,
-            AccountMapEntryMeta,
-            IndexValue,
-            PreAllocatedAccountMapEntry,
-            ZeroLamport,
-            SlotSlice,
+            AccountMapEntry, AccountMapEntryInner, AccountMapEntryMeta, IndexValue,
+            PreAllocatedAccountMapEntry, RefCount, SlotList, SlotSlice, ZeroLamport,
         },
         bucket_map_holder::{Age, BucketMapHolder},
         bucket_map_holder_stats::BucketMapHolderStats,
     },
-    rand::{thread_rng,Rng},
-    measure::measure::Measure,
+    rand::{thread_rng, Rng},
     bucket_map::bucket_api::BucketApi,
+    measure::measure::Measure,
     sdk::{clock::Slot, pubkey::Pubkey},
     std::{
         collections::{
@@ -32,14 +27,6 @@ use {
 type K = Pubkey;
 type CacheRangesHeld = RwLock<Vec<Option<RangeInclusive<Pubkey>>>>;
 pub type SlotT<T> = (Slot, T);
-pub type SlotList<T> = Vec<(Slot, T)>;
-pub type RefCount = u64;
-
-pub enum InsertNewEntryResults {
-    DidNotExist,
-    ExistedNewEntryZeroLamports,
-    ExistedNewEntryNonZeroLamports,
-}
 
 #[allow(dead_code)] // temporary during staging
                     // one instance of this represents one bin of the accounts index.
@@ -69,7 +56,264 @@ impl<T: IndexValue> Debug for InMemAccountsIndex<T> {
     }
 }
 
+pub enum InsertNewEntryResults {
+    DidNotExist,
+    ExistedNewEntryZeroLamports,
+    ExistedNewEntryNonZeroLamports,
+}
+
+#[allow(dead_code)] // temporary during staging
 impl<T: IndexValue> InMemAccountsIndex<T> {
+    pub fn new(storage: &Arc<BucketMapHolder<T>>, bin: usize) -> Self {
+        Self {
+            map_internal: RwLock::default(),
+            storage: Arc::clone(storage),
+            bin,
+            bucket: storage
+                .disk
+                .as_ref()
+                .map(|disk| disk.get_bucket_from_index(bin))
+                .map(Arc::clone),
+            cache_ranges_held: CacheRangesHeld::default(),
+            stop_flush: AtomicU64::default(),
+            bin_dirty: AtomicBool::default(),
+            flushing_active: AtomicBool::default(),
+            // initialize this to max, to make it clear we have not flushed at age 0, the starting age
+            last_age_flushed: AtomicU8::new(Age::MAX),
+        }
+    }
+
+    /// true if this bucket needs to call flush for the current age
+    /// we need to scan each bucket once per value of age
+    fn get_should_age(&self, age: Age) -> bool {
+        let last_age_flushed = self.last_age_flushed();
+        last_age_flushed != age
+    }
+
+    /// called after flush scans this bucket at the current age
+    fn set_has_aged(&self, age: Age) {
+        self.last_age_flushed.store(age, Ordering::Relaxed);
+        self.storage.bucket_flushed_at_current_age();
+    }
+
+    fn last_age_flushed(&self) -> Age {
+        self.last_age_flushed.load(Ordering::Relaxed)
+    }
+
+    fn map(&self) -> &RwLock<HashMap<Pubkey, AccountMapEntry<T>>> {
+        &self.map_internal
+    }
+
+    pub fn items<R>(&self, range: &Option<&R>) -> Vec<(K, AccountMapEntry<T>)>
+    where
+        R: RangeBounds<Pubkey> + std::fmt::Debug,
+    {
+        self.start_stop_flush(true);
+        self.put_range_in_cache(range); // check range here to see if our items are already held in the cache
+        Self::update_stat(&self.stats().items, 1);
+        let map = self.map().read().unwrap();
+        let mut result = Vec::with_capacity(map.len());
+        map.iter().for_each(|(k, v)| {
+            if range.map(|range| range.contains(k)).unwrap_or(true) {
+                result.push((*k, Arc::clone(v)));
+            }
+        });
+        self.start_stop_flush(false);
+        result
+    }
+
+    // only called in debug code paths
+    pub fn keys(&self) -> Vec<Pubkey> {
+        Self::update_stat(&self.stats().keys, 1);
+        // easiest implementation is to load evrything from disk into cache and return the keys
+        self.start_stop_flush(true);
+        self.put_range_in_cache(&None::<&RangeInclusive<Pubkey>>);
+        let keys = self.map().read().unwrap().keys().cloned().collect();
+        self.start_stop_flush(false);
+        keys
+    }
+
+    fn load_from_disk(&self, pubkey: &Pubkey) -> Option<(SlotList<T>, RefCount)> {
+        self.bucket.as_ref().and_then(|disk| {
+            let m = Measure::start("load_disk_found_count");
+            let entry_disk = disk.read_value(pubkey);
+            match &entry_disk {
+                Some(_) => {
+                    Self::update_time_stat(&self.stats().load_disk_found_us, m);
+                    Self::update_stat(&self.stats().load_disk_found_count, 1);
+                }
+                None => {
+                    Self::update_time_stat(&self.stats().load_disk_missing_us, m);
+                    Self::update_stat(&self.stats().load_disk_missing_count, 1);
+                }
+            }
+            entry_disk
+        })
+    }
+
+    fn load_account_entry_from_disk(&self, pubkey: &Pubkey) -> Option<AccountMapEntry<T>> {
+        let entry_disk = self.load_from_disk(pubkey)?; // returns None if not on disk
+
+        Some(self.disk_to_cache_entry(entry_disk.0, entry_disk.1))
+    }
+
+    /// lookup 'pubkey' by only looking in memory. Does not look on disk.
+    /// callback is called whether pubkey is found or not
+    fn get_only_in_mem<RT>(
+        &self,
+        pubkey: &K,
+        callback: impl for<'a> FnOnce(Option<&'a AccountMapEntry<T>>) -> RT,
+    ) -> RT {
+        let m = Measure::start("get");
+        let map = self.map().read().unwrap();
+        let result = map.get(pubkey);
+        let stats = self.stats();
+        let (count, time) = if result.is_some() {
+            (&stats.gets_from_mem, &stats.get_mem_us)
+        } else {
+            (&stats.gets_missing, &stats.get_missing_us)
+        };
+        Self::update_time_stat(time, m);
+        Self::update_stat(count, 1);
+
+        callback(if let Some(entry) = result {
+            entry.set_age(self.storage.future_age_to_flush());
+            Some(entry)
+        } else {
+            drop(map);
+            None
+        })
+    }
+
+    /// lookup 'pubkey' in index (in mem or on disk)
+    pub fn get(&self, pubkey: &K) -> Option<AccountMapEntry<T>> {
+        self.get_internal(pubkey, |entry| (true, entry.map(Arc::clone)))
+    }
+
+    /// lookup 'pubkey' in index (in_mem or disk).
+    /// call 'callback' whether found or not
+    pub(crate) fn get_internal<RT>(
+        &self,
+        pubkey: &K,
+        // return true if item should be added to in_mem cache
+        callback: impl for<'a> FnOnce(Option<&AccountMapEntry<T>>) -> (bool, RT),
+    ) -> RT {
+        self.get_only_in_mem(pubkey, |entry| {
+            if let Some(entry) = entry {
+                entry.set_age(self.storage.future_age_to_flush());
+                callback(Some(entry)).1
+            } else {
+                // not in cache, look on disk
+                let stats = &self.stats();
+                let disk_entry = self.load_account_entry_from_disk(pubkey);
+                if disk_entry.is_none() {
+                    return callback(None).1;
+                }
+                let disk_entry = disk_entry.unwrap();
+                let mut map = self.map().write().unwrap();
+                let entry = map.entry(*pubkey);
+                match entry {
+                    Entry::Occupied(occupied) => callback(Some(occupied.get())).1,
+                    Entry::Vacant(vacant) => {
+                        let (add_to_cache, rt) = callback(Some(&disk_entry));
+
+                        if add_to_cache {
+                            stats.insert_or_delete_mem(true, self.bin);
+                            vacant.insert(disk_entry);
+                        }
+                        rt
+                    }
+                }
+            }
+        })
+    }
+
+    fn remove_if_slot_list_empty_value(&self, slot_list: SlotSlice<T>) -> bool {
+        if slot_list.is_empty() {
+            self.stats().insert_or_delete(false, self.bin);
+            true
+        } else {
+            false
+        }
+    }
+
+    fn delete_disk_key(&self, pubkey: &Pubkey) {
+        if let Some(disk) = self.bucket.as_ref() {
+            disk.delete_key(pubkey)
+        }
+    }
+
+    fn remove_if_slot_list_empty_entry(&self, entry: Entry<K, AccountMapEntry<T>>) -> bool {
+        match entry {
+            Entry::Occupied(occupied) => {
+                let result =
+                    self.remove_if_slot_list_empty_value(&occupied.get().slot_list.read().unwrap());
+                if result {
+                    // note there is a potential race here that has existed.
+                    // if someone else holds the arc,
+                    //  then they think the item is still in the index and can make modifications.
+                    // We have to have a write lock to the map here, which means nobody else can get
+                    //  the arc, but someone may already have retreived a clone of it.
+                    // account index in_mem flushing is one such possibility
+                    self.delete_disk_key(occupied.key());
+                    self.stats().insert_or_delete_mem(false, self.bin);
+                    occupied.remove();
+                }
+                result
+            }
+            Entry::Vacant(vacant) => {
+                // not in cache, look on disk
+                let entry_disk = self.load_from_disk(vacant.key());
+                match entry_disk {
+                    Some(entry_disk) => {
+                        // on disk
+                        if self.remove_if_slot_list_empty_value(&entry_disk.0) {
+                            // not in cache, but on disk, so just delete from disk
+                            self.delete_disk_key(vacant.key());
+                            true
+                        } else {
+                            // could insert into cache here, but not required for correctness and value is unclear
+                            false
+                        }
+                    }
+                    None => false, // not in cache or on disk
+                }
+            }
+        }
+    }
+
+    // If the slot list for pubkey exists in the index and is empty, remove the index entry for pubkey and return true.
+    // Return false otherwise.
+    pub fn remove_if_slot_list_empty(&self, pubkey: Pubkey) -> bool {
+        let mut m = Measure::start("entry");
+        let mut map = self.map().write().unwrap();
+        let entry = map.entry(pubkey);
+        m.stop();
+        let found = matches!(entry, Entry::Occupied(_));
+        let result = self.remove_if_slot_list_empty_entry(entry);
+        drop(map);
+
+        self.update_entry_stats(m, found);
+        result
+    }
+
+    pub fn slot_list_mut<RT>(
+        &self,
+        pubkey: &Pubkey,
+        user: impl for<'a> FnOnce(&mut RwLockWriteGuard<'a, SlotList<T>>) -> RT,
+    ) -> Option<RT> {
+        self.get_internal(pubkey, |entry| {
+            (
+                true,
+                entry.map(|entry| {
+                    let result = user(&mut entry.slot_list.write().unwrap());
+                    entry.set_dirty(true);
+                    result
+                }),
+            )
+        })
+    }
+
     pub fn unref(&self, pubkey: &Pubkey) {
         self.get_internal(pubkey, |entry| {
             if let Some(entry) = entry {
@@ -160,90 +404,15 @@ impl<T: IndexValue> InMemAccountsIndex<T> {
         })
     }
 
-    pub fn slot_list_mut<RT>(
-        &self,
-        pubkey: &Pubkey,
-        user: impl for<'a> FnOnce(&mut RwLockWriteGuard<'a, SlotList<T>>) -> RT,
-    ) -> Option<RT> {
-        self.get_internal(pubkey, |entry| {
-            (
-                true,
-                entry.map(|entry| {
-                    let result = user(&mut entry.slot_list.write().unwrap());
-                    entry.set_dirty(true);
-                    result
-                }),
-            )
-        })
-    }
-
-    // If the slot list for pubkey exists in the index and is empty, remove the index entry for pubkey and return true.
-    // Return false otherwise.
-    pub fn remove_if_slot_list_empty(&self, pubkey: Pubkey) -> bool {
-        let mut m = Measure::start("entry");
-        let mut map = self.map().write().unwrap();
-        let entry = map.entry(pubkey);
-        m.stop();
-        let found = matches!(entry, Entry::Occupied(_));
-        let result = self.remove_if_slot_list_empty_entry(entry);
-        drop(map);
-
-        self.update_entry_stats(m, found);
-        result
-    }
-
-    fn remove_if_slot_list_empty_entry(&self, entry: Entry<K, AccountMapEntry<T>>) -> bool {
-        match entry {
-            Entry::Occupied(occupied) => {
-                let result =
-                    self.remove_if_slot_list_empty_value(&occupied.get().slot_list.read().unwrap());
-                if result {
-                    // note there is a potential race here that has existed.
-                    // if someone else holds the arc,
-                    //  then they think the item is still in the index and can make modifications.
-                    // We have to have a write lock to the map here, which means nobody else can get
-                    //  the arc, but someone may already have retreived a clone of it.
-                    // account index in_mem flushing is one such possibility
-                    self.delete_disk_key(occupied.key());
-                    self.stats().insert_or_delete_mem(false, self.bin);
-                    occupied.remove();
-                }
-                result
-            }
-            Entry::Vacant(vacant) => {
-                // not in cache, look on disk
-                let entry_disk = self.load_from_disk(vacant.key());
-                match entry_disk {
-                    Some(entry_disk) => {
-                        // on disk
-                        if self.remove_if_slot_list_empty_value(&entry_disk.0) {
-                            // not in cache, but on disk, so just delete from disk
-                            self.delete_disk_key(vacant.key());
-                            true
-                        } else {
-                            // could insert into cache here, but not required for correctness and value is unclear
-                            false
-                        }
-                    }
-                    None => false, // not in cache or on disk
-                }
-            }
-        }
-    }
-
-    fn remove_if_slot_list_empty_value(&self, slot_list: SlotSlice<T>) -> bool {
-        if slot_list.is_empty() {
-            self.stats().insert_or_delete(false, self.bin);
-            true
+    fn update_entry_stats(&self, stopped_measure: Measure, found: bool) {
+        let stats = &self.stats();
+        let (count, time) = if found {
+            (&stats.entries_from_mem, &stats.entry_mem_us)
         } else {
-            false
-        }
-    }
-
-    fn delete_disk_key(&self, pubkey: &Pubkey) {
-        if let Some(disk) = self.bucket.as_ref() {
-            disk.delete_key(pubkey)
-        }
+            (&stats.entries_missing, &stats.entry_missing_us)
+        };
+        Self::update_stat(time, stopped_measure.as_us());
+        Self::update_stat(count, 1);
     }
 
     // Try to update an item in the slot list the given `slot` If an item for the slot
@@ -307,6 +476,23 @@ impl<T: IndexValue> InMemAccountsIndex<T> {
         addref
     }
 
+    // convert from raw data on disk to AccountMapEntry, set to age in future
+    fn disk_to_cache_entry(
+        &self,
+        slot_list: SlotList<T>,
+        ref_count: RefCount,
+    ) -> AccountMapEntry<T> {
+        Arc::new(AccountMapEntryInner::new(
+            slot_list,
+            ref_count,
+            AccountMapEntryMeta::new_dirty(&self.storage),
+        ))
+    }
+
+    pub fn len_for_stats(&self) -> usize {
+        self.stats().count_in_bucket(self.bin)
+    }
+
     pub fn insert_new_entry_if_missing_with_lock(
         &self,
         pubkey: Pubkey,
@@ -356,17 +542,6 @@ impl<T: IndexValue> InMemAccountsIndex<T> {
         }
     }
 
-    fn update_entry_stats(&self, stopped_measure: Measure, found: bool) {
-        let stats = &self.stats();
-        let (count, time) = if found {
-            (&stats.entries_from_mem, &stats.entry_mem_us)
-        } else {
-            (&stats.entries_missing, &stats.entry_missing_us)
-        };
-        Self::update_stat(time, stopped_measure.as_us());
-        Self::update_stat(count, 1);
-    }
-
     /// return tuple:
     /// true if item already existed in the index
     fn upsert_on_disk(
@@ -410,37 +585,6 @@ impl<T: IndexValue> InMemAccountsIndex<T> {
             vacant.insert(new_entry);
             false // not using disk, not in mem, so did not exist
         }
-    }
-
-    pub fn len_for_stats(&self) -> usize {
-        self.stats().count_in_bucket(self.bin)
-    }
-
-    // only called in debug code paths
-    pub fn keys(&self) -> Vec<Pubkey> {
-        Self::update_stat(&self.stats().keys, 1);
-        // easiest implementation is to load evrything from disk into cache and return the keys
-        self.start_stop_flush(true);
-        self.put_range_in_cache(&None::<&RangeInclusive<Pubkey>>);
-        let keys = self.map().read().unwrap().keys().cloned().collect();
-        self.start_stop_flush(false);
-        keys
-    }
-
-    pub fn hold_range_in_memory<R>(&self, range: &R, start_holding: bool)
-    where
-        R: RangeBounds<Pubkey> + Debug,
-    {
-        self.start_stop_flush(true);
-
-        if start_holding {
-            // put everything in the cache and it will be held there
-            self.put_range_in_cache(&Some(range));
-        }
-        // do this AFTER items have been put in cache - that way anyone who finds this range can know that the items are already in the cache
-        self.just_set_hold_range_in_memory(range, start_holding);
-
-        self.start_stop_flush(false);
     }
 
     pub fn just_set_hold_range_in_memory<R>(&self, range: &R, start_holding: bool)
@@ -489,22 +633,29 @@ impl<T: IndexValue> InMemAccountsIndex<T> {
         }
     }
 
-    pub fn items<R>(&self, range: &Option<&R>) -> Vec<(K, AccountMapEntry<T>)>
+    fn start_stop_flush(&self, stop: bool) {
+        if stop {
+            self.stop_flush.fetch_add(1, Ordering::Release);
+        } else if 1 == self.stop_flush.fetch_sub(1, Ordering::Release) {
+            // stop_flush went to 0, so this bucket could now be ready to be aged
+            self.storage.wait_dirty_or_aged.notify_one();
+        }
+    }
+
+    pub fn hold_range_in_memory<R>(&self, range: &R, start_holding: bool)
     where
-        R: RangeBounds<Pubkey> + std::fmt::Debug,
+        R: RangeBounds<Pubkey> + Debug,
     {
         self.start_stop_flush(true);
-        self.put_range_in_cache(range); // check range here to see if our items are already held in the cache
-        Self::update_stat(&self.stats().items, 1);
-        let map = self.map().read().unwrap();
-        let mut result = Vec::with_capacity(map.len());
-        map.iter().for_each(|(k, v)| {
-            if range.map(|range| range.contains(k)).unwrap_or(true) {
-                result.push((*k, Arc::clone(v)));
-            }
-        });
+
+        if start_holding {
+            // put everything in the cache and it will be held there
+            self.put_range_in_cache(&Some(range));
+        }
+        // do this AFTER items have been put in cache - that way anyone who finds this range can know that the items are already in the cache
+        self.just_set_hold_range_in_memory(range, start_holding);
+
         self.start_stop_flush(false);
-        result
     }
 
     fn put_range_in_cache<R>(&self, range: &Option<&R>)
@@ -537,127 +688,8 @@ impl<T: IndexValue> InMemAccountsIndex<T> {
         Self::update_time_stat(&self.stats().get_range_us, m);
     }
 
-    fn start_stop_flush(&self, stop: bool) {
-        if stop {
-            self.stop_flush.fetch_add(1, Ordering::Release);
-        } else if 1 == self.stop_flush.fetch_sub(1, Ordering::Release) {
-            // stop_flush went to 0, so this bucket could now be ready to be aged
-            self.storage.wait_dirty_or_aged.notify_one();
-        }
-    }
-
-    pub fn new(storage: &Arc<BucketMapHolder<T>>, bin: usize) -> Self {
-        Self {
-            map_internal: RwLock::default(),
-            storage: Arc::clone(storage),
-            bin,
-            bucket: storage
-                .disk
-                .as_ref()
-                .map(|disk| disk.get_bucket_from_index(bin))
-                .map(Arc::clone),
-            cache_ranges_held: CacheRangesHeld::default(),
-            stop_flush: AtomicU64::default(),
-            bin_dirty: AtomicBool::default(),
-            flushing_active: AtomicBool::default(),
-            // initialize this to max, to make it clear we have not flushed at age 0, the starting age
-            last_age_flushed: AtomicU8::new(Age::MAX),
-        }
-    }
-
-    /// lookup 'pubkey' in index (in mem or on disk)
-    pub fn get(&self, pubkey: &K) -> Option<AccountMapEntry<T>> {
-        self.get_internal(pubkey, |entry| (true, entry.map(Arc::clone)))
-    }
-
-    fn load_from_disk(&self, pubkey: &Pubkey) -> Option<(SlotList<T>, RefCount)> {
-        self.bucket.as_ref().and_then(|disk| {
-            let m = Measure::start("load_disk_found_count");
-            let entry_disk = disk.read_value(pubkey);
-            match &entry_disk {
-                Some(_) => {
-                    Self::update_time_stat(&self.stats().load_disk_found_us, m);
-                    Self::update_stat(&self.stats().load_disk_found_count, 1);
-                }
-                None => {
-                    Self::update_time_stat(&self.stats().load_disk_missing_us, m);
-                    Self::update_stat(&self.stats().load_disk_missing_count, 1);
-                }
-            }
-            entry_disk
-        })
-    }
-
-    fn load_account_entry_from_disk(&self, pubkey: &Pubkey) -> Option<AccountMapEntry<T>> {
-        let entry_disk = self.load_from_disk(pubkey)?; // returns None if not on disk
-
-        Some(self.disk_to_cache_entry(entry_disk.0, entry_disk.1))
-    }
-
-    /// lookup 'pubkey' in index (in_mem or disk).
-    /// call 'callback' whether found or not
-    pub(crate) fn get_internal<RT>(
-        &self,
-        pubkey: &K,
-        // return true if item should be added to in_mem cache
-        callback: impl for<'a> FnOnce(Option<&AccountMapEntry<T>>) -> (bool, RT),
-    ) -> RT {
-        self.get_only_in_mem(pubkey, |entry| {
-            if let Some(entry) = entry {
-                entry.set_age(self.storage.future_age_to_flush());
-                callback(Some(entry)).1
-            } else {
-                // not in cache, look on disk
-                let stats = &self.stats();
-                let disk_entry = self.load_account_entry_from_disk(pubkey);
-                if disk_entry.is_none() {
-                    return callback(None).1;
-                }
-                let disk_entry = disk_entry.unwrap();
-                let mut map = self.map().write().unwrap();
-                let entry = map.entry(*pubkey);
-                match entry {
-                    Entry::Occupied(occupied) => callback(Some(occupied.get())).1,
-                    Entry::Vacant(vacant) => {
-                        let (add_to_cache, rt) = callback(Some(&disk_entry));
-
-                        if add_to_cache {
-                            stats.insert_or_delete_mem(true, self.bin);
-                            vacant.insert(disk_entry);
-                        }
-                        rt
-                    }
-                }
-            }
-        })
-    }
-
-    /// lookup 'pubkey' by only looking in memory. Does not look on disk.
-    /// callback is called whether pubkey is found or not
-    fn get_only_in_mem<RT>(
-        &self,
-        pubkey: &K,
-        callback: impl for<'a> FnOnce(Option<&'a AccountMapEntry<T>>) -> RT,
-    ) -> RT {
-        let m = Measure::start("get");
-        let map = self.map().read().unwrap();
-        let result = map.get(pubkey);
-        let stats = self.stats();
-        let (count, time) = if result.is_some() {
-            (&stats.gets_from_mem, &stats.get_mem_us)
-        } else {
-            (&stats.gets_missing, &stats.get_missing_us)
-        };
-        Self::update_time_stat(time, m);
-        Self::update_stat(count, 1);
-
-        callback(if let Some(entry) = result {
-            entry.set_age(self.storage.future_age_to_flush());
-            Some(entry)
-        } else {
-            drop(map);
-            None
-        })
+    fn get_stop_flush(&self) -> bool {
+        self.stop_flush.load(Ordering::Relaxed) > 0
     }
 
     pub(crate) fn flush(&self) {
@@ -670,6 +702,50 @@ impl<T: IndexValue> InMemAccountsIndex<T> {
         self.flush_internal();
 
         self.flushing_active.store(false, Ordering::Release);
+    }
+
+    pub fn set_bin_dirty(&self) {
+        self.bin_dirty.store(true, Ordering::Release);
+        // 1 bin dirty, so only need 1 thread to wake up if many could be waiting
+        self.storage.wait_dirty_or_aged.notify_one();
+    }
+
+    fn random_chance_of_eviction() -> bool {
+        // random eviction
+        const N: usize = 1000;
+        // 1/N chance of eviction
+        thread_rng().gen_range(0, N) == 0
+    }
+
+    /// return true if 'entry' should be removed from the in-mem index
+    fn should_remove_from_mem(
+        &self,
+        current_age: Age,
+        entry: &AccountMapEntry<T>,
+        startup: bool,
+        update_stats: bool,
+    ) -> bool {
+        // this could be tunable dynamically based on memory pressure
+        // we could look at more ages or we could throw out more items we are choosing to keep in the cache
+        if startup || (current_age == entry.age()) {
+            // only read the slot list if we are planning to throw the item out
+            let slot_list = entry.slot_list.read().unwrap();
+            if slot_list.len() != 1 {
+                if update_stats {
+                    Self::update_stat(&self.stats().held_in_mem_slot_list_len, 1);
+                }
+                false // keep 0 and > 1 slot lists in mem. They will be cleaned or shrunk soon.
+            } else {
+                // keep items with slot lists that contained cached items
+                let remove = !slot_list.iter().any(|(_, info)| info.is_cached());
+                if !remove && update_stats {
+                    Self::update_stat(&self.stats().held_in_mem_slot_list_cached, 1);
+                }
+                remove
+            }
+        } else {
+            false
+        }
     }
 
     fn flush_internal(&self) {
@@ -761,75 +837,6 @@ impl<T: IndexValue> InMemAccountsIndex<T> {
         }
     }
 
-    /// true if this bucket needs to call flush for the current age
-    /// we need to scan each bucket once per value of age
-    fn get_should_age(&self, age: Age) -> bool {
-        let last_age_flushed = self.last_age_flushed();
-        last_age_flushed != age
-    }
-
-    fn last_age_flushed(&self) -> Age {
-        self.last_age_flushed.load(Ordering::Relaxed)
-    }
-
-    fn map(&self) -> &RwLock<HashMap<Pubkey, AccountMapEntry<T>>> {
-        &self.map_internal
-    }
-
-    /// return true if 'entry' should be removed from the in-mem index
-    fn should_remove_from_mem(
-        &self,
-        current_age: Age,
-        entry: &AccountMapEntry<T>,
-        startup: bool,
-        update_stats: bool,
-    ) -> bool {
-        // this could be tunable dynamically based on memory pressure
-        // we could look at more ages or we could throw out more items we are choosing to keep in the cache
-        if startup || (current_age == entry.age()) {
-            // only read the slot list if we are planning to throw the item out
-            let slot_list = entry.slot_list.read().unwrap();
-            if slot_list.len() != 1 {
-                if update_stats {
-                    Self::update_stat(&self.stats().held_in_mem_slot_list_len, 1);
-                }
-                false // keep 0 and > 1 slot lists in mem. They will be cleaned or shrunk soon.
-            } else {
-                // keep items with slot lists that contained cached items
-                let remove = !slot_list.iter().any(|(_, info)| info.is_cached());
-                if !remove && update_stats {
-                    Self::update_stat(&self.stats().held_in_mem_slot_list_cached, 1);
-                }
-                remove
-            }
-        } else {
-            false
-        }
-    }
-    
-    fn random_chance_of_eviction() -> bool {
-        // random eviction
-        const N: usize = 1000;
-        // 1/N chance of eviction
-        thread_rng().gen_range(0, N) == 0
-    }
-
-    pub fn update_time_stat(stat: &AtomicU64, mut m: Measure) {
-        m.stop();
-        let value = m.as_us();
-        Self::update_stat(stat, value);
-    }
-
-    pub fn stats(&self) -> &BucketMapHolderStats {
-        &self.storage.stats
-    }
-
-    fn update_stat(stat: &AtomicU64, value: u64) {
-        if value != 0 {
-            stat.fetch_add(value, Ordering::Relaxed);
-        }
-    }
-
     // remove keys in 'removes' from in-mem cache due to age
     // return true if the removal was completed
     fn flush_remove_from_cache(
@@ -898,26 +905,197 @@ impl<T: IndexValue> InMemAccountsIndex<T> {
         completed_scan
     }
 
-    /// called after flush scans this bucket at the current age
-    fn set_has_aged(&self, age: Age) {
-        self.last_age_flushed.store(age, Ordering::Relaxed);
-        self.storage.bucket_flushed_at_current_age();
+    pub fn stats(&self) -> &BucketMapHolderStats {
+        &self.storage.stats
     }
 
-    fn get_stop_flush(&self) -> bool {
-        self.stop_flush.load(Ordering::Relaxed) > 0
+    fn update_stat(stat: &AtomicU64, value: u64) {
+        if value != 0 {
+            stat.fetch_add(value, Ordering::Relaxed);
+        }
     }
 
-    // convert from raw data on disk to AccountMapEntry, set to age in future
-    fn disk_to_cache_entry(
-        &self,
-        slot_list: SlotList<T>,
-        ref_count: RefCount,
-    ) -> AccountMapEntry<T> {
-        Arc::new(AccountMapEntryInner::new(
-            slot_list,
+    pub fn update_time_stat(stat: &AtomicU64, mut m: Measure) {
+        m.stop();
+        let value = m.as_us();
+        Self::update_stat(stat, value);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use {
+        super::*,
+        crate::accounts_index::{AccountsIndexConfig, BINS_FOR_TESTING},
+    };
+
+    fn new_for_test<T: IndexValue>() -> InMemAccountsIndex<T> {
+        let holder = Arc::new(BucketMapHolder::new(
+            BINS_FOR_TESTING,
+            &Some(AccountsIndexConfig::default()),
+            1,
+        ));
+        let bin = 0;
+        InMemAccountsIndex::new(&holder, bin)
+    }
+
+    #[test]
+    fn test_should_remove_from_mem() {
+        sino_logger::setup();
+        let bucket = new_for_test::<u64>();
+        let mut startup = false;
+        let mut current_age = 0;
+        let ref_count = 0;
+        let one_element_slot_list = vec![(0, 0)];
+        let one_element_slot_list_entry = Arc::new(AccountMapEntryInner::new(
+            one_element_slot_list,
             ref_count,
-            AccountMapEntryMeta::new_dirty(&self.storage),
-        ))
+            AccountMapEntryMeta::default(),
+        ));
+
+        // empty slot list
+        assert!(!bucket.should_remove_from_mem(
+            current_age,
+            &Arc::new(AccountMapEntryInner::new(
+                vec![],
+                ref_count,
+                AccountMapEntryMeta::default()
+            )),
+            startup,
+            false,
+        ));
+        // 1 element slot list
+        assert!(bucket.should_remove_from_mem(
+            current_age,
+            &one_element_slot_list_entry,
+            startup,
+            false,
+        ));
+        // 2 element slot list
+        assert!(!bucket.should_remove_from_mem(
+            current_age,
+            &Arc::new(AccountMapEntryInner::new(
+                vec![(0, 0), (1, 1)],
+                ref_count,
+                AccountMapEntryMeta::default()
+            )),
+            startup,
+            false,
+        ));
+
+        {
+            let bucket = new_for_test::<f64>();
+            // 1 element slot list with a CACHED item - f64 acts like cached
+            assert!(!bucket.should_remove_from_mem(
+                current_age,
+                &Arc::new(AccountMapEntryInner::new(
+                    vec![(0, 0.0)],
+                    ref_count,
+                    AccountMapEntryMeta::default()
+                )),
+                startup,
+                false,
+            ));
+        }
+
+        // 1 element slot list, age is now
+        assert!(bucket.should_remove_from_mem(
+            current_age,
+            &one_element_slot_list_entry,
+            startup,
+            false,
+        ));
+
+        // 1 element slot list, but not current age
+        current_age = 1;
+        assert!(!bucket.should_remove_from_mem(
+            current_age,
+            &one_element_slot_list_entry,
+            startup,
+            false,
+        ));
+
+        // 1 element slot list, but at startup and age not current
+        startup = true;
+        assert!(bucket.should_remove_from_mem(
+            current_age,
+            &one_element_slot_list_entry,
+            startup,
+            false,
+        ));
+    }
+
+    #[test]
+    fn test_hold_range_in_memory() {
+        let bucket = new_for_test::<u64>();
+        // 0x81 is just some other range
+        let ranges = [
+            Pubkey::new(&[0; 32])..=Pubkey::new(&[0xff; 32]),
+            Pubkey::new(&[0x81; 32])..=Pubkey::new(&[0xff; 32]),
+        ];
+        for range in ranges.clone() {
+            assert!(bucket.cache_ranges_held.read().unwrap().is_empty());
+            bucket.hold_range_in_memory(&range, true);
+            assert_eq!(
+                bucket.cache_ranges_held.read().unwrap().to_vec(),
+                vec![Some(range.clone())]
+            );
+            bucket.hold_range_in_memory(&range, false);
+            assert!(bucket.cache_ranges_held.read().unwrap().is_empty());
+            bucket.hold_range_in_memory(&range, true);
+            assert_eq!(
+                bucket.cache_ranges_held.read().unwrap().to_vec(),
+                vec![Some(range.clone())]
+            );
+            bucket.hold_range_in_memory(&range, true);
+            assert_eq!(
+                bucket.cache_ranges_held.read().unwrap().to_vec(),
+                vec![Some(range.clone()), Some(range.clone())]
+            );
+            bucket.hold_range_in_memory(&ranges[0], true);
+            assert_eq!(
+                bucket.cache_ranges_held.read().unwrap().to_vec(),
+                vec![
+                    Some(range.clone()),
+                    Some(range.clone()),
+                    Some(ranges[0].clone())
+                ]
+            );
+            bucket.hold_range_in_memory(&range, false);
+            assert_eq!(
+                bucket.cache_ranges_held.read().unwrap().to_vec(),
+                vec![Some(range.clone()), Some(ranges[0].clone())]
+            );
+            bucket.hold_range_in_memory(&range, false);
+            assert_eq!(
+                bucket.cache_ranges_held.read().unwrap().to_vec(),
+                vec![Some(ranges[0].clone())]
+            );
+            bucket.hold_range_in_memory(&ranges[0].clone(), false);
+            assert!(bucket.cache_ranges_held.read().unwrap().is_empty());
+        }
+    }
+
+    #[test]
+    fn test_age() {
+        sino_logger::setup();
+        let test = new_for_test::<u64>();
+        assert!(test.get_should_age(test.storage.current_age()));
+        assert_eq!(test.storage.count_ages_flushed(), 0);
+        test.set_has_aged(0);
+        assert!(!test.get_should_age(test.storage.current_age()));
+        assert_eq!(test.storage.count_ages_flushed(), 1);
+        // simulate rest of buckets aging
+        for _ in 1..BINS_FOR_TESTING {
+            assert!(!test.storage.all_buckets_flushed_at_current_age());
+            test.storage.bucket_flushed_at_current_age();
+        }
+        assert!(test.storage.all_buckets_flushed_at_current_age());
+        // advance age
+        test.storage.increment_age();
+        assert_eq!(test.storage.current_age(), 1);
+        assert!(!test.storage.all_buckets_flushed_at_current_age());
+        assert!(test.get_should_age(test.storage.current_age()));
+        assert_eq!(test.storage.count_ages_flushed(), 0);
     }
 }

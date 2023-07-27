@@ -2,14 +2,15 @@
 use frozen_abi::abi_example::AbiExample;
 #[cfg(debug_assertions)]
 #[allow(deprecated)]
+use sdk::AutoTraitBreakSendSync;
 use {
-    // crate::system_instruction_processor,
+    crate::system_instruction_processor,
     program_runtime::{
         invoke_context::{InvokeContext, ProcessInstructionWithContext},
         stable_log,
     },
     sdk::{
-        feature_set, instruction::InstructionError, pubkey::Pubkey, stake, /*system_program,*/
+        feature_set, instruction::InstructionError, pubkey::Pubkey, stake, system_program,
     },
     std::fmt,
 };
@@ -87,6 +88,22 @@ impl AbiExample for Builtin {
     }
 }
 
+#[derive(Clone, Debug)]
+pub struct Builtins {
+    /// Builtin programs that are always available
+    pub genesis_builtins: Vec<Builtin>,
+
+    /// Dynamic feature transitions for builtin programs
+    pub feature_transitions: Vec<BuiltinFeatureTransition>,
+}
+
+/// Actions taken by a bank when managing the list of active builtin programs.
+#[derive(Debug, Clone)]
+pub enum BuiltinAction {
+    Add(Builtin),
+    Remove(Pubkey),
+}
+
 /// State transition enum used for adding and removing builtin programs through
 /// feature activations.
 #[derive(Debug, Clone, AbiExample)]
@@ -105,20 +122,32 @@ enum InnerBuiltinFeatureTransition {
     },
 }
 
-/// Actions taken by a bank when managing the list of active builtin programs.
-#[derive(Debug, Clone)]
-pub enum BuiltinAction {
-    Add(Builtin),
-    Remove(Pubkey),
-}
+#[allow(deprecated)]
+#[cfg(debug_assertions)]
+impl AutoTraitBreakSendSync for InnerBuiltinFeatureTransition {}
 
 #[derive(AbiExample, Clone, Debug)]
 pub struct BuiltinFeatureTransition(InnerBuiltinFeatureTransition);
 
+// https://github.com/solana-labs/solana/pull/23233 added `BuiltinFeatureTransition`
+// to `Bank` which triggers https://github.com/rust-lang/rust/issues/92987 while
+// attempting to resolve `Sync` on `BankRc` in `AccountsBackgroundService::new` ala,
+//
+// query stack during panic:
+// #0 [evaluate_obligation] evaluating trait selection obligation `bank::BankRc: core::marker::Sync`
+// #1 [typeck] type-checking `accounts_background_service::<impl at runtime/src/accounts_background_service.rs:358:1: 520:2>::new`
+// #2 [typeck_item_bodies] type-checking all item bodies
+// #3 [analysis] running analysis passes on this crate
+// end of query stack
+//
+// Yoloing a `Sync` onto it avoids the auto trait evaluation and thus the ICE.
+//
+// We should remove this when upgrading to Rust 1.60.0, where the bug has been
+// fixed by https://github.com/rust-lang/rust/pull/93064
 unsafe impl Send for BuiltinFeatureTransition {}
 unsafe impl Sync for BuiltinFeatureTransition {}
 
-impl BuiltinFeatureTransition{
+impl BuiltinFeatureTransition {
     pub fn to_action(
         &self,
         should_apply_action_for_feature: &impl Fn(&Pubkey) -> bool,
@@ -152,23 +181,14 @@ impl BuiltinFeatureTransition{
     }
 }
 
-#[derive(Clone, Debug)]
-pub struct Builtins {
-    /// Builtin programs that are always available
-    pub genesis_builtins: Vec<Builtin>,
-
-    /// Dynamic feature transitions for builtin programs
-    pub feature_transitions: Vec<BuiltinFeatureTransition>,
-}
-
 /// Builtin programs that are always available
 fn genesis_builtins() -> Vec<Builtin> {
     vec![
-        // Builtin::new(
-        //     "system_program",
-        //     system_program::id(),
-        //     with_program_logging!(system_instruction_processor::process_instruction),
-        // ),
+        Builtin::new(
+            "system_program",
+            system_program::id(),
+            with_program_logging!(system_instruction_processor::process_instruction),
+        ),
         Builtin::new(
             "vote_program",
             vote_program::id(),
@@ -179,11 +199,11 @@ fn genesis_builtins() -> Vec<Builtin> {
             stake::program::id(),
             with_program_logging!(stake_program::stake_instruction::process_instruction),
         ),
-        // Builtin::new(
-        //     "config_program",
-        //     config_program::id(),
-        //     with_program_logging!(config_program::config_processor::process_instruction),
-        // ),
+        Builtin::new(
+            "config_program",
+            config_program::id(),
+            with_program_logging!(config_program::config_processor::process_instruction),
+        ),
     ]
 }
 
@@ -199,14 +219,14 @@ fn dummy_process_instruction(
 /// Dynamic feature transitions for builtin programs
 fn builtin_feature_transitions() -> Vec<BuiltinFeatureTransition> {
     vec![
-        // BuiltinFeatureTransition(InnerBuiltinFeatureTransition::Add {
-        //     builtin: Builtin::new(
-        //         "compute_budget_program",
-        //         sdk::compute_budget::id(),
-        //         compute_budget_program::process_instruction,
-        //     ),
-        //     feature_id: feature_set::add_compute_budget_program::id(),
-        // }),
+        BuiltinFeatureTransition(InnerBuiltinFeatureTransition::Add {
+            builtin: Builtin::new(
+                "compute_budget_program",
+                sdk::compute_budget::id(),
+                compute_budget_program::process_instruction,
+            ),
+            feature_id: feature_set::add_compute_budget_program::id(),
+        }),
         BuiltinFeatureTransition(InnerBuiltinFeatureTransition::RemoveOrRetain {
             previously_added_builtin: Builtin::new(
                 "secp256k1_program",
@@ -225,14 +245,14 @@ fn builtin_feature_transitions() -> Vec<BuiltinFeatureTransition> {
             addition_feature_id: feature_set::ed25519_program_enabled::id(),
             removal_feature_id: feature_set::prevent_calling_precompiles_as_programs::id(),
         }),
-        // BuiltinFeatureTransition(InnerBuiltinFeatureTransition::Add {
-        //     builtin: Builtin::new(
-        //         "address_lookup_table_program",
-        //         address_lookup_table_program::id(),
-        //         address_lookup_table_program::processor::process_instruction,
-        //     ),
-        //     feature_id: feature_set::versioned_tx_message_enabled::id(),
-        // }),
+        BuiltinFeatureTransition(InnerBuiltinFeatureTransition::Add {
+            builtin: Builtin::new(
+                "address_lookup_table_program",
+                address_lookup_table_program::id(),
+                address_lookup_table_program::processor::process_instruction,
+            ),
+            feature_id: feature_set::versioned_tx_message_enabled::id(),
+        }),
     ]
 }
 

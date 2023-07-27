@@ -1,0 +1,22 @@
+[package]
+name = "genesis-utils"
+version = "1.9.29"
+description = "Genesis Utils"
+authors = [""]
+repository = ""
+license = "Apache-2.0"
+homepage = ""
+documentation = ""
+edition = "2021"
+
+[dependencies]
+sdk = { path = "../sdk", version = "=1.9.29" }
+download-utils = { path = "../download-utils", version = "=1.9.29" }
+runtime = { path = "../runtime", version = "=1.9.29" }
+
+[lib]
+crate-type = ["lib"]
+name = "genesis_utils"
+
+[package.metadata.docs.rs]
+targets = ["x86_64-unknown-linux-gnu"]

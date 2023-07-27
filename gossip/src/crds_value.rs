@@ -194,7 +194,7 @@ impl SnapshotHashes {
         let num_hashes = rng.gen_range(0, MAX_SNAPSHOT_HASHES) + 1;
         let hashes = std::iter::repeat_with(|| {
             let slot = 47825632 + rng.gen_range(0, 512);
-            let hash = solana_sdk::hash::new_rand(rng);
+            let hash = sdk::hash::new_rand(rng);
             (slot, hash)
         })
         .take(num_hashes)

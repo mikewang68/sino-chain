@@ -4,7 +4,7 @@ use {
     },
     bincode::deserialize,
     serde_json::json,
-    solana_sdk::{
+    sdk::{
         instruction::CompiledInstruction, pubkey::Pubkey, system_instruction::SystemInstruction,
     },
 };
@@ -210,7 +210,7 @@ fn check_num_system_accounts(accounts: &[u8], num: usize) -> Result<(), ParseIns
 mod test {
     use {
         super::*,
-        solana_sdk::{message::Message, pubkey::Pubkey, system_instruction},
+        sdk::{message::Message, pubkey::Pubkey, system_instruction},
     };
 
     #[test]
@@ -218,7 +218,7 @@ mod test {
     fn test_parse_system_instruction() {
         let mut keys: Vec<Pubkey> = vec![];
         for _ in 0..6 {
-            keys.push(solana_sdk::pubkey::new_rand());
+            keys.push(sdk::pubkey::new_rand());
         }
 
         let lamports = 55;
@@ -393,7 +393,7 @@ mod test {
     fn test_parse_system_instruction_nonce() {
         let mut keys: Vec<Pubkey> = vec![];
         for _ in 0..5 {
-            keys.push(solana_sdk::pubkey::new_rand());
+            keys.push(sdk::pubkey::new_rand());
         }
 
         let instruction = system_instruction::advance_nonce_account(&keys[1], &keys[0]);

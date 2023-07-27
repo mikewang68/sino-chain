@@ -228,3 +228,103 @@ impl Default for BlockHashEvm {
     }
 }
 
+#[cfg(test)]
+mod tests {
+    #[allow(deprecated)]
+    use sdk::sysvar::recent_blockhashes::IterItem;
+    use {
+        super::*,
+        bincode::serialize,
+        evm_state::H256,
+        sdk::{clock::MAX_RECENT_BLOCKHASHES, hash::hash},
+    };
+
+    #[test]
+    fn test_register_hash() {
+        let last_hash = Hash::default();
+        let mut hash_queue = BlockhashQueue::new(100);
+        assert!(!hash_queue.check_hash(&last_hash));
+        hash_queue.register_hash(&last_hash, 0);
+        assert!(hash_queue.check_hash(&last_hash));
+        assert_eq!(hash_queue.hash_height(), 1);
+    }
+
+    #[test]
+    fn test_reject_old_last_hash() {
+        let mut hash_queue = BlockhashQueue::new(100);
+        let last_hash = hash(&serialize(&0).unwrap());
+        for i in 0..102 {
+            let last_hash = hash(&serialize(&i).unwrap());
+            hash_queue.register_hash(&last_hash, 0);
+        }
+        // Assert we're no longer able to use the oldest hash.
+        assert!(!hash_queue.check_hash(&last_hash));
+        assert_eq!(None, hash_queue.check_hash_age(&last_hash, 0));
+
+        // Assert we are not able to use the oldest remaining hash.
+        let last_valid_hash = hash(&serialize(&1).unwrap());
+        assert!(hash_queue.check_hash(&last_valid_hash));
+        assert_eq!(Some(false), hash_queue.check_hash_age(&last_valid_hash, 0));
+    }
+
+    /// test that when max age is 0, that a valid last_hash still passes the age check
+    #[test]
+    fn test_queue_init_blockhash() {
+        let last_hash = Hash::default();
+        let mut hash_queue = BlockhashQueue::new(100);
+        hash_queue.register_hash(&last_hash, 0);
+        assert_eq!(last_hash, hash_queue.last_hash());
+        assert_eq!(Some(true), hash_queue.check_hash_age(&last_hash, 0));
+    }
+
+    #[test]
+    fn test_get_recent_blockhashes() {
+        let mut blockhash_queue = BlockhashQueue::new(MAX_RECENT_BLOCKHASHES);
+        #[allow(deprecated)]
+        let recent_blockhashes = blockhash_queue.get_recent_blockhashes();
+        // Sanity-check an empty BlockhashQueue
+        assert_eq!(recent_blockhashes.count(), 0);
+        for i in 0..MAX_RECENT_BLOCKHASHES {
+            let hash = hash(&serialize(&i).unwrap());
+            blockhash_queue.register_hash(&hash, 0);
+        }
+        #[allow(deprecated)]
+        let recent_blockhashes = blockhash_queue.get_recent_blockhashes();
+        // Verify that the returned hashes are most recent
+        #[allow(deprecated)]
+        for IterItem(_slot, hash, _lamports_per_signature) in recent_blockhashes {
+            assert_eq!(
+                Some(true),
+                blockhash_queue.check_hash_age(hash, MAX_RECENT_BLOCKHASHES)
+            );
+        }
+    }
+
+    #[test]
+    fn test_evm_blockhaheshes() {
+        let mut blockhash_queue = BlockHashEvm::new();
+        assert_eq!(
+            blockhash_queue.get_hashes(),
+            &[H256::zero(); MAX_EVM_BLOCKHASHES]
+        );
+        let hash1 = H256::repeat_byte(1);
+        blockhash_queue.insert_hash(hash1);
+        for hash in &blockhash_queue.get_hashes()[..MAX_EVM_BLOCKHASHES - 1] {
+            assert_eq!(*hash, H256::zero())
+        }
+        assert_eq!(blockhash_queue.get_hashes()[MAX_EVM_BLOCKHASHES - 1], hash1);
+
+        for i in 0..MAX_EVM_BLOCKHASHES {
+            let hash1 = H256::repeat_byte(i as u8);
+            blockhash_queue.insert_hash(hash1)
+        }
+
+        for (i, hash) in blockhash_queue.get_hashes()[..MAX_EVM_BLOCKHASHES]
+            .iter()
+            .enumerate()
+        {
+            let hash1 = H256::repeat_byte(i as u8);
+            assert_eq!(*hash, hash1)
+        }
+    }
+}

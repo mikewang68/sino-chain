@@ -4,7 +4,7 @@ use {
     },
     bincode::deserialize,
     serde_json::{json, Map},
-    solana_sdk::{
+    sdk::{
         instruction::CompiledInstruction, pubkey::Pubkey, stake::instruction::StakeInstruction,
     },
 };
@@ -279,7 +279,7 @@ fn check_num_stake_accounts(accounts: &[u8], num: usize) -> Result<(), ParseInst
 mod test {
     use {
         super::*,
-        solana_sdk::{
+        sdk::{
             message::Message,
             pubkey::Pubkey,
             stake::{

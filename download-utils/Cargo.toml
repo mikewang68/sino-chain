@@ -1,0 +1,25 @@
+[package]
+name = "download-utils"
+version = "1.9.29"
+description = "Download Utils"
+authors = [""]
+repository = ""
+license = "Apache-2.0"
+homepage = ""
+documentation = ""
+edition = "2021"
+
+[dependencies]
+console = "0.15.0"
+indicatif = "0.16.2"
+log = "0.4.14"
+reqwest = { version = "0.11.6", default-features = false, features = ["blocking", "rustls-tls", "json"] }
+sdk = { path = "../sdk", version = "=1.9.29" }
+runtime = { path = "../runtime", version = "=1.9.29" }
+
+[lib]
+crate-type = ["lib"]
+name = "download_utils"
+
+[package.metadata.docs.rs]
+targets = ["x86_64-unknown-linux-gnu"]

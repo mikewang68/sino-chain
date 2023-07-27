@@ -4,8 +4,8 @@ use crate::parse_instruction::{
 use bincode::deserialize;
 use evm_rpc::RPCTransaction;
 use serde_json::json;
-use solana_evm_loader_program::instructions::{EvmBigTransaction, EvmInstruction, ExecuteTransaction};
-use solana_sdk::{instruction::CompiledInstruction, pubkey::Pubkey};
+use evm_loader_program::instructions::{EvmBigTransaction, EvmInstruction, ExecuteTransaction};
+use sdk::{instruction::CompiledInstruction, pubkey::Pubkey};
 
 pub fn parse_evm(
     instruction: &CompiledInstruction,
@@ -30,14 +30,14 @@ pub fn parse_evm(
             info: Default::default(),
         }),
         EvmInstruction::SwapNativeToEther {
-            lamports,
+            wens,
             evm_address,
         } => {
             check_num_stake_accounts(&instruction.accounts, 2)?;
             let info = json!({
                 "fromNativeAccount": account_keys[instruction.accounts[1] as usize].to_string(),
                 "toEvmAccount": format!("{:?}", evm_address),
-                "lamports": lamports,
+                "lamports": wens,
             });
             Ok(ParsedInstructionEnum {
                 instruction_type: "swapNativeToEvm".to_string(),

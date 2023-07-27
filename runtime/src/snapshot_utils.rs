@@ -27,8 +27,8 @@ use {
     log::*,
     rayon::prelude::*,
     regex::Regex,
-   measure::measure::Measure,
-   sdk::{clock::Slot, genesis_config::GenesisConfig, hash::Hash, pubkey::Pubkey},
+    measure::measure::Measure,
+    sdk::{clock::Slot, genesis_config::GenesisConfig, hash::Hash, pubkey::Pubkey},
     std::{
         cmp::{max, Ordering},
         collections::HashSet,
@@ -2030,7 +2030,7 @@ mod tests {
         crate::accounts_db::ACCOUNTS_DB_CONFIG_FOR_TESTING,
         assert_matches::assert_matches,
         bincode::{deserialize_from, serialize_into},
-       sdk::{
+        sdk::{
             genesis_config::create_genesis_config,
             signature::{Keypair, Signer},
             system_transaction,
@@ -2259,7 +2259,7 @@ mod tests {
 
     #[test]
     fn test_parse_incremental_snapshot_archive_filename() {
-       sino_logger::setup();
+        sino_logger::setup();
         assert_eq!(
             parse_incremental_snapshot_archive_filename(&format!(
                 "incremental-snapshot-42-123-{}.tar.bz2",

@@ -2,10 +2,10 @@
 name = "account-decoder"
 version = "1.9.29"
 description = "account decoder"
-authors = ["Solana Maintainers <maintainers@solana.foundation>"]
-repository = "https://github.com/solana-labs/solana"
-homepage = "https://solana.com/"
-documentation = "https://docs.rs/solana-account-decoder"
+authors = [""]
+repository = ""
+homepage = ""
+documentation = ""
 license = "Apache-2.0"
 edition = "2021"
 
@@ -26,8 +26,8 @@ spl-token = { version = "=3.2.0", features = ["no-entrypoint"] }
 thiserror = "1.0"
 zstd = "0.9.0"
 
-#velas-account-program = { path = "../programs/velas-account-program" }
-#velas-relying-party-program = { path = "../programs/velas-relying-party-program" }
+account-program = { path = "../programs/account-program" }
+relying-party-program = { path = "../programs/relying-party-program" }
 
 
 [package.metadata.docs.rs]

@@ -1,0 +1,19 @@
+[package]
+authors = [""]
+edition = "2021"
+name = "geyser-plugin-interface"
+description = "Geyser plugin interface."
+version = "1.9.29"
+repository = ""
+license = "Apache-2.0"
+homepage = ""
+documentation = "https://docs.rs/solana-geyser-plugin-interface"
+
+[dependencies]
+log = "0.4.11"
+thiserror = "1.0.30"
+sdk = { path = "../sdk", version = "=1.9.29" }
+transaction-status = { path = "../transaction-status", version = "=1.9.29" }
+
+[package.metadata.docs.rs]
+targets = ["x86_64-unknown-linux-gnu"]

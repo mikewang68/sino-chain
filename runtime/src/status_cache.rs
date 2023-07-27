@@ -292,3 +292,251 @@ impl<T: Serialize + Clone> StatusCache<T> {
         hash_entry.push((key_slice, res))
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use {
+        super::*,
+        sdk::{hash::hash, signature::Signature},
+    };
+
+    type BankStatusCache = StatusCache<()>;
+
+    #[test]
+    fn test_empty_has_no_sigs() {
+        let sig = Signature::default();
+        let blockhash = hash(Hash::default().as_ref());
+        let status_cache = BankStatusCache::default();
+        assert_eq!(
+            status_cache.get_status(&sig, &blockhash, &Ancestors::default()),
+            None
+        );
+        assert_eq!(
+            status_cache.get_status_any_blockhash(&sig, &Ancestors::default()),
+            None
+        );
+    }
+
+    #[test]
+    fn test_find_sig_with_ancestor_fork() {
+        let sig = Signature::default();
+        let mut status_cache = BankStatusCache::default();
+        let blockhash = hash(Hash::default().as_ref());
+        let ancestors = vec![(0, 1)].into_iter().collect();
+        status_cache.insert(&blockhash, &sig, 0, ());
+        assert_eq!(
+            status_cache.get_status(&sig, &blockhash, &ancestors),
+            Some((0, ()))
+        );
+        assert_eq!(
+            status_cache.get_status_any_blockhash(&sig, &ancestors),
+            Some((0, ()))
+        );
+    }
+
+    #[test]
+    fn test_find_sig_without_ancestor_fork() {
+        let sig = Signature::default();
+        let mut status_cache = BankStatusCache::default();
+        let blockhash = hash(Hash::default().as_ref());
+        let ancestors = Ancestors::default();
+        status_cache.insert(&blockhash, &sig, 1, ());
+        assert_eq!(status_cache.get_status(&sig, &blockhash, &ancestors), None);
+        assert_eq!(
+            status_cache.get_status_any_blockhash(&sig, &ancestors),
+            None
+        );
+    }
+
+    #[test]
+    fn test_find_sig_with_root_ancestor_fork() {
+        let sig = Signature::default();
+        let mut status_cache = BankStatusCache::default();
+        let blockhash = hash(Hash::default().as_ref());
+        let ancestors = Ancestors::default();
+        status_cache.insert(&blockhash, &sig, 0, ());
+        status_cache.add_root(0);
+        assert_eq!(
+            status_cache.get_status(&sig, &blockhash, &ancestors),
+            Some((0, ()))
+        );
+    }
+
+    #[test]
+    fn test_insert_picks_latest_blockhash_fork() {
+        let sig = Signature::default();
+        let mut status_cache = BankStatusCache::default();
+        let blockhash = hash(Hash::default().as_ref());
+        let ancestors = vec![(0, 0)].into_iter().collect();
+        status_cache.insert(&blockhash, &sig, 0, ());
+        status_cache.insert(&blockhash, &sig, 1, ());
+        for i in 0..(MAX_CACHE_ENTRIES + 1) {
+            status_cache.add_root(i as u64);
+        }
+        assert!(status_cache
+            .get_status(&sig, &blockhash, &ancestors)
+            .is_some());
+    }
+
+    #[test]
+    fn test_root_expires() {
+        let sig = Signature::default();
+        let mut status_cache = BankStatusCache::default();
+        let blockhash = hash(Hash::default().as_ref());
+        let ancestors = Ancestors::default();
+        status_cache.insert(&blockhash, &sig, 0, ());
+        for i in 0..(MAX_CACHE_ENTRIES + 1) {
+            status_cache.add_root(i as u64);
+        }
+        assert_eq!(status_cache.get_status(&sig, &blockhash, &ancestors), None);
+    }
+
+    #[test]
+    fn test_clear_signatures_sigs_are_gone() {
+        let sig = Signature::default();
+        let mut status_cache = BankStatusCache::default();
+        let blockhash = hash(Hash::default().as_ref());
+        let ancestors = Ancestors::default();
+        status_cache.insert(&blockhash, &sig, 0, ());
+        status_cache.add_root(0);
+        status_cache.clear();
+        assert_eq!(status_cache.get_status(&sig, &blockhash, &ancestors), None);
+    }
+
+    #[test]
+    fn test_clear_signatures_insert_works() {
+        let sig = Signature::default();
+        let mut status_cache = BankStatusCache::default();
+        let blockhash = hash(Hash::default().as_ref());
+        let ancestors = Ancestors::default();
+        status_cache.add_root(0);
+        status_cache.clear();
+        status_cache.insert(&blockhash, &sig, 0, ());
+        assert!(status_cache
+            .get_status(&sig, &blockhash, &ancestors)
+            .is_some());
+    }
+
+    #[test]
+    fn test_signatures_slice() {
+        let sig = Signature::default();
+        let mut status_cache = BankStatusCache::default();
+        let blockhash = hash(Hash::default().as_ref());
+        status_cache.clear();
+        status_cache.insert(&blockhash, &sig, 0, ());
+        let (_, index, sig_map) = status_cache.cache.get(&blockhash).unwrap();
+        let sig_slice: &[u8; CACHED_KEY_SIZE] =
+            arrayref::array_ref![sig.as_ref(), *index, CACHED_KEY_SIZE];
+        assert!(sig_map.get(sig_slice).is_some());
+    }
+
+    #[test]
+    fn test_slot_deltas() {
+        let sig = Signature::default();
+        let mut status_cache = BankStatusCache::default();
+        let blockhash = hash(Hash::default().as_ref());
+        status_cache.clear();
+        status_cache.insert(&blockhash, &sig, 0, ());
+        let slot_deltas = status_cache.slot_deltas(&[0]);
+        let cache = StatusCache::from_slot_deltas(&slot_deltas);
+        assert_eq!(cache, status_cache);
+        let slot_deltas = cache.slot_deltas(&[0]);
+        let cache = StatusCache::from_slot_deltas(&slot_deltas);
+        assert_eq!(cache, status_cache);
+    }
+
+    #[test]
+    fn test_roots_deltas() {
+        let sig = Signature::default();
+        let mut status_cache = BankStatusCache::default();
+        let blockhash = hash(Hash::default().as_ref());
+        let blockhash2 = hash(blockhash.as_ref());
+        status_cache.insert(&blockhash, &sig, 0, ());
+        status_cache.insert(&blockhash, &sig, 1, ());
+        status_cache.insert(&blockhash2, &sig, 1, ());
+        for i in 0..(MAX_CACHE_ENTRIES + 1) {
+            status_cache.add_root(i as u64);
+        }
+        let slots: Vec<_> = (0_u64..MAX_CACHE_ENTRIES as u64 + 1).collect();
+        assert_eq!(status_cache.slot_deltas.len(), 1);
+        assert!(status_cache.slot_deltas.get(&1).is_some());
+        let slot_deltas = status_cache.slot_deltas(&slots);
+        let cache = StatusCache::from_slot_deltas(&slot_deltas);
+        assert_eq!(cache, status_cache);
+    }
+
+    #[test]
+    #[allow(clippy::assertions_on_constants)]
+    fn test_age_sanity() {
+        assert!(MAX_CACHE_ENTRIES <= MAX_RECENT_BLOCKHASHES);
+    }
+
+    #[test]
+    fn test_clear_slot_signatures() {
+        let sig = Signature::default();
+        let mut status_cache = BankStatusCache::default();
+        let blockhash = hash(Hash::default().as_ref());
+        let blockhash2 = hash(blockhash.as_ref());
+        status_cache.insert(&blockhash, &sig, 0, ());
+        status_cache.insert(&blockhash, &sig, 1, ());
+        status_cache.insert(&blockhash2, &sig, 1, ());
+
+        let mut ancestors0 = Ancestors::default();
+        ancestors0.insert(0, 0);
+        let mut ancestors1 = Ancestors::default();
+        ancestors1.insert(1, 0);
+
+        // Clear slot 0 related data
+        assert!(status_cache
+            .get_status(&sig, &blockhash, &ancestors0)
+            .is_some());
+        status_cache.clear_slot_entries(0);
+        assert!(status_cache
+            .get_status(&sig, &blockhash, &ancestors0)
+            .is_none());
+        assert!(status_cache
+            .get_status(&sig, &blockhash, &ancestors1)
+            .is_some());
+        assert!(status_cache
+            .get_status(&sig, &blockhash2, &ancestors1)
+            .is_some());
+
+        // Check that the slot delta for slot 0 is gone, but slot 1 still
+        // exists
+        assert!(status_cache.slot_deltas.get(&0).is_none());
+        assert!(status_cache.slot_deltas.get(&1).is_some());
+
+        // Clear slot 1 related data
+        status_cache.clear_slot_entries(1);
+        assert!(status_cache.slot_deltas.is_empty());
+        assert!(status_cache
+            .get_status(&sig, &blockhash, &ancestors1)
+            .is_none());
+        assert!(status_cache
+            .get_status(&sig, &blockhash2, &ancestors1)
+            .is_none());
+        assert!(status_cache.cache.is_empty());
+    }
+
+    // Status cache uses a random key offset for each blockhash. Ensure that shorter
+    // keys can still be used if the offset if greater than the key length.
+    #[test]
+    fn test_different_sized_keys() {
+        let mut status_cache = BankStatusCache::default();
+        let ancestors = vec![(0, 0)].into_iter().collect();
+        let blockhash = Hash::default();
+        for _ in 0..100 {
+            let blockhash = hash(blockhash.as_ref());
+            let sig_key = Signature::default();
+            let hash_key = Hash::new_unique();
+            status_cache.insert(&blockhash, &sig_key, 0, ());
+            status_cache.insert(&blockhash, &hash_key, 0, ());
+            assert!(status_cache
+                .get_status(&sig_key, &blockhash, &ancestors)
+                .is_some());
+            assert!(status_cache
+                .get_status(&hash_key, &blockhash, &ancestors)
+                .is_some());
+        }
+    }
+}

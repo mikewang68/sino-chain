@@ -34,4 +34,4 @@ impl From<&AccountStorageEntry> for SerializableAccountStorageEntry {
 }
 
 #[cfg(RUSTC_WITH_SPECIALIZATION)]
-impl solana_frozen_abi::abi_example::IgnoreAsHelper for SerializableAccountStorageEntry {}
+impl frozen_abi::abi_example::IgnoreAsHelper for SerializableAccountStorageEntry {}

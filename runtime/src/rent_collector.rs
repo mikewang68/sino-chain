@@ -31,20 +31,25 @@ impl Default for RentCollector {
 }
 
 impl RentCollector {
-     /// Performs easy checks to see if rent collection can be skipped
-     fn can_skip_rent_collection(
-        &self,
-        address: &Pubkey,
-        account: &mut AccountSharedData,
-        rent_for_sysvars: bool,
-        filler_account_suffix: Option<&Pubkey>,
-    ) -> bool {
-        !self.should_collect_rent(address, account, rent_for_sysvars)
-            || account.rent_epoch() > self.epoch
-            || crate::accounts_db::AccountsDb::is_filler_account_helper(
-                address,
-                filler_account_suffix,
-            )
+    pub fn new(
+        epoch: Epoch,
+        epoch_schedule: &EpochSchedule,
+        slots_per_year: f64,
+        rent: &Rent,
+    ) -> Self {
+        Self {
+            epoch,
+            epoch_schedule: *epoch_schedule,
+            slots_per_year,
+            rent: *rent,
+        }
+    }
+
+    pub fn clone_with_epoch(&self, epoch: Epoch) -> Self {
+        Self {
+            epoch,
+            ..self.clone()
+        }
     }
 
     /// true if it is easy to determine this account should consider having rent collected from it
@@ -125,27 +130,33 @@ impl RentCollector {
         }
     }
 
-    pub fn clone_with_epoch(&self, epoch: Epoch) -> Self {
-        Self {
-            epoch,
-            ..self.clone()
-        }
+    #[must_use = "add to Bank::collected_rent"]
+    pub fn collect_from_created_account(
+        &self,
+        address: &Pubkey,
+        account: &mut AccountSharedData,
+        rent_for_sysvars: bool,
+    ) -> CollectedInfo {
+        // initialize rent_epoch as created at this epoch
+        account.set_rent_epoch(self.epoch);
+        self.collect_from_existing_account(address, account, rent_for_sysvars, None)
     }
 
-    pub fn new(
-        epoch: Epoch,
-        epoch_schedule: &EpochSchedule,
-        slots_per_year: f64,
-        rent: &Rent,
-    ) -> Self {
-        Self {
-            epoch,
-            epoch_schedule: *epoch_schedule,
-            slots_per_year,
-            rent: *rent,
-        }
+    /// Performs easy checks to see if rent collection can be skipped
+    fn can_skip_rent_collection(
+        &self,
+        address: &Pubkey,
+        account: &mut AccountSharedData,
+        rent_for_sysvars: bool,
+        filler_account_suffix: Option<&Pubkey>,
+    ) -> bool {
+        !self.should_collect_rent(address, account, rent_for_sysvars)
+            || account.rent_epoch() > self.epoch
+            || crate::accounts_db::AccountsDb::is_filler_account_helper(
+                address,
+                filler_account_suffix,
+            )
     }
-
 }
 
 /// Information computed during rent collection
@@ -174,3 +185,146 @@ impl std::ops::AddAssign for CollectedInfo {
     }
 }
 
+#[cfg(test)]
+mod tests {
+    use {super::*, sdk::account::Account};
+
+    #[test]
+    fn test_collect_from_account_created_and_existing() {
+        let old_lamports = 1000;
+        let old_epoch = 1;
+        let new_epoch = 3;
+
+        let (mut created_account, mut existing_account) = {
+            let account = AccountSharedData::from(Account {
+                lamports: old_lamports,
+                rent_epoch: old_epoch,
+                ..Account::default()
+            });
+
+            (account.clone(), account)
+        };
+
+        let rent_collector = RentCollector::default().clone_with_epoch(new_epoch);
+
+        // collect rent on a newly-created account
+        let collected = rent_collector.collect_from_created_account(
+            &sdk::pubkey::new_rand(),
+            &mut created_account,
+            true,
+        );
+        assert!(created_account.wens() < old_lamports);
+        assert_eq!(
+            created_account.wens() + collected.rent_amount,
+            old_lamports
+        );
+        assert_ne!(created_account.rent_epoch(), old_epoch);
+        assert_eq!(collected.account_data_len_reclaimed, 0);
+
+        // collect rent on a already-existing account
+        let collected = rent_collector.collect_from_existing_account(
+            &sdk::pubkey::new_rand(),
+            &mut existing_account,
+            true,
+            None,
+        );
+        assert!(existing_account.wens() < old_lamports);
+        assert_eq!(
+            existing_account.wens() + collected.rent_amount,
+            old_lamports
+        );
+        assert_ne!(existing_account.rent_epoch(), old_epoch);
+        assert_eq!(collected.account_data_len_reclaimed, 0);
+
+        // newly created account should be collected for less rent; thus more remaining balance
+        assert!(created_account.wens() > existing_account.wens());
+        assert_eq!(created_account.rent_epoch(), existing_account.rent_epoch());
+    }
+
+    #[test]
+    fn test_rent_exempt_temporal_escape() {
+        let mut account = AccountSharedData::default();
+        let epoch = 3;
+        let huge_lamports = 123_456_789_012;
+        let tiny_lamports = 789_012;
+        let pubkey = sdk::pubkey::new_rand();
+
+        account.set_wens(huge_lamports);
+        assert_eq!(account.rent_epoch(), 0);
+
+        // create a tested rent collector
+        let rent_collector = RentCollector::default().clone_with_epoch(epoch);
+
+        // first mark account as being collected while being rent-exempt
+        let collected =
+            rent_collector.collect_from_existing_account(&pubkey, &mut account, true, None);
+        assert_eq!(account.wens(), huge_lamports);
+        assert_eq!(collected, CollectedInfo::default());
+
+        // decrease the balance not to be rent-exempt
+        account.set_wens(tiny_lamports);
+
+        // ... and trigger another rent collection on the same epoch and check that rent is working
+        let collected =
+            rent_collector.collect_from_existing_account(&pubkey, &mut account, true, None);
+        assert_eq!(account.wens(), tiny_lamports - collected.rent_amount);
+        assert_ne!(collected, CollectedInfo::default());
+    }
+
+    #[test]
+    fn test_rent_exempt_sysvar() {
+        let tiny_lamports = 1;
+        let mut account = AccountSharedData::default();
+        account.set_owner(sysvar::id());
+        account.set_wens(tiny_lamports);
+
+        let pubkey = sdk::pubkey::new_rand();
+
+        assert_eq!(account.rent_epoch(), 0);
+
+        let epoch = 3;
+        let rent_collector = RentCollector::default().clone_with_epoch(epoch);
+
+        // old behavior: sysvars are special-cased
+        let collected =
+            rent_collector.collect_from_existing_account(&pubkey, &mut account, false, None);
+        assert_eq!(account.wens(), tiny_lamports);
+        assert_eq!(collected, CollectedInfo::default());
+
+        // new behavior: sysvars are NOT special-cased
+        let collected =
+            rent_collector.collect_from_existing_account(&pubkey, &mut account, true, None);
+        assert_eq!(account.wens(), 0);
+        assert_eq!(collected.rent_amount, 1);
+    }
+
+    /// Ensure that when an account is "rent collected" away, its data len is returned.
+    #[test]
+    fn test_collect_cleans_up_account() {
+        sino_logger::setup();
+        let account_lamports = 1; // must be *below* rent amount
+        let account_data_len = 567;
+        let account_rent_epoch = 11;
+        let mut account = AccountSharedData::from(Account {
+            lamports: account_lamports, // <-- must be below rent-exempt amount
+            data: vec![u8::default(); account_data_len],
+            rent_epoch: account_rent_epoch,
+            ..Account::default()
+        });
+        let rent_collector = RentCollector::default().clone_with_epoch(account_rent_epoch + 2);
+
+        let collected = rent_collector.collect_from_existing_account(
+            &Pubkey::new_unique(),
+            &mut account,
+            true,
+            None,
+        );
+
+        assert_eq!(collected.rent_amount, account_lamports);
+        assert_eq!(
+            collected.account_data_len_reclaimed,
+            account_data_len as u64
+        );
+        assert_eq!(account, AccountSharedData::default());
+    }
+}

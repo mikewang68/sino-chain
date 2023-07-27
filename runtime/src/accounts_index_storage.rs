@@ -1,8 +1,6 @@
 use {
     crate::{
-        accounts_index::{
-            AccountsIndexConfig, 
-            IndexValue},
+        accounts_index::{AccountsIndexConfig, IndexValue},
         bucket_map_holder::BucketMapHolder,
         in_mem_accounts_index::InMemAccountsIndex,
         waitable_condvar::WaitableCondvar,

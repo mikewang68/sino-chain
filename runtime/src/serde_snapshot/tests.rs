@@ -42,18 +42,18 @@ fn copy_append_vecs<P: AsRef<Path>>(
     Ok(unpacked_append_vec_map)
 }
 
-// fn check_accounts(accounts: &Accounts, pubkeys: &[Pubkey], num: usize) {
-//     for _ in 1..num {
-//         let idx = thread_rng().gen_range(0, num - 1);
-//         let ancestors = vec![(0, 0)].into_iter().collect();
-//         let account = accounts.load_without_fixed_root(&ancestors, &pubkeys[idx]);
-//         let account1 = Some((
-//             AccountSharedData::new((idx + 1) as u64, 0, AccountSharedData::default().owner()),
-//             0,
-//         ));
-//         assert_eq!(account, account1);
-//     }
-// }
+fn check_accounts(accounts: &Accounts, pubkeys: &[Pubkey], num: usize) {
+    for _ in 1..num {
+        let idx = thread_rng().gen_range(0, num - 1);
+        let ancestors = vec![(0, 0)].into_iter().collect();
+        let account = accounts.load_without_fixed_root(&ancestors, &pubkeys[idx]);
+        let account1 = Some((
+            AccountSharedData::new((idx + 1) as u64, 0, AccountSharedData::default().owner()),
+            0,
+        ));
+        assert_eq!(account, account1);
+    }
+}
 
 fn context_accountsdb_from_stream<'a, C, R>(
     stream: &mut BufReader<R>,
@@ -132,146 +132,146 @@ where
     }
 }
 
-// fn test_accounts_serialize_style(evm_version: EvmStateVersion) {
-//     sino_logger::setup();
-//     let (_accounts_dir, paths) = get_temp_accounts_paths(4).unwrap();
-//     let accounts = Accounts::new_with_config_for_tests(
-//         paths,
-//         &ClusterType::Development,
-//         AccountSecondaryIndexes::default(),
-//         false,
-//         AccountShrinkThreshold::default(),
-//     );
+fn test_accounts_serialize_style(evm_version: EvmStateVersion) {
+    sino_logger::setup();
+    let (_accounts_dir, paths) = get_temp_accounts_paths(4).unwrap();
+    let accounts = Accounts::new_with_config_for_tests(
+        paths,
+        &ClusterType::Development,
+        AccountSecondaryIndexes::default(),
+        false,
+        AccountShrinkThreshold::default(),
+    );
 
-//     let mut pubkeys: Vec<Pubkey> = vec![];
-//     create_test_accounts(&accounts, &mut pubkeys, 100, 0);
-//     check_accounts(&accounts, &pubkeys, 100);
-//     accounts.add_root(0);
+    let mut pubkeys: Vec<Pubkey> = vec![];
+    create_test_accounts(&accounts, &mut pubkeys, 100, 0);
+    check_accounts(&accounts, &pubkeys, 100);
+    accounts.add_root(0);
 
-//     let mut writer = Cursor::new(vec![]);
-//     accountsdb_to_stream(
-//         evm_version,
-//         &mut writer,
-//         &*accounts.accounts_db,
-//         0,
-//         &accounts.accounts_db.get_snapshot_storages(0, None, None).0,
-//     )
-//     .unwrap();
+    let mut writer = Cursor::new(vec![]);
+    accountsdb_to_stream(
+        evm_version,
+        &mut writer,
+        &*accounts.accounts_db,
+        0,
+        &accounts.accounts_db.get_snapshot_storages(0, None, None).0,
+    )
+    .unwrap();
 
-//     let copied_accounts = TempDir::new().unwrap();
+    let copied_accounts = TempDir::new().unwrap();
 
-//     // Simulate obtaining a copy of the AppendVecs from a tarball
-//     let unpacked_append_vec_map =
-//         copy_append_vecs(&accounts.accounts_db, copied_accounts.path()).unwrap();
+    // Simulate obtaining a copy of the AppendVecs from a tarball
+    let unpacked_append_vec_map =
+        copy_append_vecs(&accounts.accounts_db, copied_accounts.path()).unwrap();
 
-//     let buf = writer.into_inner();
-//     let mut reader = BufReader::new(&buf[..]);
-//     let (_accounts_dir, daccounts_paths) = get_temp_accounts_paths(2).unwrap();
-//     let daccounts = Accounts::new_empty(
-//         accountsdb_from_stream(
-//             evm_version,
-//             &mut reader,
-//             &daccounts_paths,
-//             unpacked_append_vec_map,
-//         )
-//         .unwrap(),
-//     );
-//     check_accounts(&daccounts, &pubkeys, 100);
-//     assert_eq!(accounts.bank_hash_at(0), daccounts.bank_hash_at(0));
-// }
+    let buf = writer.into_inner();
+    let mut reader = BufReader::new(&buf[..]);
+    let (_accounts_dir, daccounts_paths) = get_temp_accounts_paths(2).unwrap();
+    let daccounts = Accounts::new_empty(
+        accountsdb_from_stream(
+            evm_version,
+            &mut reader,
+            &daccounts_paths,
+            unpacked_append_vec_map,
+        )
+        .unwrap(),
+    );
+    check_accounts(&daccounts, &pubkeys, 100);
+    assert_eq!(accounts.bank_hash_at(0), daccounts.bank_hash_at(0));
+}
 
-// fn test_bank_serialize_style(evm_version: EvmStateVersion) {
-//     sino_logger::setup();
-//     let (genesis_config, _) = create_genesis_config(500);
-//     let bank0 = Arc::new(Bank::new_for_tests(&genesis_config));
-//     let bank1 = Bank::new_from_parent(&bank0, &Pubkey::default(), 1);
-//     bank0.squash();
+fn test_bank_serialize_style(evm_version: EvmStateVersion) {
+    sino_logger::setup();
+    let (genesis_config, _) = create_genesis_config(500);
+    let bank0 = Arc::new(Bank::new_for_tests(&genesis_config));
+    let bank1 = Bank::new_from_parent(&bank0, &Pubkey::default(), 1);
+    bank0.squash();
 
-//     // Create an account on a non-root fork
-//     let key1 = Keypair::new();
-//     bank1.deposit(&key1.pubkey(), 5).unwrap();
+    // Create an account on a non-root fork
+    let key1 = Keypair::new();
+    bank1.deposit(&key1.pubkey(), 5).unwrap();
 
-//     let bank2 = Bank::new_from_parent(&bank0, &Pubkey::default(), 2);
+    let bank2 = Bank::new_from_parent(&bank0, &Pubkey::default(), 2);
 
-//     // Test new account
-//     let key2 = Keypair::new();
-//     bank2.deposit(&key2.pubkey(), 10).unwrap();
-//     assert_eq!(bank2.get_balance(&key2.pubkey()), 10);
+    // Test new account
+    let key2 = Keypair::new();
+    bank2.deposit(&key2.pubkey(), 10).unwrap();
+    assert_eq!(bank2.get_balance(&key2.pubkey()), 10);
 
-//     let key3 = Keypair::new();
-//     bank2.deposit(&key3.pubkey(), 0).unwrap();
+    let key3 = Keypair::new();
+    bank2.deposit(&key3.pubkey(), 0).unwrap();
 
-//     bank2.freeze();
-//     bank2.squash();
-//     bank2.force_flush_accounts_cache();
+    bank2.freeze();
+    bank2.squash();
+    bank2.force_flush_accounts_cache();
 
-//     let snapshot_storages = bank2.get_snapshot_storages(None);
-//     let mut buf = vec![];
-//     let mut writer = Cursor::new(&mut buf);
-//     crate::serde_snapshot::bank_to_stream(
-//         evm_version,
-//         &mut std::io::BufWriter::new(&mut writer),
-//         &bank2,
-//         &snapshot_storages,
-//     )
-//     .unwrap();
+    let snapshot_storages = bank2.get_snapshot_storages(None);
+    let mut buf = vec![];
+    let mut writer = Cursor::new(&mut buf);
+    crate::serde_snapshot::bank_to_stream(
+        evm_version,
+        &mut std::io::BufWriter::new(&mut writer),
+        &bank2,
+        &snapshot_storages,
+    )
+    .unwrap();
 
-//     let rdr = Cursor::new(&buf[..]);
-//     let mut reader = std::io::BufReader::new(&buf[rdr.position() as usize..]);
+    let rdr = Cursor::new(&buf[..]);
+    let mut reader = std::io::BufReader::new(&buf[rdr.position() as usize..]);
 
-//     // Create a new set of directories for this bank's accounts
-//     let (_accounts_dir, dbank_paths) = get_temp_accounts_paths(4).unwrap();
-//     let ref_sc = StatusCacheRc::default();
-//     ref_sc.status_cache.write().unwrap().add_root(2);
-//     // Create a directory to simulate AppendVecs unpackaged from a snapshot tar
-//     let copied_accounts = TempDir::new().unwrap();
-//     let unpacked_append_vec_map =
-//         copy_append_vecs(&bank2.rc.accounts.accounts_db, copied_accounts.path()).unwrap();
+    // Create a new set of directories for this bank's accounts
+    let (_accounts_dir, dbank_paths) = get_temp_accounts_paths(4).unwrap();
+    let ref_sc = StatusCacheRc::default();
+    ref_sc.status_cache.write().unwrap().add_root(2);
+    // Create a directory to simulate AppendVecs unpackaged from a snapshot tar
+    let copied_accounts = TempDir::new().unwrap();
+    let unpacked_append_vec_map =
+        copy_append_vecs(&bank2.rc.accounts.accounts_db, copied_accounts.path()).unwrap();
 
-//     // Create a directory to simulate evm backup
-//     let evm_copied_backup = TempDir::new().unwrap();
-//     bank2
-//         .evm_state
-//         .read()
-//         .unwrap()
-//         .kvs()
-//         .backup(Some(evm_copied_backup.path().to_path_buf()))
-//         .unwrap();
+    // Create a directory to simulate evm backup
+    let evm_copied_backup = TempDir::new().unwrap();
+    bank2
+        .evm_state
+        .read()
+        .unwrap()
+        .kvs()
+        .backup(Some(evm_copied_backup.path().to_path_buf()))
+        .unwrap();
 
-//     // And dirrectory to store recovered evm state.
-//     let evm_state_path = TempDir::new().unwrap();
+    // And dirrectory to store recovered evm state.
+    let evm_state_path = TempDir::new().unwrap();
 
-//     let mut snapshot_streams = SnapshotStreams {
-//         full_snapshot_stream: &mut reader,
-//         incremental_snapshot_stream: None,
-//     };
-//     let mut dbank = crate::serde_snapshot::bank_from_streams(
-//         evm_state_path.path(),
-//         evm_version,
-//         &mut snapshot_streams,
-//         &dbank_paths,
-//         unpacked_append_vec_map,
-//         &genesis_config,
-//         None,
-//         None,
-//         AccountSecondaryIndexes::default(),
-//         false,
-//         evm_copied_backup.path(),
-//         false, // skip purge verify
-//         None,  // evm archive
-//         None,
-//         AccountShrinkThreshold::default(),
-//         false,
-//         Some(crate::accounts_db::ACCOUNTS_DB_CONFIG_FOR_TESTING),
-//         None,
-//     )
-//     .unwrap();
-//     dbank.src = ref_sc;
-//     assert_eq!(dbank.get_balance(&key1.pubkey()), 0);
-//     assert_eq!(dbank.get_balance(&key2.pubkey()), 10);
-//     assert_eq!(dbank.get_balance(&key3.pubkey()), 0);
-//     assert!(bank2 == dbank);
-// }
+    let mut snapshot_streams = SnapshotStreams {
+        full_snapshot_stream: &mut reader,
+        incremental_snapshot_stream: None,
+    };
+    let mut dbank = crate::serde_snapshot::bank_from_streams(
+        evm_state_path.path(),
+        evm_version,
+        &mut snapshot_streams,
+        &dbank_paths,
+        unpacked_append_vec_map,
+        &genesis_config,
+        None,
+        None,
+        AccountSecondaryIndexes::default(),
+        false,
+        evm_copied_backup.path(),
+        false, // skip purge verify
+        None,  // evm archive
+        None,
+        AccountShrinkThreshold::default(),
+        false,
+        Some(crate::accounts_db::ACCOUNTS_DB_CONFIG_FOR_TESTING),
+        None,
+    )
+    .unwrap();
+    dbank.src = ref_sc;
+    assert_eq!(dbank.get_balance(&key1.pubkey()), 0);
+    assert_eq!(dbank.get_balance(&key2.pubkey()), 10);
+    assert_eq!(dbank.get_balance(&key3.pubkey()), 0);
+    assert!(bank2 == dbank);
+}
 
 pub(crate) fn reconstruct_accounts_db_via_serialization(
     accounts: &AccountsDb,
@@ -313,15 +313,15 @@ pub(crate) fn reconstruct_accounts_db_via_serialization(
     accounts_db
 }
 
-// #[test]
-// fn test_accounts_serialize_newer() {
-//     test_accounts_serialize_style(EvmStateVersion::V1_5_0)
-// }
+#[test]
+fn test_accounts_serialize_newer() {
+    test_accounts_serialize_style(EvmStateVersion::V1_5_0)
+}
 
-// #[test]
-// fn test_bank_serialize_newer() {
-//     test_bank_serialize_style(EvmStateVersion::V1_5_0)
-// }
+#[test]
+fn test_bank_serialize_newer() {
+    test_bank_serialize_style(EvmStateVersion::V1_5_0)
+}
 
 #[cfg(RUSTC_WITH_SPECIALIZATION)]
 mod test_bank_serialize {

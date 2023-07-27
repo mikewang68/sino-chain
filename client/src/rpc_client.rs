@@ -42,11 +42,11 @@ use {
         signature::Signature,
         transaction::{self, uses_durable_nonce, Transaction},
     },
-    solana_transaction_status::{
+    transaction_status::{
         EncodedConfirmedBlock, EncodedConfirmedTransaction, TransactionStatus, UiConfirmedBlock,
         UiTransactionEncoding,
     },
-    solana_vote_program::vote_state::MAX_LOCKOUT_HISTORY,
+    vote_program::vote_state::MAX_LOCKOUT_HISTORY,
     std::{
         cmp::min,
         net::SocketAddr,
@@ -128,14 +128,14 @@ impl RpcClientConfig {
 /// field, so it is common for the value to be accessed with `?.value`, as in
 ///
 /// ```
-/// # use solana_sdk::system_transaction;
+/// # use sdk::system_transaction;
 /// # use solana_client::rpc_client::RpcClient;
 /// # use solana_client::client_error::ClientError;
-/// # use solana_sdk::signature::{Keypair, Signer};
-/// # use solana_sdk::hash::Hash;
+/// # use sdk::signature::{Keypair, Signer};
+/// # use sdk::hash::Hash;
 /// # let rpc_client = RpcClient::new_mock("succeeds".to_string());
 /// # let key = Keypair::new();
-/// # let to = solana_sdk::pubkey::new_rand();
+/// # let to = sdk::pubkey::new_rand();
 /// # let lamports = 50;
 /// # let latest_blockhash = Hash::default();
 /// # let tx = system_transaction::transfer(&key, &to, lamports, latest_blockhash);
@@ -208,7 +208,7 @@ impl RpcClient {
     /// # Examples
     ///
     /// ```
-    /// # use solana_sdk::commitment_config::CommitmentConfig;
+    /// # use sdk::commitment_config::CommitmentConfig;
     /// # use solana_client::rpc_client::RpcClient;
     /// let url = "http://localhost:8899".to_string();
     /// let commitment_config = CommitmentConfig::processed();
@@ -259,7 +259,7 @@ impl RpcClient {
     /// ```
     /// # use std::time::Duration;
     /// # use solana_client::rpc_client::RpcClient;
-    /// # use solana_sdk::commitment_config::CommitmentConfig;
+    /// # use sdk::commitment_config::CommitmentConfig;
     /// let url = "http://localhost::8899".to_string();
     /// let timeout = Duration::from_secs(1);
     /// let commitment_config = CommitmentConfig::processed();
@@ -300,7 +300,7 @@ impl RpcClient {
     /// ```
     /// # use std::time::Duration;
     /// # use solana_client::rpc_client::RpcClient;
-    /// # use solana_sdk::commitment_config::CommitmentConfig;
+    /// # use sdk::commitment_config::CommitmentConfig;
     /// let url = "http://localhost::8899".to_string();
     /// let timeout = Duration::from_secs(1);
     /// let commitment_config = CommitmentConfig::processed();
@@ -419,7 +419,7 @@ impl RpcClient {
     /// ```
     /// # use std::net::SocketAddr;
     /// # use solana_client::rpc_client::RpcClient;
-    /// # use solana_sdk::commitment_config::CommitmentConfig;
+    /// # use sdk::commitment_config::CommitmentConfig;
     /// let addr = SocketAddr::from(([127, 0, 0, 1], 8899));
     /// let commitment_config = CommitmentConfig::processed();
     /// let client = RpcClient::new_socket_with_commitment(
@@ -574,7 +574,7 @@ impl RpcClient {
     /// #     rpc_client::RpcClient,
     /// #     client_error::ClientError,
     /// # };
-    /// # use solana_sdk::{
+    /// # use sdk::{
     /// #     signature::Signer,
     /// #     signature::Signature,
     /// #     signer::keypair::Keypair,
@@ -747,7 +747,7 @@ impl RpcClient {
     /// #     client_error::ClientError,
     /// #     rpc_client::RpcClient,
     /// # };
-    /// # use solana_sdk::{
+    /// # use sdk::{
     /// #     signature::Signer,
     /// #     signature::Signature,
     /// #     signer::keypair::Keypair,
@@ -830,7 +830,7 @@ impl RpcClient {
     /// #     rpc_client::RpcClient,
     /// #     rpc_config::RpcSendTransactionConfig,
     /// # };
-    /// # use solana_sdk::{
+    /// # use sdk::{
     /// #     signature::Signer,
     /// #     signature::Signature,
     /// #     signer::keypair::Keypair,
@@ -965,7 +965,7 @@ impl RpcClient {
     /// #     client_error::ClientError,
     /// #     rpc_client::RpcClient,
     /// # };
-    /// # use solana_sdk::{
+    /// # use sdk::{
     /// #     signature::Signer,
     /// #     signature::Signature,
     /// #     signer::keypair::Keypair,
@@ -1022,7 +1022,7 @@ impl RpcClient {
     /// #     client_error::ClientError,
     /// #     rpc_client::RpcClient,
     /// # };
-    /// # use solana_sdk::{
+    /// # use sdk::{
     /// #     commitment_config::CommitmentConfig,
     /// #     signature::Signer,
     /// #     signature::Signature,
@@ -1198,7 +1198,7 @@ impl RpcClient {
     /// #     rpc_client::RpcClient,
     /// #     rpc_response::RpcSimulateTransactionResult,
     /// # };
-    /// # use solana_sdk::{
+    /// # use sdk::{
     /// #     signature::Signer,
     /// #     signature::Signature,
     /// #     signer::keypair::Keypair,
@@ -1275,7 +1275,7 @@ impl RpcClient {
     /// #     rpc_config::RpcSimulateTransactionConfig,
     /// #     rpc_response::RpcSimulateTransactionResult,
     /// # };
-    /// # use solana_sdk::{
+    /// # use sdk::{
     /// #     signature::Signer,
     /// #     signer::keypair::Keypair,
     /// #     hash::Hash,
@@ -1381,11 +1381,11 @@ impl RpcClient {
     /// and the transaction failed, this method returns `Ok(Some(Err(_)))`,
     /// where the interior error is type [`TransactionError`].
     ///
-    /// [`TransactionError`]: solana_sdk::transaction::TransactionError
+    /// [`TransactionError`]: sdk::transaction::TransactionError
     ///
     /// This function only searches a node's recent history, including all
     /// recent slots, plus up to
-    /// [`MAX_RECENT_BLOCKHASHES`][solana_sdk::clock::MAX_RECENT_BLOCKHASHES]
+    /// [`MAX_RECENT_BLOCKHASHES`][sdk::clock::MAX_RECENT_BLOCKHASHES]
     /// rooted slots. To search the full transaction history use the
     /// [`get_signature_statuse_with_commitment_and_history`][RpcClient::get_signature_status_with_commitment_and_history]
     /// method.
@@ -1403,7 +1403,7 @@ impl RpcClient {
     /// #     rpc_client::RpcClient,
     /// #     client_error::ClientError,
     /// # };
-    /// # use solana_sdk::{
+    /// # use sdk::{
     /// #     signature::Signer,
     /// #     signature::Signature,
     /// #     signer::keypair::Keypair,
@@ -1446,7 +1446,7 @@ impl RpcClient {
     ///
     /// This function only searches a node's recent history, including all
     /// recent slots, plus up to
-    /// [`MAX_RECENT_BLOCKHASHES`][solana_sdk::clock::MAX_RECENT_BLOCKHASHES]
+    /// [`MAX_RECENT_BLOCKHASHES`][sdk::clock::MAX_RECENT_BLOCKHASHES]
     /// rooted slots. To search the full transaction history use the
     /// [`get_signature_statuses_with_history`][RpcClient::get_signature_statuses_with_history]
     /// method.
@@ -1470,7 +1470,7 @@ impl RpcClient {
     /// #     rpc_client::RpcClient,
     /// #     client_error::ClientError,
     /// # };
-    /// # use solana_sdk::{
+    /// # use sdk::{
     /// #     signature::Signer,
     /// #     signature::Signature,
     /// #     signer::keypair::Keypair,
@@ -1548,7 +1548,7 @@ impl RpcClient {
     /// #     rpc_client::RpcClient,
     /// #     client_error::ClientError,
     /// # };
-    /// # use solana_sdk::{
+    /// # use sdk::{
     /// #     signature::Signer,
     /// #     signature::Signature,
     /// #     signer::keypair::Keypair,
@@ -1595,11 +1595,11 @@ impl RpcClient {
     /// and the transaction failed, this method returns `Ok(Some(Err(_)))`,
     /// where the interior error is type [`TransactionError`].
     ///
-    /// [`TransactionError`]: solana_sdk::transaction::TransactionError
+    /// [`TransactionError`]: sdk::transaction::TransactionError
     ///
     /// This function only searches a node's recent history, including all
     /// recent slots, plus up to
-    /// [`MAX_RECENT_BLOCKHASHES`][solana_sdk::clock::MAX_RECENT_BLOCKHASHES]
+    /// [`MAX_RECENT_BLOCKHASHES`][sdk::clock::MAX_RECENT_BLOCKHASHES]
     /// rooted slots. To search the full transaction history use the
     /// [`get_signature_statuse_with_commitment_and_history`][RpcClient::get_signature_status_with_commitment_and_history]
     /// method.
@@ -1617,7 +1617,7 @@ impl RpcClient {
     /// #     rpc_client::RpcClient,
     /// #     client_error::ClientError,
     /// # };
-    /// # use solana_sdk::{
+    /// # use sdk::{
     /// #     commitment_config::CommitmentConfig,
     /// #     signature::Signer,
     /// #     signature::Signature,
@@ -1668,7 +1668,7 @@ impl RpcClient {
     /// and the transaction failed, this method returns `Ok(Some(Err(_)))`,
     /// where the interior error is type [`TransactionError`].
     ///
-    /// [`TransactionError`]: solana_sdk::transaction::TransactionError
+    /// [`TransactionError`]: sdk::transaction::TransactionError
     ///
     /// This method optionally searches a node's full ledger history and (if
     /// implemented) long-term storage.
@@ -1686,7 +1686,7 @@ impl RpcClient {
     /// #     rpc_client::RpcClient,
     /// #     client_error::ClientError,
     /// # };
-    /// # use solana_sdk::{
+    /// # use sdk::{
     /// #     commitment_config::CommitmentConfig,
     /// #     signature::Signer,
     /// #     signature::Signature,
@@ -1769,7 +1769,7 @@ impl RpcClient {
     /// #     rpc_client::RpcClient,
     /// #     client_error::ClientError,
     /// # };
-    /// # use solana_sdk::commitment_config::CommitmentConfig;
+    /// # use sdk::commitment_config::CommitmentConfig;
     /// # let rpc_client = RpcClient::new_mock("succeeds".to_string());
     /// let commitment_config = CommitmentConfig::processed();
     /// let slot = rpc_client.get_slot_with_commitment(commitment_config)?;
@@ -1827,7 +1827,7 @@ impl RpcClient {
     /// #     rpc_client::RpcClient,
     /// #     client_error::ClientError,
     /// # };
-    /// # use solana_sdk::commitment_config::CommitmentConfig;
+    /// # use sdk::commitment_config::CommitmentConfig;
     /// # let rpc_client = RpcClient::new_mock("succeeds".to_string());
     /// let commitment_config = CommitmentConfig::processed();
     /// let block_height = rpc_client.get_block_height_with_commitment(
@@ -1860,7 +1860,7 @@ impl RpcClient {
     /// #     rpc_client::RpcClient,
     /// #     client_error::ClientError,
     /// # };
-    /// # use solana_sdk::slot_history::Slot;
+    /// # use sdk::slot_history::Slot;
     /// # let rpc_client = RpcClient::new_mock("succeeds".to_string());
     /// let start_slot = 1;
     /// let limit = 3;
@@ -1925,7 +1925,7 @@ impl RpcClient {
     /// #     rpc_config::RpcBlockProductionConfig,
     /// #     rpc_config::RpcBlockProductionConfigRange,
     /// # };
-    /// # use solana_sdk::{
+    /// # use sdk::{
     /// #     signature::Signer,
     /// #     signer::keypair::Keypair,
     /// #     commitment_config::CommitmentConfig,
@@ -1976,7 +1976,7 @@ impl RpcClient {
     /// #     client_error::ClientError,
     /// #     rpc_response::StakeActivationState,
     /// # };
-    /// # use solana_sdk::{
+    /// # use sdk::{
     /// #     signer::keypair::Keypair,
     /// #     signature::Signer,
     /// #     pubkey::Pubkey,
@@ -2086,7 +2086,7 @@ impl RpcClient {
     /// #     rpc_client::RpcClient,
     /// #     client_error::ClientError,
     /// # };
-    /// # use solana_sdk::commitment_config::CommitmentConfig;
+    /// # use sdk::commitment_config::CommitmentConfig;
     /// # let rpc_client = RpcClient::new_mock("succeeds".to_string());
     /// let commitment_config = CommitmentConfig::processed();
     /// let supply = rpc_client.supply_with_commitment(
@@ -2122,7 +2122,7 @@ impl RpcClient {
     /// #     rpc_config::RpcLargestAccountsConfig,
     /// #     rpc_config::RpcLargestAccountsFilter,
     /// # };
-    /// # use solana_sdk::commitment_config::CommitmentConfig;
+    /// # use sdk::commitment_config::CommitmentConfig;
     /// # let rpc_client = RpcClient::new_mock("succeeds".to_string());
     /// let commitment_config = CommitmentConfig::processed();
     /// let config = RpcLargestAccountsConfig {
@@ -2188,7 +2188,7 @@ impl RpcClient {
     /// # Examples
     ///
     /// ```
-    /// # use solana_sdk::commitment_config::CommitmentConfig;
+    /// # use sdk::commitment_config::CommitmentConfig;
     /// # use solana_client::{
     /// #     rpc_client::RpcClient,
     /// #     client_error::ClientError,
@@ -2229,7 +2229,7 @@ impl RpcClient {
     /// #     client_error::ClientError,
     /// #     rpc_config::RpcGetVoteAccountsConfig,
     /// # };
-    /// # use solana_sdk::{
+    /// # use sdk::{
     /// #     signer::keypair::Keypair,
     /// #     signature::Signer,
     /// #     commitment_config::CommitmentConfig,
@@ -2547,7 +2547,7 @@ impl RpcClient {
     /// # Examples
     ///
     /// ```
-    /// # use solana_sdk::commitment_config::CommitmentConfig;
+    /// # use sdk::commitment_config::CommitmentConfig;
     /// # use solana_client::{
     /// #     rpc_client::RpcClient,
     /// #     client_error::ClientError,
@@ -2648,7 +2648,7 @@ impl RpcClient {
     /// # Examples
     ///
     /// ```
-    /// # use solana_sdk::commitment_config::CommitmentConfig;
+    /// # use sdk::commitment_config::CommitmentConfig;
     /// # use solana_client::{
     /// #     rpc_client::RpcClient,
     /// #     client_error::ClientError,
@@ -2779,7 +2779,7 @@ impl RpcClient {
     /// #     client_error::ClientError,
     /// #     rpc_client::RpcClient,
     /// # };
-    /// # use solana_sdk::{
+    /// # use sdk::{
     /// #     signature::Signer,
     /// #     signer::keypair::Keypair,
     /// #     system_transaction,
@@ -2828,7 +2828,7 @@ impl RpcClient {
     /// #     rpc_client::RpcClient,
     /// #     rpc_client::GetConfirmedSignaturesForAddress2Config,
     /// # };
-    /// # use solana_sdk::{
+    /// # use sdk::{
     /// #     signature::Signer,
     /// #     signer::keypair::Keypair,
     /// #     system_transaction,
@@ -2936,7 +2936,7 @@ impl RpcClient {
     /// #     client_error::ClientError,
     /// #     rpc_client::RpcClient,
     /// # };
-    /// # use solana_sdk::{
+    /// # use sdk::{
     /// #     signature::Signer,
     /// #     signature::Signature,
     /// #     signer::keypair::Keypair,
@@ -2994,7 +2994,7 @@ impl RpcClient {
     /// #     rpc_client::RpcClient,
     /// #     rpc_config::RpcTransactionConfig,
     /// # };
-    /// # use solana_sdk::{
+    /// # use sdk::{
     /// #     signature::Signer,
     /// #     signature::Signature,
     /// #     signer::keypair::Keypair,
@@ -3142,7 +3142,7 @@ impl RpcClient {
     /// #     client_error::ClientError,
     /// #     rpc_client::RpcClient,
     /// # };
-    /// # use solana_sdk::commitment_config::CommitmentConfig;
+    /// # use sdk::commitment_config::CommitmentConfig;
     /// # let rpc_client = RpcClient::new_mock("succeeds".to_string());
     /// let commitment_config = CommitmentConfig::confirmed();
     /// let epoch_info = rpc_client.get_epoch_info_with_commitment(
@@ -3179,7 +3179,7 @@ impl RpcClient {
     /// #     client_error::ClientError,
     /// #     rpc_client::RpcClient,
     /// # };
-    /// # use solana_sdk::commitment_config::CommitmentConfig;
+    /// # use sdk::commitment_config::CommitmentConfig;
     /// # let rpc_client = RpcClient::new_mock("succeeds".to_string());
     /// # let slot = rpc_client.get_slot()?;
     /// let leader_schedule = rpc_client.get_leader_schedule(
@@ -3209,7 +3209,7 @@ impl RpcClient {
     /// #     client_error::ClientError,
     /// #     rpc_client::RpcClient,
     /// # };
-    /// # use solana_sdk::commitment_config::CommitmentConfig;
+    /// # use sdk::commitment_config::CommitmentConfig;
     /// # let rpc_client = RpcClient::new_mock("succeeds".to_string());
     /// # let slot = rpc_client.get_slot()?;
     /// let commitment_config = CommitmentConfig::processed();
@@ -3249,7 +3249,7 @@ impl RpcClient {
     /// #     rpc_client::RpcClient,
     /// # };
     /// # use solana_client::rpc_config::RpcLeaderScheduleConfig;
-    /// # use solana_sdk::commitment_config::CommitmentConfig;
+    /// # use sdk::commitment_config::CommitmentConfig;
     /// # let rpc_client = RpcClient::new_mock("succeeds".to_string());
     /// # let slot = rpc_client.get_slot()?;
     /// # let validator_pubkey_str = "7AYmEYBBetok8h5L3Eo3vi3bDWnjNnaFbSXfSNYV5ewB".to_string();
@@ -3427,7 +3427,7 @@ impl RpcClient {
     /// #     client_error::ClientError,
     /// #     rpc_client::RpcClient,
     /// # };
-    /// # use solana_sdk::signature::{Keypair, Signer};
+    /// # use sdk::signature::{Keypair, Signer};
     /// # let rpc_client = RpcClient::new_mock("succeeds".to_string());
     /// # let epoch_info = rpc_client.get_epoch_info()?;
     /// # let epoch = epoch_info.epoch;
@@ -3476,7 +3476,7 @@ impl RpcClient {
     /// #     client_error::ClientError,
     /// #     rpc_client::RpcClient,
     /// # };
-    /// # use solana_sdk::signature::{Keypair, Signer};
+    /// # use sdk::signature::{Keypair, Signer};
     /// # let rpc_client = RpcClient::new_mock("succeeds".to_string());
     /// let expected_version = semver::Version::new(0, 6, 0);
     /// let version = rpc_client.get_version()?;
@@ -3546,7 +3546,7 @@ impl RpcClient {
     /// #     rpc_client::{self, RpcClient},
     /// #     client_error::ClientError,
     /// # };
-    /// # use solana_sdk::{
+    /// # use sdk::{
     /// #     signature::Signer,
     /// #     signer::keypair::Keypair,
     /// #     pubkey::Pubkey,
@@ -3585,7 +3585,7 @@ impl RpcClient {
     /// #     rpc_client::{self, RpcClient},
     /// #     client_error::ClientError,
     /// # };
-    /// # use solana_sdk::{
+    /// # use sdk::{
     /// #     signature::Signer,
     /// #     signer::keypair::Keypair,
     /// #     pubkey::Pubkey,
@@ -3710,7 +3710,7 @@ impl RpcClient {
     /// #     rpc_client::RpcClient,
     /// #     client_error::ClientError,
     /// # };
-    /// # use solana_sdk::{
+    /// # use sdk::{
     /// #     signature::Signer,
     /// #     signer::keypair::Keypair,
     /// # };
@@ -3742,7 +3742,7 @@ impl RpcClient {
     /// #     rpc_client::RpcClient,
     /// #     client_error::ClientError,
     /// # };
-    /// # use solana_sdk::{
+    /// # use sdk::{
     /// #     signature::Signer,
     /// #     signer::keypair::Keypair,
     /// #     commitment_config::CommitmentConfig,
@@ -3789,7 +3789,7 @@ impl RpcClient {
     /// #     rpc_config::RpcAccountInfoConfig,
     /// #     client_error::ClientError,
     /// # };
-    /// # use solana_sdk::{
+    /// # use sdk::{
     /// #     signature::Signer,
     /// #     signer::keypair::Keypair,
     /// #     commitment_config::CommitmentConfig,
@@ -3857,7 +3857,7 @@ impl RpcClient {
     /// #     rpc_client::{self, RpcClient},
     /// #     client_error::ClientError,
     /// # };
-    /// # use solana_sdk::{
+    /// # use sdk::{
     /// #     signature::Signer,
     /// #     signer::keypair::Keypair,
     /// #     pubkey::Pubkey,
@@ -3930,7 +3930,7 @@ impl RpcClient {
     /// #     rpc_client::RpcClient,
     /// #     client_error::ClientError,
     /// # };
-    /// # use solana_sdk::{
+    /// # use sdk::{
     /// #     signature::Signer,
     /// #     signer::keypair::Keypair,
     /// # };
@@ -3960,7 +3960,7 @@ impl RpcClient {
     /// #     rpc_client::RpcClient,
     /// #     client_error::ClientError,
     /// # };
-    /// # use solana_sdk::{
+    /// # use sdk::{
     /// #     signature::Signer,
     /// #     signer::keypair::Keypair,
     /// #     commitment_config::CommitmentConfig,
@@ -4008,7 +4008,7 @@ impl RpcClient {
     /// #     rpc_client::RpcClient,
     /// #     client_error::ClientError,
     /// # };
-    /// # use solana_sdk::{
+    /// # use sdk::{
     /// #     signature::Signer,
     /// #     signer::keypair::Keypair,
     /// # };
@@ -4047,7 +4047,7 @@ impl RpcClient {
     /// #     rpc_config::{RpcAccountInfoConfig, RpcProgramAccountsConfig},
     /// #     rpc_filter::{MemcmpEncodedBytes, RpcFilterType, Memcmp},
     /// # };
-    /// # use solana_sdk::{
+    /// # use sdk::{
     /// #     signature::Signer,
     /// #     signer::keypair::Keypair,
     /// #     commitment_config::CommitmentConfig,
@@ -4993,7 +4993,7 @@ mod tests {
         jsonrpc_core::{futures::prelude::*, Error, IoHandler, Params},
         jsonrpc_http_server::{AccessControlAllowOrigin, DomainsValidation, ServerBuilder},
         serde_json::Number,
-        solana_sdk::{
+        sdk::{
             instruction::InstructionError,
             signature::{Keypair, Signer},
             system_transaction,
@@ -5078,7 +5078,7 @@ mod tests {
         let rpc_client = RpcClient::new_mock("succeeds".to_string());
 
         let key = Keypair::new();
-        let to = solana_sdk::pubkey::new_rand();
+        let to = sdk::pubkey::new_rand();
         let blockhash = Hash::default();
         let tx = system_transaction::transfer(&key, &to, 50, blockhash);
 
@@ -5148,7 +5148,7 @@ mod tests {
         let rpc_client = RpcClient::new_mock("succeeds".to_string());
 
         let key = Keypair::new();
-        let to = solana_sdk::pubkey::new_rand();
+        let to = sdk::pubkey::new_rand();
         let blockhash = Hash::default();
         let tx = system_transaction::transfer(&key, &to, 50, blockhash);
         let result = rpc_client.send_and_confirm_transaction(&tx);

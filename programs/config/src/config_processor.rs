@@ -146,7 +146,7 @@ pub fn process_instruction(
 //         bincode::serialized_size,
 //         serde_derive::{Deserialize, Serialize},
 //         solana_program_runtime::invoke_context::mock_process_instruction,
-//         solana_sdk::{
+//         sdk::{
 //             account::AccountSharedData,
 //             pubkey::Pubkey,
 //             signature::{Keypair, Signer},

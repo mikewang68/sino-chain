@@ -36,7 +36,7 @@ lazy_static! {
         (native_loader::id(), COMPUTE_UNIT_TO_US_RATIO * 2),
         (sdk::stake::config::id(), COMPUTE_UNIT_TO_US_RATIO * 2),
         (sdk::stake::program::id(), COMPUTE_UNIT_TO_US_RATIO * 25),
-        // (config_program::id(), COMPUTE_UNIT_TO_US_RATIO * 15),
+        (config_program::id(), COMPUTE_UNIT_TO_US_RATIO * 15),
         (vote_program::id(), COMPUTE_UNIT_TO_US_RATIO * 70),
         // secp256k1 is executed in banking stage, it should cost similar to sigverify
         (secp256k1_program::id(), COMPUTE_UNIT_TO_US_RATIO * 24),

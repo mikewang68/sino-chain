@@ -1,13 +1,13 @@
 use {
     crate::TransactionTokenBalance,
-    solana_account_decoder::parse_token::{
+    account_decoder::parse_token::{
         is_known_spl_token_id, pubkey_from_spl_token, spl_token_native_mint,
         token_amount_to_ui_amount, UiTokenAmount,
     },
-    solana_measure::measure::Measure,
-    solana_metrics::datapoint_debug,
-    solana_runtime::{bank::Bank, transaction_batch::TransactionBatch},
-    solana_sdk::{account::ReadableAccount, pubkey::Pubkey},
+    measure::measure::Measure,
+    metrics::datapoint_debug,
+    runtime::{bank::Bank, transaction_batch::TransactionBatch},
+    sdk::{account::ReadableAccount, pubkey::Pubkey},
     spl_token::{
         solana_program::program_pack::Pack,
         state::{Account as TokenAccount, Mint},
@@ -137,8 +137,8 @@ fn collect_token_balance_from_account(
 mod test {
     use {
         super::*,
-        solana_account_decoder::parse_token::{pubkey_from_spl_token, spl_token_pubkey},
-        solana_sdk::{account::Account, genesis_config::create_genesis_config},
+        account_decoder::parse_token::{pubkey_from_spl_token, spl_token_pubkey},
+        sdk::{account::Account, genesis_config::create_genesis_config},
         spl_token::solana_program::program_option::COption,
         std::collections::BTreeMap,
     };

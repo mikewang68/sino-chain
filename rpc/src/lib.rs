@@ -27,4 +27,4 @@ pub mod middleware;
 // extern crate serde_json;
 
 // #[macro_use]
-// extern crate solana_metrics;
+// extern crate metrics;

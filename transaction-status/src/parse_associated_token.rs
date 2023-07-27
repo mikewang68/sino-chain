@@ -3,11 +3,11 @@ use {
         check_num_accounts, ParsableProgram, ParseInstructionError, ParsedInstructionEnum,
     },
     serde_json::json,
-    solana_sdk::{instruction::CompiledInstruction, pubkey::Pubkey},
+    sdk::{instruction::CompiledInstruction, pubkey::Pubkey},
 };
 
 // A helper function to convert spl_associated_token_account::id() as spl_sdk::pubkey::Pubkey
-// to solana_sdk::pubkey::Pubkey
+// to sdk::pubkey::Pubkey
 pub fn spl_associated_token_id() -> Pubkey {
     Pubkey::new_from_array(spl_associated_token_account::id().to_bytes())
 }
@@ -78,7 +78,7 @@ mod test {
     fn test_parse_associated_token() {
         let mut keys: Vec<Pubkey> = vec![];
         for _ in 0..7 {
-            keys.push(solana_sdk::pubkey::new_rand());
+            keys.push(sdk::pubkey::new_rand());
         }
 
         let create_ix = create_associated_token_account(

@@ -144,3 +144,250 @@ impl AccountsDb {
         notify_stats.elapsed_notifying_us += measure_notify.as_us() as usize;
     }
 }
+
+#[cfg(test)]
+pub mod tests {
+    use {
+        crate::{
+            accounts_db::AccountsDb,
+            accounts_update_notifier_interface::{
+                AccountsUpdateNotifier, AccountsUpdateNotifierInterface,
+            },
+            append_vec::{StoredAccountMeta, StoredMeta},
+        },
+        dashmap::DashMap,
+        sdk::{
+            account::{AccountSharedData, ReadableAccount},
+            clock::Slot,
+            pubkey::Pubkey,
+        },
+        std::sync::{
+            atomic::{AtomicBool, Ordering},
+            Arc, RwLock,
+        },
+    };
+
+    impl AccountsDb {
+        pub fn set_geyser_plugin_notifer(&mut self, notifier: Option<AccountsUpdateNotifier>) {
+            self.accounts_update_notifier = notifier;
+        }
+    }
+
+    #[derive(Debug, Default)]
+    struct GeyserTestPlugin {
+        pub accounts_notified: DashMap<Pubkey, Vec<(Slot, AccountSharedData)>>,
+        pub is_startup_done: AtomicBool,
+    }
+
+    impl AccountsUpdateNotifierInterface for GeyserTestPlugin {
+        /// Notified when an account is updated at runtime, due to transaction activities
+        fn notify_account_update(
+            &self,
+            slot: Slot,
+            meta: &StoredMeta,
+            account: &AccountSharedData,
+        ) {
+            self.accounts_notified
+                .entry(meta.pubkey)
+                .or_insert(Vec::default())
+                .push((slot, account.clone()));
+        }
+
+        /// Notified when the AccountsDb is initialized at start when restored
+        /// from a snapshot.
+        fn notify_account_restore_from_snapshot(&self, slot: Slot, account: &StoredAccountMeta) {
+            self.accounts_notified
+                .entry(account.meta.pubkey)
+                .or_insert(Vec::default())
+                .push((slot, account.clone_account()));
+        }
+
+        fn notify_end_of_restore_from_snapshot(&self) {
+            self.is_startup_done.store(true, Ordering::Relaxed);
+        }
+    }
+
+    #[test]
+    fn test_notify_account_restore_from_snapshot_once_per_slot() {
+        let mut accounts = AccountsDb::new_single_for_tests();
+        // Account with key1 is updated twice in the store -- should only get notified once.
+        let key1 = sdk::pubkey::new_rand();
+        let mut account1_lamports: u64 = 1;
+        let account1 =
+            AccountSharedData::new(account1_lamports, 1, AccountSharedData::default().owner());
+        let slot0 = 0;
+        accounts.store_uncached(slot0, &[(&key1, &account1)]);
+
+        account1_lamports = 2;
+        let account1 = AccountSharedData::new(account1_lamports, 1, account1.owner());
+        accounts.store_uncached(slot0, &[(&key1, &account1)]);
+        let notifier = GeyserTestPlugin::default();
+
+        let key2 = sdk::pubkey::new_rand();
+        let account2_lamports: u64 = 100;
+        let account2 =
+            AccountSharedData::new(account2_lamports, 1, AccountSharedData::default().owner());
+
+        accounts.store_uncached(slot0, &[(&key2, &account2)]);
+
+        let notifier = Arc::new(RwLock::new(notifier));
+        accounts.set_geyser_plugin_notifer(Some(notifier.clone()));
+
+        accounts.notify_account_restore_from_snapshot();
+
+        let notifier = notifier.write().unwrap();
+        assert_eq!(notifier.accounts_notified.get(&key1).unwrap().len(), 1);
+        assert_eq!(
+            notifier.accounts_notified.get(&key1).unwrap()[0]
+                .1
+                .wens(),
+            account1_lamports
+        );
+        assert_eq!(notifier.accounts_notified.get(&key1).unwrap()[0].0, slot0);
+        assert_eq!(notifier.accounts_notified.get(&key2).unwrap().len(), 1);
+        assert_eq!(
+            notifier.accounts_notified.get(&key2).unwrap()[0]
+                .1
+                .wens(),
+            account2_lamports
+        );
+        assert_eq!(notifier.accounts_notified.get(&key2).unwrap()[0].0, slot0);
+
+        assert!(notifier.is_startup_done.load(Ordering::Relaxed));
+    }
+
+    #[test]
+    fn test_notify_account_restore_from_snapshot_once_across_slots() {
+        let mut accounts = AccountsDb::new_single_for_tests();
+        // Account with key1 is updated twice in two different slots -- should only get notified once.
+        // Account with key2 is updated slot0, should get notified once
+        // Account with key3 is updated in slot1, should get notified once
+        let key1 = sdk::pubkey::new_rand();
+        let mut account1_lamports: u64 = 1;
+        let account1 =
+            AccountSharedData::new(account1_lamports, 1, AccountSharedData::default().owner());
+        let slot0 = 0;
+        accounts.store_uncached(slot0, &[(&key1, &account1)]);
+
+        let key2 = sdk::pubkey::new_rand();
+        let account2_lamports: u64 = 200;
+        let account2 =
+            AccountSharedData::new(account2_lamports, 1, AccountSharedData::default().owner());
+        accounts.store_uncached(slot0, &[(&key2, &account2)]);
+
+        account1_lamports = 2;
+        let slot1 = 1;
+        let account1 = AccountSharedData::new(account1_lamports, 1, account1.owner());
+        accounts.store_uncached(slot1, &[(&key1, &account1)]);
+        let notifier = GeyserTestPlugin::default();
+
+        let key3 = sdk::pubkey::new_rand();
+        let account3_lamports: u64 = 300;
+        let account3 =
+            AccountSharedData::new(account3_lamports, 1, AccountSharedData::default().owner());
+        accounts.store_uncached(slot1, &[(&key3, &account3)]);
+
+        let notifier = Arc::new(RwLock::new(notifier));
+        accounts.set_geyser_plugin_notifer(Some(notifier.clone()));
+
+        accounts.notify_account_restore_from_snapshot();
+
+        let notifier = notifier.write().unwrap();
+        assert_eq!(notifier.accounts_notified.get(&key1).unwrap().len(), 1);
+        assert_eq!(
+            notifier.accounts_notified.get(&key1).unwrap()[0]
+                .1
+                .wens(),
+            account1_lamports
+        );
+        assert_eq!(notifier.accounts_notified.get(&key1).unwrap()[0].0, slot1);
+        assert_eq!(notifier.accounts_notified.get(&key2).unwrap().len(), 1);
+        assert_eq!(
+            notifier.accounts_notified.get(&key2).unwrap()[0]
+                .1
+                .wens(),
+            account2_lamports
+        );
+        assert_eq!(notifier.accounts_notified.get(&key2).unwrap()[0].0, slot0);
+        assert_eq!(notifier.accounts_notified.get(&key3).unwrap().len(), 1);
+        assert_eq!(
+            notifier.accounts_notified.get(&key3).unwrap()[0]
+                .1
+                .wens(),
+            account3_lamports
+        );
+        assert_eq!(notifier.accounts_notified.get(&key3).unwrap()[0].0, slot1);
+        assert!(notifier.is_startup_done.load(Ordering::Relaxed));
+    }
+
+    #[test]
+    fn test_notify_account_at_accounts_update() {
+        let mut accounts = AccountsDb::new_single_for_tests_with_caching();
+
+        let notifier = GeyserTestPlugin::default();
+
+        let notifier = Arc::new(RwLock::new(notifier));
+        accounts.set_geyser_plugin_notifer(Some(notifier.clone()));
+
+        // Account with key1 is updated twice in two different slots -- should only get notified twice.
+        // Account with key2 is updated slot0, should get notified once
+        // Account with key3 is updated in slot1, should get notified once
+        let key1 = sdk::pubkey::new_rand();
+        let account1_lamports1: u64 = 1;
+        let account1 =
+            AccountSharedData::new(account1_lamports1, 1, AccountSharedData::default().owner());
+        let slot0 = 0;
+        accounts.store_cached(slot0, &[(&key1, &account1)]);
+
+        let key2 = sdk::pubkey::new_rand();
+        let account2_lamports: u64 = 200;
+        let account2 =
+            AccountSharedData::new(account2_lamports, 1, AccountSharedData::default().owner());
+        accounts.store_cached(slot0, &[(&key2, &account2)]);
+
+        let account1_lamports2 = 2;
+        let slot1 = 1;
+        let account1 = AccountSharedData::new(account1_lamports2, 1, account1.owner());
+        accounts.store_cached(slot1, &[(&key1, &account1)]);
+
+        let key3 = sdk::pubkey::new_rand();
+        let account3_lamports: u64 = 300;
+        let account3 =
+            AccountSharedData::new(account3_lamports, 1, AccountSharedData::default().owner());
+        accounts.store_cached(slot1, &[(&key3, &account3)]);
+
+        let notifier = notifier.write().unwrap();
+        assert_eq!(notifier.accounts_notified.get(&key1).unwrap().len(), 2);
+        assert_eq!(
+            notifier.accounts_notified.get(&key1).unwrap()[0]
+                .1
+                .wens(),
+            account1_lamports1
+        );
+        assert_eq!(notifier.accounts_notified.get(&key1).unwrap()[0].0, slot0);
+        assert_eq!(
+            notifier.accounts_notified.get(&key1).unwrap()[1]
+                .1
+                .wens(),
+            account1_lamports2
+        );
+        assert_eq!(notifier.accounts_notified.get(&key1).unwrap()[1].0, slot1);
+
+        assert_eq!(notifier.accounts_notified.get(&key2).unwrap().len(), 1);
+        assert_eq!(
+            notifier.accounts_notified.get(&key2).unwrap()[0]
+                .1
+                .wens(),
+            account2_lamports
+        );
+        assert_eq!(notifier.accounts_notified.get(&key2).unwrap()[0].0, slot0);
+        assert_eq!(notifier.accounts_notified.get(&key3).unwrap().len(), 1);
+        assert_eq!(
+            notifier.accounts_notified.get(&key3).unwrap()[0]
+                .1
+                .wens(),
+            account3_lamports
+        );
+        assert_eq!(notifier.accounts_notified.get(&key3).unwrap()[0].0, slot1);
+    }
+}

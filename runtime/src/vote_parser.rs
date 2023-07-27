@@ -68,3 +68,49 @@ fn parse_vote_instruction_data(vote_instruction_data: &[u8]) -> Option<(Vote, Op
         _ => None,
     }
 }
+
+#[cfg(test)]
+mod test {
+    use sdk::signature::{Keypair, Signer};
+    use vote_program::{
+        vote_instruction, vote_state::Vote, vote_transaction::new_vote_transaction,
+    };
+
+    use {super::*, sdk::hash::hash};
+
+    fn run_test_parse_vote_transaction(input_hash: Option<Hash>) {
+        let node_keypair = Keypair::new();
+        let vote_keypair = Keypair::new();
+        let auth_voter_keypair = Keypair::new();
+        let bank_hash = Hash::default();
+        let vote_tx = new_vote_transaction(
+            vec![42],
+            bank_hash,
+            Hash::default(),
+            &node_keypair,
+            &vote_keypair,
+            &auth_voter_keypair,
+            input_hash,
+        );
+        let (key, vote, hash) = parse_vote_transaction(&vote_tx).unwrap();
+        assert_eq!(hash, input_hash);
+        assert_eq!(vote, Vote::new(vec![42], bank_hash));
+        assert_eq!(key, vote_keypair.pubkey());
+
+        // Test bad program id fails
+        let mut vote_ix = vote_instruction::vote(
+            &vote_keypair.pubkey(),
+            &auth_voter_keypair.pubkey(),
+            Vote::new(vec![1, 2], Hash::default()),
+        );
+        vote_ix.program_id = Pubkey::default();
+        let vote_tx = Transaction::new_with_payer(&[vote_ix], Some(&node_keypair.pubkey()));
+        assert!(parse_vote_transaction(&vote_tx).is_none());
+    }
+
+    #[test]
+    fn test_parse_vote_transaction() {
+        run_test_parse_vote_transaction(None);
+        run_test_parse_vote_transaction(Some(hash(&[42u8])));
+    }
+}

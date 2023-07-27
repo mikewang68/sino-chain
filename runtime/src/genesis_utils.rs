@@ -165,7 +165,6 @@ pub fn create_genesis_config_with_leader(
     }
 }
 
-//--------------------
 pub fn activate_velas_features_on_prod(genesis_config: &mut GenesisConfig) {
     for feature_id in (*sdk::feature_set::FEATURE_NAMES_BEFORE_MAINNET).keys() {
         genesis_config.accounts.insert(
@@ -179,7 +178,7 @@ pub fn activate_velas_features_on_prod(genesis_config: &mut GenesisConfig) {
         );
     }
 }
-//--------------------
+
 pub fn activate_all_features(genesis_config: &mut GenesisConfig) {
     // Activate all features at genesis in development mode
     for feature_id in FeatureSet::default().inactive {
@@ -194,7 +193,6 @@ pub fn activate_all_features(genesis_config: &mut GenesisConfig) {
         );
     }
 }
-//--------------------
 
 #[allow(clippy::too_many_arguments)]
 pub fn create_genesis_config_with_leader_ex(
