@@ -1,5 +1,5 @@
 use {
-    // crate::duplicate_shred,
+    crate::duplicate_shred,
     std::{io, sync},
     thiserror::Error,
 };
@@ -8,8 +8,8 @@ use {
 pub enum GossipError {
     #[error("duplicate node instance")]
     DuplicateNodeInstance,
-    // #[error(transparent)]
-    // DuplicateShredError(#[from] duplicate_shred::Error),
+    #[error(transparent)]
+    DuplicateShredError(#[from] duplicate_shred::Error),
     #[error(transparent)]
     Io(#[from] io::Error),
     #[error(transparent)]

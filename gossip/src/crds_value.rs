@@ -358,7 +358,7 @@ impl<'de> Deserialize<'de> for Vote {
 pub struct LegacyVersion {
     pub from: Pubkey,
     pub wallclock: u64,
-    pub version: solana_version::LegacyVersion,
+    pub version: version::LegacyVersion,
 }
 
 impl Sanitize for LegacyVersion {
@@ -373,7 +373,7 @@ impl Sanitize for LegacyVersion {
 pub struct Version {
     pub from: Pubkey,
     pub wallclock: u64,
-    pub version: solana_version::Version,
+    pub version: version::Version,
 }
 
 impl Sanitize for Version {
@@ -389,7 +389,7 @@ impl Version {
         Self {
             from,
             wallclock: timestamp(),
-            version: solana_version::Version::default(),
+            version: version::Version::default(),
         }
     }
 
@@ -398,7 +398,7 @@ impl Version {
         Self {
             from: pubkey.unwrap_or_else(pubkey::new_rand),
             wallclock: new_rand_timestamp(rng),
-            version: solana_version::Version {
+            version: version::Version {
                 major: rng.gen(),
                 minor: rng.gen(),
                 patch: rng.gen(),
