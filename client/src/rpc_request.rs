@@ -322,27 +322,6 @@ impl fmt::Display for RpcResponseErrorData {
     }
 }
 
-#[derive(Derivative, Error)]
-#[derivative(Debug)]
-pub enum RpcError {
-    #[error("RPC request error: {0}")]
-    RpcRequestError(String),
-    #[error("RPC response error {code}: {message} {data}")]
-    RpcResponseError {
-        code: i64,
-        message: String,
-        data: RpcResponseErrorData,
-        #[derivative(Debug = "ignore")]
-        original_err: serde_json::Value,
-    },
-    #[error("parse error: expected {0}")]
-    ParseError(String), /* "expected" */
-    // Anything in a `ForUser` needs to die.  The caller should be
-    // deciding what to tell their user
-    #[error("{0}")]
-    ForUser(String), /* "direct-to-user message" */
-}
-
 #[derive(Serialize, Deserialize)]
 pub enum TokenAccountsFilter {
     Mint(Pubkey),
