@@ -46,7 +46,7 @@ use {
         EncodedConfirmedBlock, EncodedConfirmedTransaction, TransactionStatus, UiConfirmedBlock,
         UiTransactionEncoding,
     },
-    vote_program::vote_state::MAX_LOCKOUT_HISTORY,
+    //vote_program::vote_state::MAX_LOCKOUT_HISTORY,
     std::{
         cmp::min,
         net::SocketAddr,
@@ -56,6 +56,8 @@ use {
         time::{Duration, Instant},
     },
 };
+
+pub const MAX_LOCKOUT_HISTORY: usize = 31;
 
 #[derive(Default)]
 pub struct RpcClientConfig {
@@ -465,7 +467,7 @@ impl RpcClient {
             let node_version = self.get_version().map_err(|e| {
                 RpcError::RpcRequestError(format!("cluster version query failed: {}", e))
             })?;
-            let node_version = semver::Version::parse(&node_version.solana_core).map_err(|e| {
+            let node_version = semver::Version::parse(&node_version.sino_core).map_err(|e| {
                 RpcError::RpcRequestError(format!("failed to parse cluster version: {}", e))
             })?;
             *w_node_version = Some(node_version.clone());
@@ -4819,7 +4821,7 @@ impl RpcClient {
                 .get_fee_calculator_for_blockhash(&message.recent_blockhash)?
                 .ok_or_else(|| ClientErrorKind::Custom("Invalid blockhash".to_string()))?;
             Ok(fee_calculator
-                .lamports_per_signature
+                .wens_per_signature
                 .saturating_mul(message.header.num_required_signatures as u64))
         } else {
             let serialized_encoded =
