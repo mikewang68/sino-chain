@@ -2,7 +2,7 @@ use clap::{App, Arg};
 
 fn main() {
     sino_logger::setup();
-    let matches = App::new("solana-ip-address")
+    let matches = App::new("sino-ip-address")
         .version(version::version!())
         .arg(
             Arg::with_name("host_port")

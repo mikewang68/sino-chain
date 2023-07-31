@@ -2618,7 +2618,7 @@ impl ClusterInfo {
             .build()
             .unwrap();
         Builder::new()
-            .name("solana-listen".to_string())
+            .name("sino-listen".to_string())
             .spawn(move || {
                 while !exit.load(Ordering::Relaxed) {
                     if let Err(err) = self.run_listen(

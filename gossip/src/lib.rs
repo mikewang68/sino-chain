@@ -1,5 +1,5 @@
-// #![cfg_attr(RUSTC_WITH_SPECIALIZATION, feature(min_specialization))]
-// #![allow(clippy::integer_arithmetic)]
+#![cfg_attr(RUSTC_WITH_SPECIALIZATION, feature(min_specialization))]
+#![allow(clippy::integer_arithmetic)]
 
 pub mod cluster_info;
 mod cluster_info_metrics;
