@@ -41,7 +41,8 @@ use {
     },
     storage_proto::{StoredExtendedRewards, StoredTransactionStatusMeta},
     transaction_status::{
-        // ConfirmedBlock, ConfirmedTransaction, ConfirmedTransactionStatusWithSignature, 
+        // ConfirmedBlock, ConfirmedTransaction, 
+        ConfirmedTransactionStatusWithSignature, 
         Rewards,
         TransactionStatusMeta, 
         // TransactionWithMetadata,
