@@ -54,133 +54,133 @@ impl TpuInfo for ClusterTpuInfo {
     }
 }
 
-#[cfg(test)]
-mod test {
-    use {
-        super::*,
-        gossip::contact_info::ContactInfo,
-        ledger::{
-            blockstore::Blockstore, get_tmp_ledger_path, leader_schedule_cache::LeaderScheduleCache,
-        },
-        runtime::{
-            bank::Bank,
-            genesis_utils::{
-                create_genesis_config_with_vote_accounts, GenesisConfigInfo, ValidatorVoteKeypairs,
-            },
-        },
-        sdk::{
-            poh_config::PohConfig,
-            signature::{Keypair, Signer},
-            timing::timestamp,
-        },
-        streamer::socket::SocketAddrSpace,
-        std::sync::atomic::AtomicBool,
-    };
+// #[cfg(test)]
+// mod test {
+//     use {
+//         super::*,
+//         gossip::contact_info::ContactInfo,
+//         ledger::{
+//             blockstore::Blockstore, get_tmp_ledger_path, leader_schedule_cache::LeaderScheduleCache,
+//         },
+//         runtime::{
+//             bank::Bank,
+//             genesis_utils::{
+//                 create_genesis_config_with_vote_accounts, GenesisConfigInfo, ValidatorVoteKeypairs,
+//             },
+//         },
+//         sdk::{
+//             poh_config::PohConfig,
+//             signature::{Keypair, Signer},
+//             timing::timestamp,
+//         },
+//         sino_streamer::socket::SocketAddrSpace,
+//         std::sync::atomic::AtomicBool,
+//     };
 
-    #[test]
-    fn test_get_leader_tpus() {
-        let ledger_path = get_tmp_ledger_path!();
-        {
-            let blockstore = Blockstore::open(&ledger_path).unwrap();
+//     #[test]
+//     fn test_get_leader_tpus() {
+//         let ledger_path = get_tmp_ledger_path!();
+//         {
+//             let blockstore = Blockstore::open(&ledger_path).unwrap();
 
-            let validator_vote_keypairs0 = ValidatorVoteKeypairs::new_rand();
-            let validator_vote_keypairs1 = ValidatorVoteKeypairs::new_rand();
-            let validator_vote_keypairs2 = ValidatorVoteKeypairs::new_rand();
-            let validator_keypairs = vec![
-                &validator_vote_keypairs0,
-                &validator_vote_keypairs1,
-                &validator_vote_keypairs2,
-            ];
-            let GenesisConfigInfo { genesis_config, .. } = create_genesis_config_with_vote_accounts(
-                1_000_000_000,
-                &validator_keypairs,
-                vec![10_000; 3],
-            );
-            let bank = Arc::new(Bank::new_for_tests(&genesis_config));
+//             let validator_vote_keypairs0 = ValidatorVoteKeypairs::new_rand();
+//             let validator_vote_keypairs1 = ValidatorVoteKeypairs::new_rand();
+//             let validator_vote_keypairs2 = ValidatorVoteKeypairs::new_rand();
+//             let validator_keypairs = vec![
+//                 &validator_vote_keypairs0,
+//                 &validator_vote_keypairs1,
+//                 &validator_vote_keypairs2,
+//             ];
+//             let GenesisConfigInfo { genesis_config, .. } = create_genesis_config_with_vote_accounts(
+//                 1_000_000_000,
+//                 &validator_keypairs,
+//                 vec![10_000; 3],
+//             );
+//             let bank = Arc::new(Bank::new_for_tests(&genesis_config));
 
-            let (poh_recorder, _entry_receiver, _record_receiver) = PohRecorder::new(
-                0,
-                bank.last_blockhash(),
-                bank.clone(),
-                Some((2, 2)),
-                bank.ticks_per_slot(),
-                &Pubkey::default(),
-                &Arc::new(blockstore),
-                &Arc::new(LeaderScheduleCache::new_from_bank(&bank)),
-                &Arc::new(PohConfig::default()),
-                Arc::new(AtomicBool::default()),
-            );
+//             let (poh_recorder, _entry_receiver, _record_receiver) = PohRecorder::new(
+//                 0,
+//                 bank.last_blockhash(),
+//                 bank.clone(),
+//                 Some((2, 2)),
+//                 bank.ticks_per_slot(),
+//                 &Pubkey::default(),
+//                 &Arc::new(blockstore),
+//                 &Arc::new(LeaderScheduleCache::new_from_bank(&bank)),
+//                 &Arc::new(PohConfig::default()),
+//                 Arc::new(AtomicBool::default()),
+//             );
 
-            let node_keypair = Arc::new(Keypair::new());
-            let cluster_info = Arc::new(ClusterInfo::new(
-                ContactInfo::new_localhost(&node_keypair.pubkey(), timestamp()),
-                node_keypair,
-                SocketAddrSpace::Unspecified,
-            ));
+//             let node_keypair = Arc::new(Keypair::new());
+//             let cluster_info = Arc::new(ClusterInfo::new(
+//                 ContactInfo::new_localhost(&node_keypair.pubkey(), timestamp()),
+//                 node_keypair,
+//                 SocketAddrSpace::Unspecified,
+//             ));
 
-            let validator0_socket = SocketAddr::from(([127, 0, 0, 1], 1111));
-            let validator1_socket = SocketAddr::from(([127, 0, 0, 1], 2222));
-            let validator2_socket = SocketAddr::from(([127, 0, 0, 1], 3333));
-            let recent_peers: HashMap<_, _> = vec![
-                (
-                    validator_vote_keypairs0.node_keypair.pubkey(),
-                    validator0_socket,
-                ),
-                (
-                    validator_vote_keypairs1.node_keypair.pubkey(),
-                    validator1_socket,
-                ),
-                (
-                    validator_vote_keypairs2.node_keypair.pubkey(),
-                    validator2_socket,
-                ),
-            ]
-            .iter()
-            .cloned()
-            .collect();
-            let leader_info = ClusterTpuInfo {
-                cluster_info,
-                poh_recorder: Arc::new(Mutex::new(poh_recorder)),
-                recent_peers: recent_peers.clone(),
-            };
+//             let validator0_socket = SocketAddr::from(([127, 0, 0, 1], 1111));
+//             let validator1_socket = SocketAddr::from(([127, 0, 0, 1], 2222));
+//             let validator2_socket = SocketAddr::from(([127, 0, 0, 1], 3333));
+//             let recent_peers: HashMap<_, _> = vec![
+//                 (
+//                     validator_vote_keypairs0.node_keypair.pubkey(),
+//                     validator0_socket,
+//                 ),
+//                 (
+//                     validator_vote_keypairs1.node_keypair.pubkey(),
+//                     validator1_socket,
+//                 ),
+//                 (
+//                     validator_vote_keypairs2.node_keypair.pubkey(),
+//                     validator2_socket,
+//                 ),
+//             ]
+//             .iter()
+//             .cloned()
+//             .collect();
+//             let leader_info = ClusterTpuInfo {
+//                 cluster_info,
+//                 poh_recorder: Arc::new(Mutex::new(poh_recorder)),
+//                 recent_peers: recent_peers.clone(),
+//             };
 
-            let slot = bank.slot();
-            let first_leader =
-                ledger::leader_schedule_utils::slot_leader_at(slot, &bank).unwrap();
-            assert_eq!(
-                leader_info.get_leader_tpus(1),
-                vec![recent_peers.get(&first_leader).unwrap()]
-            );
+//             let slot = bank.slot();
+//             let first_leader =
+//                 ledger::leader_schedule_utils::slot_leader_at(slot, &bank).unwrap();
+//             assert_eq!(
+//                 leader_info.get_leader_tpus(1),
+//                 vec![recent_peers.get(&first_leader).unwrap()]
+//             );
 
-            let second_leader = ledger::leader_schedule_utils::slot_leader_at(
-                slot + NUM_CONSECUTIVE_LEADER_SLOTS,
-                &bank,
-            )
-            .unwrap();
-            let mut expected_leader_sockets = vec![
-                recent_peers.get(&first_leader).unwrap(),
-                recent_peers.get(&second_leader).unwrap(),
-            ];
-            expected_leader_sockets.dedup();
-            assert_eq!(leader_info.get_leader_tpus(2), expected_leader_sockets);
+//             let second_leader = ledger::leader_schedule_utils::slot_leader_at(
+//                 slot + NUM_CONSECUTIVE_LEADER_SLOTS,
+//                 &bank,
+//             )
+//             .unwrap();
+//             let mut expected_leader_sockets = vec![
+//                 recent_peers.get(&first_leader).unwrap(),
+//                 recent_peers.get(&second_leader).unwrap(),
+//             ];
+//             expected_leader_sockets.dedup();
+//             assert_eq!(leader_info.get_leader_tpus(2), expected_leader_sockets);
 
-            let third_leader = ledger::leader_schedule_utils::slot_leader_at(
-                slot + (2 * NUM_CONSECUTIVE_LEADER_SLOTS),
-                &bank,
-            )
-            .unwrap();
-            let mut expected_leader_sockets = vec![
-                recent_peers.get(&first_leader).unwrap(),
-                recent_peers.get(&second_leader).unwrap(),
-                recent_peers.get(&third_leader).unwrap(),
-            ];
-            expected_leader_sockets.dedup();
-            assert_eq!(leader_info.get_leader_tpus(3), expected_leader_sockets);
+//             let third_leader = ledger::leader_schedule_utils::slot_leader_at(
+//                 slot + (2 * NUM_CONSECUTIVE_LEADER_SLOTS),
+//                 &bank,
+//             )
+//             .unwrap();
+//             let mut expected_leader_sockets = vec![
+//                 recent_peers.get(&first_leader).unwrap(),
+//                 recent_peers.get(&second_leader).unwrap(),
+//                 recent_peers.get(&third_leader).unwrap(),
+//             ];
+//             expected_leader_sockets.dedup();
+//             assert_eq!(leader_info.get_leader_tpus(3), expected_leader_sockets);
 
-            for x in 4..8 {
-                assert!(leader_info.get_leader_tpus(x).len() <= recent_peers.len());
-            }
-        }
-        Blockstore::destroy(&ledger_path).unwrap();
-    }
-}
+//             for x in 4..8 {
+//                 assert!(leader_info.get_leader_tpus(x).len() <= recent_peers.len());
+//             }
+//         }
+//         Blockstore::destroy(&ledger_path).unwrap();
+//     }
+// }

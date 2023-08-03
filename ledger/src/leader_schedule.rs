@@ -63,32 +63,32 @@ impl LeaderSchedule {
 //         self.slot_leaders.len()
 //     }
 
-//     /// 'offset' is an index into the leader schedule. The function returns an
-//     /// iterator of indices i >= offset where the given pubkey is the leader.
-//     pub(crate) fn get_indices(
-//         &self,
-//         pubkey: &Pubkey,
-//         offset: usize, // Starting index.
-//     ) -> impl Iterator<Item = usize> {
-//         let index = self.index.get(pubkey).cloned().unwrap_or_default();
-//         let num_slots = self.slot_leaders.len();
-//         let size = index.len();
-//         #[allow(clippy::reversed_empty_ranges)]
-//         let range = if index.is_empty() {
-//             1..=0 // Intentionally empty range of type RangeInclusive.
-//         } else {
-//             let offset = index
-//                 .binary_search(&(offset % num_slots))
-//                 .unwrap_or_else(identity)
-//                 + offset / num_slots * size;
-//             offset..=usize::MAX
-//         };
-//         // The modular arithmetic here and above replicate Index implementation
-//         // for LeaderSchedule, where the schedule keeps repeating endlessly.
-//         // The '%' returns where in a cycle we are and the '/' returns how many
-//         // times the schedule is repeated.
-//         range.map(move |k| index[k % size] + k / size * num_slots)
-//     }
+    /// 'offset' is an index into the leader schedule. The function returns an
+    /// iterator of indices i >= offset where the given pubkey is the leader.
+    pub(crate) fn get_indices(
+        &self,
+        pubkey: &Pubkey,
+        offset: usize, // Starting index.
+    ) -> impl Iterator<Item = usize> {
+        let index = self.index.get(pubkey).cloned().unwrap_or_default();
+        let num_slots = self.slot_leaders.len();
+        let size = index.len();
+        #[allow(clippy::reversed_empty_ranges)]
+        let range = if index.is_empty() {
+            1..=0 // Intentionally empty range of type RangeInclusive.
+        } else {
+            let offset = index
+                .binary_search(&(offset % num_slots))
+                .unwrap_or_else(identity)
+                + offset / num_slots * size;
+            offset..=usize::MAX
+        };
+        // The modular arithmetic here and above replicate Index implementation
+        // for LeaderSchedule, where the schedule keeps repeating endlessly.
+        // The '%' returns where in a cycle we are and the '/' returns how many
+        // times the schedule is repeated.
+        range.map(move |k| index[k % size] + k / size * num_slots)
+    }
 }
 
 impl Index<u64> for LeaderSchedule {

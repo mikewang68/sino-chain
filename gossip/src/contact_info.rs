@@ -7,7 +7,7 @@ use {
         signature::{Keypair, Signer},
         timing::timestamp,
     },
-    streamer::socket::SocketAddrSpace,
+    sino_streamer::socket::SocketAddrSpace,
     std::net::{IpAddr, SocketAddr},
 };
 

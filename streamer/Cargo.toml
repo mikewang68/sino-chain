@@ -34,7 +34,7 @@ tokio = { version = "~1.14.1", features = ["full"] }
 
 [lib]
 crate-type = ["lib"]
-name = "streamer"
+name = "sino_streamer"
 
 [package.metadata.docs.rs]
 targets = ["x86_64-unknown-linux-gnu"]

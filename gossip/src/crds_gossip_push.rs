@@ -28,7 +28,7 @@ use {
     rand::{seq::SliceRandom, Rng},
     bloom::bloom::{AtomicBloom, Bloom},
     sdk::{packet::PACKET_DATA_SIZE, pubkey::Pubkey, timing::timestamp},
-    streamer::socket::SocketAddrSpace,
+    sino_streamer::socket::SocketAddrSpace,
     std::{
         cmp,
         collections::{HashMap, HashSet},

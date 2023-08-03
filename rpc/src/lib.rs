@@ -16,15 +16,15 @@ pub mod transaction_notifier_interface;
 pub mod transaction_status_service;
 pub mod middleware;
 
-// #[macro_use]
-// extern crate log;
+#[macro_use]
+extern crate log;
 
-// #[macro_use]
-// extern crate serde_derive;
+#[macro_use]
+extern crate serde_derive;
 
-// #[cfg(test)]
-// #[macro_use]
-// extern crate serde_json;
+#[cfg(test)]
+#[macro_use]
+extern crate serde_json;
 
-// #[macro_use]
-// extern crate metrics;
+#[macro_use]
+extern crate metrics;

@@ -13,7 +13,7 @@ use {
         pubkey::Pubkey,
         signature::{Keypair, Signer},
     },
-    streamer::{
+    sino_streamer::{
         socket::SocketAddrSpace,
         streamer::{self, StreamerReceiveStats},
     },

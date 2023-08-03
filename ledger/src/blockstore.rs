@@ -376,6 +376,14 @@ struct SlotStats {
 }
 
 impl Blockstore {
+    pub fn is_root(&self, slot: Slot) -> bool {
+        matches!(self.db.get::<cf::Root>(slot), Ok(Some(true)))
+    }
+
+    pub fn meta(&self, slot: Slot) -> Result<Option<SlotMeta>> {
+        self.meta_cf.get(slot)
+    }
+
     pub fn destroy(ledger_path: &Path) -> Result<()> {
         // Database::destroy() fails if the path doesn't exist
         fs::create_dir_all(ledger_path)?;
@@ -1500,6 +1508,24 @@ impl Blockstore {
             })
         })
     }
+
+    pub fn slot_meta_iterator(
+        &self,
+        slot: Slot,
+    ) -> Result<impl Iterator<Item = (Slot, SlotMeta)> + '_> {
+        let meta_iter = self
+            .db
+            .iter::<cf::SlotMeta>(IteratorMode::From(slot, IteratorDirection::Forward))?;
+        Ok(meta_iter.map(|(slot, slot_meta_bytes)| {
+            (
+                slot,
+                deserialize(&slot_meta_bytes).unwrap_or_else(|e| {
+                    panic!("Could not deserialize SlotMeta for slot {}: {:?}", slot, e)
+                }),
+            )
+        }))
+    }
+    
 }
 
 pub enum EvmStateJson<'a> {
@@ -1509,10 +1535,37 @@ pub enum EvmStateJson<'a> {
 }
 
 #[macro_export]
+macro_rules! tmp_ledger_name {
+    () => {
+        &format!("{}-{}", file!(), line!())
+    };
+}
+
+#[macro_export]
 macro_rules! get_tmp_ledger_path {
     () => {
         $crate::blockstore::get_ledger_path_from_name($crate::tmp_ledger_name!())
     };
+}
+
+
+pub fn get_ledger_path_from_name(name: &str) -> PathBuf {
+    use std::env;
+    let out_dir = env::var("FARF_DIR").unwrap_or_else(|_| "farf".to_string());
+    let keypair = Keypair::new();
+
+    let path = [
+        out_dir,
+        "ledger".to_string(),
+        format!("{}-{}", name, keypair.pubkey()),
+    ]
+    .iter()
+    .collect();
+
+    // whack any possible collision
+    let _ignored = fs::remove_dir_all(&path);
+
+    path
 }
 
 #[cfg(unix)]

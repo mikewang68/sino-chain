@@ -32,21 +32,27 @@ serde_derive = "1.0.103"
 serde_json = "1.0.72"
 soketto = "0.7"
 account-decoder = { path = "../account-decoder", version = "=1.9.29" }
+# account-program = { path = "../programs/velas-account-program" }
 client = { path = "../client", version = "=1.9.29" }
 entry = { path = "../entry", version = "=1.9.29" }
 faucet = { path = "../faucet", version = "=1.9.29" }
+gossip = { path = "../gossip", version = "=1.9.29" }
 ledger = { path = "../ledger", version = "=1.9.29" }
 measure = { path = "../measure", version = "=1.9.29" }
 metrics = { path = "../metrics", version = "=1.9.29" }
 perf = { path = "../perf", version = "=1.9.29" }
+poh = { path = "../poh", version = "=1.9.29" }
 rayon-threadlimit = { path = "../rayon-threadlimit", version = "=1.9.29" }
 runtime = { path = "../runtime", version = "=1.9.29" }
 sdk = { path = "../sdk", version = "=1.9.29" }
 transaction-status = { path = "../transaction-status", version = "=1.9.29" }
 version = { path = "../version", version = "=0.6.3" }
 vote-program = { path = "../programs/vote", version = "=1.9.29" }
+send-transaction-service = { path = "../send-transaction-service", version = "=1.9.29" }
 spl-token = { version = "=3.2.0", features = ["no-entrypoint"] }
 stream-cancel = "0.8.1"
+streamer = { path = "../streamer", version = "=1.9.29" }
+storage-bigtable = { path = "../storage-bigtable", version = "=1.9.29" }
 thiserror = "1.0"
 tokio = { version = "~1.14.1", features = ["full"] }
 tokio-util = { version = "0.6", features = ["codec", "compat"] }

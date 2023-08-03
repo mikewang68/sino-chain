@@ -31,7 +31,7 @@ use {
         pubkey::Pubkey,
         signature::{Keypair, Signer},
     },
-    streamer::socket::SocketAddrSpace,
+    sino_streamer::socket::SocketAddrSpace,
     std::{
         collections::{HashMap, HashSet, VecDeque},
         convert::TryInto,
@@ -851,7 +851,7 @@ pub(crate) mod tests {
         let gossip = socketaddr!("127.0.0.1:1234");
 
         let me = CrdsValue::new_unsigned(CrdsData::ContactInfo(ContactInfo {
-            id: ssdk::pubkey::new_rand(),
+            id: sdk::pubkey::new_rand(),
             gossip,
             ..ContactInfo::default()
         }));

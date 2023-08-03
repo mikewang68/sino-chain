@@ -13,7 +13,8 @@ use {
         account::{AccountSharedData, ReadableAccount},
         pubkey::Pubkey,
     },
-    spl_token::{program::program_pack::Pack, state::Mint},
+    //-----------------------------------------------------------
+    spl_token::{solana_program::program_pack::Pack, state::Mint},
     std::{collections::HashMap, sync::Arc},
 };
 

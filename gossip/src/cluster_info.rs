@@ -64,7 +64,7 @@ use {
         timing::timestamp,
         transaction::Transaction,
     },
-    streamer::{
+    sino_streamer::{
         packet,
         sendmmsg::{multi_target_send, SendPktsError},
         socket::SocketAddrSpace,
@@ -184,9 +184,6 @@ pub(crate) struct PruneData {
 
 impl PruneData {
     ///// New random PruneData for tests and benchmarks.
-=======
-    // New random PruneData for tests and benchmarks.
->>>>>>> ab47304f5625dde2d8357058f5dd26d9ffe9464a
     // #[cfg(test)]
     // fn new_rand<R: Rng>(rng: &mut R, self_keypair: &Keypair, num_nodes: Option<usize>) -> Self {
     //     let wallclock = crds_value::new_rand_timestamp(rng);
