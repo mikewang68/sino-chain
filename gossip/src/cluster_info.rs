@@ -183,7 +183,6 @@ pub(crate) struct PruneData {
 }
 
 impl PruneData {
-<<<<<<< HEAD
     ///// New random PruneData for tests and benchmarks.
 =======
     // New random PruneData for tests and benchmarks.
