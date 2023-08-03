@@ -10,11 +10,12 @@ use {
         transaction::{Transaction, TransactionError},
     },
     transaction_status::{
-        // ConfirmedBlock, ConfirmedBlockWithOptionalMetadata, 
+        ConfirmedBlock, ConfirmedBlockWithOptionalMetadata, 
         InnerInstructions, Reward, RewardType,
-        // TransactionByAddrInfo, 
+        TransactionByAddrInfo, 
         TransactionStatusMeta, TransactionTokenBalance,
-        // TransactionWithMetadata, TransactionWithOptionalMetadata,
+        TransactionWithMetadata, 
+        TransactionWithOptionalMetadata,
     },
     std::{
         convert::{TryFrom, TryInto},
@@ -121,80 +122,80 @@ impl From<generated::Reward> for Reward {
     }
 }
 
-// impl From<ConfirmedBlock> for generated::ConfirmedBlock {
-//     fn from(confirmed_block: ConfirmedBlock) -> Self {
-//         let ConfirmedBlock {
-//             previous_blockhash,
-//             blockhash,
-//             parent_slot,
-//             transactions,
-//             rewards,
-//             block_time,
-//             block_height,
-//         } = confirmed_block;
+impl From<ConfirmedBlock> for generated::ConfirmedBlock {
+    fn from(confirmed_block: ConfirmedBlock) -> Self {
+        let ConfirmedBlock {
+            previous_blockhash,
+            blockhash,
+            parent_slot,
+            transactions,
+            rewards,
+            block_time,
+            block_height,
+        } = confirmed_block;
 
-//         Self {
-//             previous_blockhash,
-//             blockhash,
-//             parent_slot,
-//             transactions: transactions.into_iter().map(|tx| tx.into()).collect(),
-//             rewards: rewards.into_iter().map(|r| r.into()).collect(),
-//             block_time: block_time.map(|timestamp| generated::UnixTimestamp { timestamp }),
-//             block_height: block_height.map(|block_height| generated::BlockHeight { block_height }),
-//         }
-//     }
-// }
+        Self {
+            previous_blockhash,
+            blockhash,
+            parent_slot,
+            transactions: transactions.into_iter().map(|tx| tx.into()).collect(),
+            rewards: rewards.into_iter().map(|r| r.into()).collect(),
+            block_time: block_time.map(|timestamp| generated::UnixTimestamp { timestamp }),
+            block_height: block_height.map(|block_height| generated::BlockHeight { block_height }),
+        }
+    }
+}
 
-// impl TryFrom<generated::ConfirmedBlock> for ConfirmedBlockWithOptionalMetadata {
-//     type Error = bincode::Error;
-//     fn try_from(
-//         confirmed_block: generated::ConfirmedBlock,
-//     ) -> std::result::Result<Self, Self::Error> {
-//         let generated::ConfirmedBlock {
-//             previous_blockhash,
-//             blockhash,
-//             parent_slot,
-//             transactions,
-//             rewards,
-//             block_time,
-//             block_height,
-//         } = confirmed_block;
+impl TryFrom<generated::ConfirmedBlock> for ConfirmedBlockWithOptionalMetadata {
+    type Error = bincode::Error;
+    fn try_from(
+        confirmed_block: generated::ConfirmedBlock,
+    ) -> std::result::Result<Self, Self::Error> {
+        let generated::ConfirmedBlock {
+            previous_blockhash,
+            blockhash,
+            parent_slot,
+            transactions,
+            rewards,
+            block_time,
+            block_height,
+        } = confirmed_block;
 
-//         Ok(Self {
-//             previous_blockhash,
-//             blockhash,
-//             parent_slot,
-//             transactions: transactions
-//                 .into_iter()
-//                 .map(|tx| tx.try_into())
-//                 .collect::<std::result::Result<Vec<TransactionWithOptionalMetadata>, Self::Error>>(
-//                 )?,
-//             rewards: rewards.into_iter().map(|r| r.into()).collect(),
-//             block_time: block_time.map(|generated::UnixTimestamp { timestamp }| timestamp),
-//             block_height: block_height.map(|generated::BlockHeight { block_height }| block_height),
-//         })
-//     }
-// }
+        Ok(Self {
+            previous_blockhash,
+            blockhash,
+            parent_slot,
+            transactions: transactions
+                .into_iter()
+                .map(|tx| tx.try_into())
+                .collect::<std::result::Result<Vec<TransactionWithOptionalMetadata>, Self::Error>>(
+                )?,
+            rewards: rewards.into_iter().map(|r| r.into()).collect(),
+            block_time: block_time.map(|generated::UnixTimestamp { timestamp }| timestamp),
+            block_height: block_height.map(|generated::BlockHeight { block_height }| block_height),
+        })
+    }
+}
 
-// impl From<TransactionWithMetadata> for generated::ConfirmedTransaction {
-//     fn from(value: TransactionWithMetadata) -> Self {
-//         Self {
-//             transaction: Some(value.transaction.into()),
-//             meta: Some(value.meta.into()),
-//         }
-//     }
-// }
+impl From<TransactionWithMetadata> for generated::ConfirmedTransaction {
+    fn from(value: TransactionWithMetadata) -> Self {
+        Self {
+            transaction: Some(value.transaction.into()),
+            meta: Some(value.meta.into()),
+        }
+    }
+}
 
-// impl TryFrom<generated::ConfirmedTransaction> for TransactionWithOptionalMetadata {
-//     type Error = bincode::Error;
-//     fn try_from(value: generated::ConfirmedTransaction) -> std::result::Result<Self, Self::Error> {
-//         let meta = value.meta.map(|meta| meta.try_into()).transpose()?;
-//         Ok(Self {
-//             transaction: value.transaction.expect("transaction is required").into(),
-//             meta,
-//         })
-//     }
-// }
+impl TryFrom<generated::ConfirmedTransaction> for TransactionWithOptionalMetadata {
+    type Error = bincode::Error;
+    fn try_from(value: generated::ConfirmedTransaction) -> std::result::Result<Self, Self::Error> {
+        let meta = value.meta.map(|meta| meta.try_into()).transpose()?;
+        Ok(Self {
+            transaction: value.transaction.expect("transaction is required").into(),
+            meta,
+        })
+    }
+}
 
 impl From<Transaction> for generated::Transaction {
     fn from(value: Transaction) -> Self {
@@ -856,62 +857,62 @@ impl From<TransactionError> for tx_by_addr::TransactionError {
     }
 }
 
-// impl From<TransactionByAddrInfo> for tx_by_addr::TransactionByAddrInfo {
-//     fn from(by_addr: TransactionByAddrInfo) -> Self {
-//         let TransactionByAddrInfo {
-//             signature,
-//             err,
-//             index,
-//             memo,
-//             block_time,
-//         } = by_addr;
+impl From<TransactionByAddrInfo> for tx_by_addr::TransactionByAddrInfo {
+    fn from(by_addr: TransactionByAddrInfo) -> Self {
+        let TransactionByAddrInfo {
+            signature,
+            err,
+            index,
+            memo,
+            block_time,
+        } = by_addr;
 
-//         Self {
-//             signature: <Signature as AsRef<[u8]>>::as_ref(&signature).into(),
-//             err: err.map(|e| e.into()),
-//             index,
-//             memo: memo.map(|memo| tx_by_addr::Memo { memo }),
-//             block_time: block_time.map(|timestamp| tx_by_addr::UnixTimestamp { timestamp }),
-//         }
-//     }
-// }
+        Self {
+            signature: <Signature as AsRef<[u8]>>::as_ref(&signature).into(),
+            err: err.map(|e| e.into()),
+            index,
+            memo: memo.map(|memo| tx_by_addr::Memo { memo }),
+            block_time: block_time.map(|timestamp| tx_by_addr::UnixTimestamp { timestamp }),
+        }
+    }
+}
 
-// impl TryFrom<tx_by_addr::TransactionByAddrInfo> for TransactionByAddrInfo {
-//     type Error = &'static str;
+impl TryFrom<tx_by_addr::TransactionByAddrInfo> for TransactionByAddrInfo {
+    type Error = &'static str;
 
-//     fn try_from(
-//         transaction_by_addr: tx_by_addr::TransactionByAddrInfo,
-//     ) -> Result<Self, Self::Error> {
-//         let err = transaction_by_addr
-//             .err
-//             .map(|err| err.try_into())
-//             .transpose()?;
+    fn try_from(
+        transaction_by_addr: tx_by_addr::TransactionByAddrInfo,
+    ) -> Result<Self, Self::Error> {
+        let err = transaction_by_addr
+            .err
+            .map(|err| err.try_into())
+            .transpose()?;
 
-//         Ok(Self {
-//             signature: Signature::new(&transaction_by_addr.signature),
-//             err,
-//             index: transaction_by_addr.index,
-//             memo: transaction_by_addr
-//                 .memo
-//                 .map(|tx_by_addr::Memo { memo }| memo),
-//             block_time: transaction_by_addr
-//                 .block_time
-//                 .map(|tx_by_addr::UnixTimestamp { timestamp }| timestamp),
-//         })
-//     }
-// }
+        Ok(Self {
+            signature: Signature::new(&transaction_by_addr.signature),
+            err,
+            index: transaction_by_addr.index,
+            memo: transaction_by_addr
+                .memo
+                .map(|tx_by_addr::Memo { memo }| memo),
+            block_time: transaction_by_addr
+                .block_time
+                .map(|tx_by_addr::UnixTimestamp { timestamp }| timestamp),
+        })
+    }
+}
 
-// impl TryFrom<tx_by_addr::TransactionByAddr> for Vec<TransactionByAddrInfo> {
-//     type Error = &'static str;
+impl TryFrom<tx_by_addr::TransactionByAddr> for Vec<TransactionByAddrInfo> {
+    type Error = &'static str;
 
-//     fn try_from(collection: tx_by_addr::TransactionByAddr) -> Result<Self, Self::Error> {
-//         collection
-//             .tx_by_addrs
-//             .into_iter()
-//             .map(|tx_by_addr| tx_by_addr.try_into())
-//             .collect::<Result<Vec<TransactionByAddrInfo>, Self::Error>>()
-//     }
-// }
+    fn try_from(collection: tx_by_addr::TransactionByAddr) -> Result<Self, Self::Error> {
+        collection
+            .tx_by_addrs
+            .into_iter()
+            .map(|tx_by_addr| tx_by_addr.try_into())
+            .collect::<Result<Vec<TransactionByAddrInfo>, Self::Error>>()
+    }
+}
 
 //
 // Evm compatibility layer
