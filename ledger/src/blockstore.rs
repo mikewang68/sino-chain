@@ -628,6 +628,134 @@ impl Blockstore {
         }
     }
 
+    /// Returns EVM block, and flag if that block was rooted (confirmed)
+    pub fn get_evm_block(&self, block_number: evm::BlockNum) -> Result<(evm::Block, bool)> {
+        datapoint_info!(
+            "blockstore-rpc-api",
+            ("method", "get_evm_block", String)
+        );
+        // TODO: Integrate with cleanup service
+        // let lowest_cleanup_slot = self.lowest_cleanup_slot.read().unwrap();
+        // // lowest_cleanup_slot is the last slot that was not cleaned up by
+        // // LedgerCleanupService
+        // if *lowest_cleanup_slot > 0 && *lowest_cleanup_slot >= slot {
+        //     return Err(BlockstoreError::SlotCleanedUp);
+        // }
+
+        let mut block_headers = self.read_evm_block_headers(block_number)?;
+
+        if block_headers.is_empty() {
+            return Err(BlockstoreError::SlotCleanedUp);
+        };
+        // we need to find one block from array:
+        // If confirmed block is present, then return it.
+        // Otherways return first block
+
+        let confirmed_block = block_headers
+            .iter()
+            .enumerate()
+            .find(|(_idx, b)| self.is_root(b.native_chain_slot))
+            .map(|(idx, _b)| idx);
+
+        let block_header = block_headers.remove(confirmed_block.unwrap_or_default());
+
+        let mut txs = Vec::new();
+        for hash in &block_header.transactions {
+            let tx = self.read_evm_transaction((
+                *hash,
+                block_header.block_number,
+                Some(block_header.native_chain_slot),
+            ))?;
+            if let Some(tx) = tx {
+                txs.push((*hash, tx))
+            } else {
+                warn!(
+                    "Requesting block {}, evm transaction = {}, was cleaned up, while block still exist,",
+                    block_number, hash
+                );
+                return Err(BlockstoreError::SlotCleanedUp);
+            };
+        }
+
+        let confirmed = self.is_root(block_header.native_chain_slot);
+        Ok((
+            evm::Block {
+                header: block_header,
+                transactions: txs,
+            },
+            confirmed,
+        ))
+    }
+
+    /// Returns iterator over evm blocks.
+    /// If more than one evm block have been found on same block_num, this function return multiple items.
+    ///
+    pub fn read_evm_block_headers(
+        &self,
+        block_index: evm::BlockNum,
+    ) -> Result<Vec<evm::BlockHeader>> {
+        Ok(self
+            .evm_blocks_iterator(block_index)?
+            .take_while(|((block_num, _slot), _block)| *block_num == block_index)
+            .map(|((_block_num, _slot), block)| block)
+            .collect())
+    }
+
+    pub fn read_evm_transaction(
+        &self,
+        index: (H256, evm::BlockNum, Option<Slot>),
+    ) -> Result<Option<evm::TransactionReceipt>> {
+        let (hash, block_num, slot) = index;
+        // search transaction in 0 | 1 primary indexes, with and without slot.
+        for slot in slot.map(Some).into_iter().chain(Some(None)) {
+            for primary_index in 0..=1 {
+                if let Some(tx) = self
+                    .evm_transactions_cf
+                    .get_protobuf_or_bincode::<evm::TransactionReceipt>(
+                        EvmTransactionReceiptsIndex {
+                            index: primary_index,
+                            hash,
+                            block_num,
+                            slot,
+                        },
+                    )?
+                    .and_then(|meta| meta.try_into().ok())
+                {
+                    return Ok(Some(tx));
+                }
+            }
+        }
+        Ok(None)
+    }
+
+    /// Return iterator over evm blocks.
+    /// There can be more than one block with same block number and different slot numbers.
+    ///
+    pub fn evm_blocks_iterator(
+        &self,
+        block_num: evm::BlockNum,
+    ) -> Result<impl Iterator<Item = ((evm::BlockNum, Option<Slot>), evm::BlockHeader)> + '_> {
+        let blocks_headers = self.evm_blocks_cf.iter(IteratorMode::From(
+            cf::EvmBlockHeader::as_index(block_num),
+            IteratorDirection::Forward,
+        ))?;
+        Ok(blocks_headers.map(move |(block_num, block_header)| {
+            (
+                block_num,
+                self.evm_blocks_cf
+                    .deserialize_protobuf_or_bincode::<evm::BlockHeader>(&block_header)
+                    .unwrap_or_else(|e| {
+                        panic!(
+                            "Could not deserialize BlockHeader for block_num {} slot {:?}: {:?}",
+                            block_num.0, block_num.1, e
+                        )
+                    })
+                    .try_into()
+                    .expect("Convertation should always pass"),
+            )
+        }))
+    }
+
     fn get_primary_index_to_write(
         &self,
         slot: Slot,
