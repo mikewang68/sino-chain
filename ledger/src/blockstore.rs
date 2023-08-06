@@ -479,6 +479,87 @@ impl Blockstore {
             }))
     }
 
+    pub fn get_last_available_evm_block(&self) -> Result<Option<evm::BlockNum>> {
+        Ok(self
+            .evm_blocks_cf
+            .iter(IteratorMode::End)?
+            .map(|((block, _slot), _)| block)
+            .next())
+    }
+
+    // DEPRECATED
+    pub fn get_confirmed_signatures_for_address(
+        &self,
+        pubkey: Pubkey,
+        start_slot: Slot,
+        end_slot: Slot,
+    ) -> Result<Vec<Signature>> {
+        datapoint_info!(
+            "blockstore-rpc-api",
+            (
+                "method",
+                "get_confirmed_signatures_for_address",
+                String
+            )
+        );
+        self.find_address_signatures(pubkey, start_slot, end_slot)
+            .map(|signatures| signatures.iter().map(|(_, signature)| *signature).collect())
+    }
+
+    // Returns all rooted signatures for an address, ordered by slot that the transaction was
+    // processed in. Within each slot the transactions will be ordered by signature, and NOT by
+    // the order in which the transactions exist in the block
+    //
+    // DEPRECATED
+    fn find_address_signatures(
+        &self,
+        pubkey: Pubkey,
+        start_slot: Slot,
+        end_slot: Slot,
+    ) -> Result<Vec<(Slot, Signature)>> {
+        let (lock, lowest_available_slot) = self.ensure_lowest_cleanup_slot();
+
+        let mut signatures: Vec<(Slot, Signature)> = vec![];
+        for transaction_status_cf_primary_index in 0..=1 {
+            let index_iterator = self.address_signatures_cf.iter(IteratorMode::From(
+                (
+                    transaction_status_cf_primary_index,
+                    pubkey,
+                    start_slot.max(lowest_available_slot),
+                    Signature::default(),
+                ),
+                IteratorDirection::Forward,
+            ))?;
+            for ((i, address, slot, signature), _) in index_iterator {
+                if i != transaction_status_cf_primary_index || slot > end_slot || address != pubkey
+                {
+                    break;
+                }
+                if self.is_root(slot) {
+                    signatures.push((slot, signature));
+                }
+            }
+        }
+        drop(lock);
+        signatures.sort_by(|a, b| a.0.partial_cmp(&b.0).unwrap().then(a.1.cmp(&b.1)));
+        Ok(signatures)
+    }
+
+    fn ensure_lowest_cleanup_slot(&self) -> (parking_lot::RwLockReadGuard<Slot>, Slot) {
+        // Ensures consistent result by using lowest_cleanup_slot as the lower bound
+        // for reading columns that do not employ strong read consistency with slot-based
+        // delete_range
+        let lowest_cleanup_slot = self.lowest_cleanup_slot.read_recursive();
+        let lowest_available_slot = (*lowest_cleanup_slot)
+            .checked_add(1)
+            .expect("overflow from trusted value");
+
+        // Make caller hold this lock properly; otherwise LedgerCleanupService can purge/compact
+        // needed slots here at any given moment.
+        // Blockstore callers, like rpc, can process concurrent read queries
+        (lowest_cleanup_slot, lowest_available_slot)
+    }
+
     fn get_primary_index_to_write(
         &self,
         slot: Slot,
