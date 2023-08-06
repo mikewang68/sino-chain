@@ -1736,7 +1736,7 @@ impl JsonRpcRequestProcessor {
                     return Ok(RpcStakeActivation {
                         state: StakeActivationState::Inactive,
                         active: 0,
-                        inactive: stake_account.lamports().saturating_sub(rent_exempt_reserve),
+                        inactive: stake_account.wens().saturating_sub(rent_exempt_reserve),
                     });
                 }
             }
