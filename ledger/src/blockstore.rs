@@ -439,6 +439,18 @@ impl Blockstore {
         Ok(())
     }
 
+    pub fn get_recent_perf_samples(&self, num: usize) -> Result<Vec<(Slot, PerfSample)>> {
+        Ok(self
+            .db
+            .iter::<cf::PerfSamples>(IteratorMode::End)?
+            .take(num)
+            .map(|(slot, data)| {
+                let perf_sample = deserialize(&data).unwrap();
+                (slot, perf_sample)
+            })
+            .collect())
+    }
+
     fn get_primary_index_to_write(
         &self,
         slot: Slot,

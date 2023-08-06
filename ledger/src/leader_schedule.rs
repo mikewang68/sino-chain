@@ -40,6 +40,10 @@ impl LeaderSchedule {
         Self::new_from_schedule(slot_leaders)
     }
 
+    pub fn get_slot_leaders(&self) -> &[Pubkey] {
+        &self.slot_leaders
+    }
+
     pub fn new_from_schedule(slot_leaders: Vec<Pubkey>) -> Self {
         let index = slot_leaders
             .iter()
