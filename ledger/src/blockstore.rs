@@ -615,6 +615,19 @@ impl Blockstore {
             .unwrap_or(0)
     }
 
+    pub fn read_evm_block_id_by_hash(&self, hash: H256) -> Result<Option<evm_state::BlockNum>> {
+        let result = self
+            .evm_blocks_by_hash_cf
+            .get_protobuf_or_bincode::<evm_state::BlockNum>((0, hash))?;
+        if result.is_none() {
+            Ok(self
+                .evm_blocks_by_hash_cf
+                .get_protobuf_or_bincode::<evm_state::BlockNum>((1, hash))?)
+        } else {
+            Ok(result)
+        }
+    }
+
     fn get_primary_index_to_write(
         &self,
         slot: Slot,
