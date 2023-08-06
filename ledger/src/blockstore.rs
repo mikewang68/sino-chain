@@ -395,6 +395,11 @@ impl Blockstore {
         self.meta_cf.get(slot)
     }
 
+    /// Opens a Ledger in directory, provides "infinite" window of shreds
+    pub fn open(ledger_path: &Path) -> Result<Blockstore> {
+        Self::do_open(ledger_path, AccessType::PrimaryOnly, None, true)
+    }
+
     pub fn destroy(ledger_path: &Path) -> Result<()> {
         // Database::destroy() fails if the path doesn't exist
         fs::create_dir_all(ledger_path)?;
