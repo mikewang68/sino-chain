@@ -590,6 +590,31 @@ impl Blockstore {
         self.last_root()
     }
 
+    /// Returns true if a slot is between the rooted slot bounds of the ledger, but has not itself
+    /// been rooted. This is either because the slot was skipped, or due to a gap in ledger data,
+    /// as when booting from a newer snapshot.
+    pub fn is_skipped(&self, slot: Slot) -> bool {
+        let lowest_root = self
+            .rooted_slot_iterator(0)
+            .ok()
+            .and_then(|mut iter| iter.next())
+            .unwrap_or_default();
+        match self.db.get::<cf::Root>(slot).ok().flatten() {
+            Some(_) => false,
+            None => slot < self.max_root() && slot > lowest_root,
+        }
+    }
+
+    // Get max root or 0 if it doesn't exist
+    pub fn max_root(&self) -> Slot {
+        self.db
+            .iter::<cf::Root>(IteratorMode::End)
+            .expect("Couldn't get rooted iterator for max_root()")
+            .next()
+            .map(|(slot, _)| slot)
+            .unwrap_or(0)
+    }
+
     fn get_primary_index_to_write(
         &self,
         slot: Slot,
