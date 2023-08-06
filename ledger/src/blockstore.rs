@@ -391,6 +391,54 @@ impl Blockstore {
         Database::destroy(&blockstore_path)
     }
 
+    pub fn write_transaction_status(
+        &self,
+        slot: Slot,
+        signature: Signature,
+        writable_keys: Vec<&Pubkey>,
+        readonly_keys: Vec<&Pubkey>,
+        status: TransactionStatusMeta,
+    ) -> Result<()> {
+        let status = status.into();
+        // This write lock prevents interleaving issues with the transaction_status_index_cf by gating
+        // writes to that column
+        let w_active_transaction_status_index =
+            self.active_transaction_status_index.write().unwrap();
+        let primary_index =
+            self.get_primary_index_to_write(slot, &w_active_transaction_status_index)?;
+        self.transaction_status_cf
+            .put_protobuf((primary_index, signature, slot), &status)?;
+        for address in writable_keys {
+            self.address_signatures_cf.put(
+                (primary_index, *address, slot, signature),
+                &AddressSignatureMeta { writeable: true },
+            )?;
+        }
+        for address in readonly_keys {
+            self.address_signatures_cf.put(
+                (primary_index, *address, slot, signature),
+                &AddressSignatureMeta { writeable: false },
+            )?;
+        }
+        Ok(())
+    }
+
+    fn get_primary_index_to_write(
+        &self,
+        slot: Slot,
+        // take WriteGuard to require critical section semantics at call site
+        w_active_transaction_status_index: &RwLockWriteGuard<Slot>,
+    ) -> Result<u64> {
+        let i = **w_active_transaction_status_index;
+        let mut index_meta = self.transaction_status_index_cf.get(i)?.unwrap();
+        if slot > index_meta.max_slot {
+            assert!(!index_meta.frozen);
+            index_meta.max_slot = slot;
+            self.transaction_status_index_cf.put(i, &index_meta)?;
+        }
+        Ok(i)
+    }
+
     pub fn open_with_access_type(
         ledger_path: &Path,
         access_type: AccessType,
