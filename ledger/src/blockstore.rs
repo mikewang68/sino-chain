@@ -41,11 +41,11 @@ use {
     },
     storage_proto::{StoredExtendedRewards, StoredTransactionStatusMeta},
     transaction_status::{
-        // ConfirmedBlock, ConfirmedTransaction, 
+        ConfirmedBlock, //ConfirmedTransaction, 
         ConfirmedTransactionStatusWithSignature, 
         Rewards,
         TransactionStatusMeta, 
-        // TransactionWithMetadata,
+        TransactionWithMetadata,
     },
 
     evm_state as evm,
@@ -79,11 +79,18 @@ pub use crate::blockstore_db::BlockstoreError;
 
 pub const BLOCKSTORE_DIRECTORY: &str = "rocksdb";
 pub type CompletedSlotsSender = SyncSender<Vec<Slot>>;
+type CompletedRanges = Vec<(u32, u32)>;
 
 // An upper bound on maximum number of data shreds we can handle in a slot
 // 32K shreds would allow ~320K peak TPS
 // (32K shreds per slot * 4 TX per shred * 2.5 slots per sec)
 pub const MAX_DATA_SHREDS_PER_SLOT: usize = 32_768;
+
+thread_local!(static PAR_THREAD_POOL: RefCell<ThreadPool> = RefCell::new(rayon::ThreadPoolBuilder::new()
+                    .num_threads(get_thread_count())
+                    .thread_name(|ix| format!("blockstore_{}", ix))
+                    .build()
+                    .unwrap()));
 
 #[derive(PartialEq, Debug, Clone)]
 enum ShredSource {
@@ -375,6 +382,10 @@ struct SlotStats {
     num_recovered: usize,
 }
 
+fn get_last_hash<'a>(iterator: impl Iterator<Item = &'a Entry> + 'a) -> Option<Hash> {
+    iterator.last().map(|entry| entry.hash)
+}
+
 impl Blockstore {
     pub fn is_root(&self, slot: Slot) -> bool {
         matches!(self.db.get::<cf::Root>(slot), Ok(Some(true)))
@@ -441,6 +452,315 @@ impl Blockstore {
 
     pub fn write_transaction_memos(&self, signature: &Signature, memos: String) -> Result<()> {
         self.transaction_memos_cf.put(*signature, &memos)
+    }
+
+    pub fn get_complete_block(
+        &self,
+        slot: Slot,
+        require_previous_blockhash: bool,
+    ) -> Result<ConfirmedBlock> {
+        let slot_meta_cf = self.db.column::<cf::SlotMeta>();
+        let slot_meta = match slot_meta_cf.get(slot)? {
+            Some(slot_meta) => slot_meta,
+            None => {
+                info!("SlotMeta not found for slot {}", slot);
+                return Err(BlockstoreError::SlotUnavailable);
+            }
+        };
+        if slot_meta.is_full() {
+            let slot_entries = self.get_slot_entries(slot, 0)?;
+            if !slot_entries.is_empty() {
+                let blockhash = slot_entries
+                    .last()
+                    .map(|entry| entry.hash)
+                    .unwrap_or_else(|| panic!("Rooted slot {:?} must have blockhash", slot));
+                let slot_transaction_iterator = slot_entries
+                    .into_iter()
+                    .flat_map(|entry| entry.transactions)
+                    .map(|transaction| {
+                        if let Err(err) = transaction.sanitize() {
+                            warn!(
+                                "Blockstore::get_block sanitize failed: {:?}, \
+                                slot: {:?}, \
+                                {:?}",
+                                err, slot, transaction,
+                            );
+                        }
+                        transaction
+                    });
+                let parent_slot_entries = slot_meta
+                    .parent_slot
+                    .and_then(|parent_slot| {
+                        self.get_slot_entries(parent_slot, /*shred_start_index:*/ 0)
+                            .ok()
+                    })
+                    .unwrap_or_default();
+                if parent_slot_entries.is_empty() && require_previous_blockhash {
+                    return Err(BlockstoreError::ParentEntriesUnavailable);
+                }
+                let previous_blockhash = if !parent_slot_entries.is_empty() {
+                    get_last_hash(parent_slot_entries.iter()).unwrap()
+                } else {
+                    Hash::default()
+                };
+
+                let rewards = self
+                    .rewards_cf
+                    .get_protobuf_or_bincode::<StoredExtendedRewards>(slot)?
+                    .unwrap_or_default()
+                    .into();
+
+                // The Blocktime and BlockHeight column families are updated asynchronously; they
+                // may not be written by the time the complete slot entries are available. In this
+                // case, these fields will be `None`.
+                let block_time = self.blocktime_cf.get(slot)?;
+                let block_height = self.block_height_cf.get(slot)?;
+
+                let block = ConfirmedBlock {
+                    previous_blockhash: previous_blockhash.to_string(),
+                    blockhash: blockhash.to_string(),
+                    // If the slot is full it should have parent_slot populated
+                    // from shreds received.
+                    parent_slot: slot_meta.parent_slot.unwrap(),
+                    transactions: self
+                        .map_transactions_to_statuses(slot, slot_transaction_iterator)?,
+                    rewards,
+                    block_time,
+                    block_height,
+                };
+                return Ok(block);
+            }
+        }
+        Err(BlockstoreError::SlotUnavailable)
+    }
+
+    /// Returns the entry vector for the slot starting with `shred_start_index`
+    pub fn get_slot_entries(&self, slot: Slot, shred_start_index: u64) -> Result<Vec<Entry>> {
+        self.get_slot_entries_with_shred_info(slot, shred_start_index, false)
+            .map(|x| x.0)
+    }
+
+    /// Returns the entry vector for the slot starting with `shred_start_index`, the number of
+    /// shreds that comprise the entry vector, and whether the slot is full (consumed all shreds).
+    pub fn get_slot_entries_with_shred_info(
+        &self,
+        slot: Slot,
+        start_index: u64,
+        allow_dead_slots: bool,
+    ) -> Result<(Vec<Entry>, u64, bool)> {
+        let (completed_ranges, slot_meta) = self.get_completed_ranges(slot, start_index)?;
+
+        // Check if the slot is dead *after* fetching completed ranges to avoid a race
+        // where a slot is marked dead by another thread before the completed range query finishes.
+        // This should be sufficient because full slots will never be marked dead from another thread,
+        // this can only happen during entry processing during replay stage.
+        if self.is_dead(slot) && !allow_dead_slots {
+            return Err(BlockstoreError::DeadSlot);
+        } else if completed_ranges.is_empty() {
+            return Ok((vec![], 0, false));
+        }
+
+        let slot_meta = slot_meta.unwrap();
+        let num_shreds = completed_ranges
+            .last()
+            .map(|(_, end_index)| u64::from(*end_index) - start_index + 1)
+            .unwrap_or(0);
+
+        let entries: Result<Vec<Vec<Entry>>> = PAR_THREAD_POOL.with(|thread_pool| {
+            thread_pool.borrow().install(|| {
+                completed_ranges
+                    .par_iter()
+                    .map(|(start_index, end_index)| {
+                        self.get_entries_in_data_block(
+                            slot,
+                            *start_index,
+                            *end_index,
+                            Some(&slot_meta),
+                        )
+                    })
+                    .collect()
+            })
+        });
+
+        let entries: Vec<Entry> = entries?.into_iter().flatten().collect();
+        Ok((entries, num_shreds, slot_meta.is_full()))
+    }
+
+    pub fn map_transactions_to_statuses(
+        &self,
+        slot: Slot,
+        iterator: impl Iterator<Item = VersionedTransaction>,
+    ) -> Result<Vec<TransactionWithMetadata>> {
+        iterator
+            .map(|versioned_tx| {
+                // TODO: add support for versioned transactions
+                if let Some(transaction) = versioned_tx.into_legacy_transaction() {
+                    let signature = transaction.signatures[0];
+                    Ok(TransactionWithMetadata {
+                        transaction,
+                        meta: self
+                            .read_transaction_status((signature, slot))?
+                            .ok_or(BlockstoreError::MissingTransactionMetadata)?,
+                    })
+                } else {
+                    Err(BlockstoreError::UnsupportedTransactionVersion)
+                }
+            })
+            .collect()
+    }
+
+    fn get_completed_ranges(
+        &self,
+        slot: Slot,
+        start_index: u64,
+    ) -> Result<(CompletedRanges, Option<SlotMeta>)> {
+        let _lock = self.check_lowest_cleanup_slot(slot)?;
+
+        let slot_meta_cf = self.db.column::<cf::SlotMeta>();
+        let slot_meta = slot_meta_cf.get(slot)?;
+        if slot_meta.is_none() {
+            return Ok((vec![], slot_meta));
+        }
+
+        let slot_meta = slot_meta.unwrap();
+        // Find all the ranges for the completed data blocks
+        let completed_ranges = Self::get_completed_data_ranges(
+            start_index as u32,
+            &slot_meta.completed_data_indexes,
+            slot_meta.consumed as u32,
+        );
+
+        Ok((completed_ranges, Some(slot_meta)))
+    }
+
+    pub fn is_dead(&self, slot: Slot) -> bool {
+        matches!(
+            self.db
+                .get::<cf::DeadSlots>(slot)
+                .expect("fetch from DeadSlots column family failed"),
+            Some(true)
+        )
+    }
+
+    pub fn get_entries_in_data_block(
+        &self,
+        slot: Slot,
+        start_index: u32,
+        end_index: u32,
+        slot_meta: Option<&SlotMeta>,
+    ) -> Result<Vec<Entry>> {
+        let data_shred_cf = self.db.column::<cf::ShredData>();
+
+        // Short circuit on first error
+        let data_shreds: Result<Vec<Shred>> = (start_index..=end_index)
+            .map(|i| {
+                data_shred_cf
+                    .get_bytes((slot, u64::from(i)))
+                    .and_then(|serialized_shred| {
+                        if serialized_shred.is_none() {
+                            if let Some(slot_meta) = slot_meta {
+                                panic!(
+                                    "Shred with
+                                    slot: {},
+                                    index: {},
+                                    consumed: {},
+                                    completed_indexes: {:?}
+                                    must exist if shred index was included in a range: {} {}",
+                                    slot,
+                                    i,
+                                    slot_meta.consumed,
+                                    slot_meta.completed_data_indexes,
+                                    start_index,
+                                    end_index
+                                );
+                            } else {
+                                return Err(BlockstoreError::InvalidShredData(Box::new(
+                                    bincode::ErrorKind::Custom(format!(
+                                        "Missing shred for slot {}, index {}",
+                                        slot, i
+                                    )),
+                                )));
+                            }
+                        }
+
+                        Shred::new_from_serialized_shred(serialized_shred.unwrap()).map_err(|err| {
+                            BlockstoreError::InvalidShredData(Box::new(bincode::ErrorKind::Custom(
+                                format!(
+                                    "Could not reconstruct shred from shred payload: {:?}",
+                                    err
+                                ),
+                            )))
+                        })
+                    })
+            })
+            .collect();
+
+        let data_shreds = data_shreds?;
+        let last_shred = data_shreds.last().unwrap();
+        assert!(last_shred.data_complete() || last_shred.last_in_slot());
+
+        let deshred_payload = Shredder::deshred(&data_shreds).map_err(|e| {
+            BlockstoreError::InvalidShredData(Box::new(bincode::ErrorKind::Custom(format!(
+                "Could not reconstruct data block from constituent shreds, error: {:?}",
+                e
+            ))))
+        })?;
+
+        debug!("{:?} shreds in last FEC set", data_shreds.len(),);
+        bincode::deserialize::<Vec<Entry>>(&deshred_payload).map_err(|e| {
+            BlockstoreError::InvalidShredData(Box::new(bincode::ErrorKind::Custom(format!(
+                "could not reconstruct entries: {:?}",
+                e
+            ))))
+        })
+    }
+
+    fn check_lowest_cleanup_slot(&self, slot: Slot) -> Result<parking_lot::RwLockReadGuard<Slot>> {
+        // lowest_cleanup_slot is the last slot that was not cleaned up by LedgerCleanupService
+        let lowest_cleanup_slot = self.lowest_cleanup_slot.read_recursive();
+        if *lowest_cleanup_slot > 0 && *lowest_cleanup_slot >= slot {
+            return Err(BlockstoreError::SlotCleanedUp);
+        }
+        // Make caller hold this lock properly; otherwise LedgerCleanupService can purge/compact
+        // needed slots here at any given moment
+        Ok(lowest_cleanup_slot)
+    }
+
+    // Get the range of indexes [start_index, end_index] of every completed data block
+    fn get_completed_data_ranges(
+        start_index: u32,
+        completed_data_indexes: &BTreeSet<u32>,
+        consumed: u32,
+    ) -> CompletedRanges {
+        // `consumed` is the next missing shred index, but shred `i` existing in
+        // completed_data_end_indexes implies it's not missing
+        assert!(!completed_data_indexes.contains(&consumed));
+        completed_data_indexes
+            .range(start_index..consumed)
+            .scan(start_index, |begin, index| {
+                let out = (*begin, *index);
+                *begin = index + 1;
+                Some(out)
+            })
+            .collect()
+    }
+
+    pub fn read_transaction_status(
+        &self,
+        index: (Signature, Slot),
+    ) -> Result<Option<TransactionStatusMeta>> {
+        let (signature, slot) = index;
+        let result = self
+            .transaction_status_cf
+            .get_protobuf_or_bincode::<StoredTransactionStatusMeta>((0, signature, slot))?;
+        if result.is_none() {
+            Ok(self
+                .transaction_status_cf
+                .get_protobuf_or_bincode::<StoredTransactionStatusMeta>((1, signature, slot))?
+                .and_then(|meta| meta.try_into().ok()))
+        } else {
+            Ok(result.and_then(|meta| meta.try_into().ok()))
+        }
     }
 
     pub fn open_with_access_type(
