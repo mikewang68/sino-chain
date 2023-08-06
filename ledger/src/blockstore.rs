@@ -560,6 +560,36 @@ impl Blockstore {
         (lowest_cleanup_slot, lowest_available_slot)
     }
 
+    /// The first complete block that is available in the Blockstore ledger
+    pub fn get_first_available_block(&self) -> Result<Slot> {
+        let mut root_iterator = self.rooted_slot_iterator(self.lowest_slot())?;
+        // The block at root-index 0 cannot be complete, because it is missing its parent
+        // blockhash. A parent blockhash must be calculated from the entries of the previous block.
+        // Therefore, the first available complete block is that at root-index 1.
+        Ok(root_iterator.nth(1).unwrap_or_default())
+    }
+
+    pub fn rooted_slot_iterator(&self, slot: Slot) -> Result<impl Iterator<Item = u64> + '_> {
+        let slot_iterator = self
+            .db
+            .iter::<cf::Root>(IteratorMode::From(slot, IteratorDirection::Forward))?;
+        Ok(slot_iterator.map(move |(rooted_slot, _)| rooted_slot))
+    }
+
+    // find the first available slot in blockstore that has some data in it
+    pub fn lowest_slot(&self) -> Slot {
+        for (slot, meta) in self
+            .slot_meta_iterator(0)
+            .expect("unable to iterate over meta")
+        {
+            if slot > 0 && meta.received > 0 {
+                return slot;
+            }
+        }
+        // This means blockstore is empty, should never get here aside from right at boot.
+        self.last_root()
+    }
+
     fn get_primary_index_to_write(
         &self,
         slot: Slot,
