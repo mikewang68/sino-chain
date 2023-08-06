@@ -11,7 +11,7 @@ use {
     },
     runtime::bank_forks::BankForks,
     sdk::clock::{Slot, DEFAULT_MS_PER_SLOT},
-    streamer::streamer::{
+    sino_streamer::streamer::{
         self, PacketBatchReceiver, PacketBatchSender, StreamerReceiveStats,
     },
     std::{

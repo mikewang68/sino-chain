@@ -84,7 +84,7 @@ mod tests {
             system_transaction,
             timing::timestamp,
         },
-        streamer::socket::SocketAddrSpace,
+        sino_streamer::socket::SocketAddrSpace,
         std::{
             collections::HashSet,
             fs,

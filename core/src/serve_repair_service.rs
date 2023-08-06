@@ -2,7 +2,7 @@ use {
     crate::serve_repair::ServeRepair,
     ledger::blockstore::Blockstore,
     perf::recycler::Recycler,
-    streamer::{
+    sino_streamer::{
         socket::SocketAddrSpace,
         streamer::{self, StreamerReceiveStats},
     },

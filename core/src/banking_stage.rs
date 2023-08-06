@@ -53,7 +53,7 @@ use {
         timing::{duration_as_ms, timestamp, AtomicInterval},
         transaction::{self, SanitizedTransaction, TransactionError, VersionedTransaction},
     },
-    streamer::sendmmsg::{batch_send, SendPktsError},
+    sino_streamer::sendmmsg::{batch_send, SendPktsError},
     transaction_status::token_balances::{
         collect_token_balances, TransactionTokenBalancesSet,
     },
@@ -2119,7 +2119,7 @@ mod tests {
             system_transaction,
             transaction::{Transaction, TransactionError},
         },
-        streamer::{recvmmsg::recv_mmsg, socket::SocketAddrSpace},
+        sino_streamer::{recvmmsg::recv_mmsg, socket::SocketAddrSpace},
         transaction_status::TransactionWithMetadata,
         vote_program::vote_transaction,
         std::{

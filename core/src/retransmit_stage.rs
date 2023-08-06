@@ -32,7 +32,7 @@ use {
     rpc::{max_slots::MaxSlots, rpc_subscriptions::RpcSubscriptions},
     runtime::{bank::Bank, bank_forks::BankForks},
     sdk::{clock::Slot, epoch_schedule::EpochSchedule, pubkey::Pubkey, timing::timestamp},
-    streamer::sendmmsg::{multi_target_send, SendPktsError},
+    sino_streamer::sendmmsg::{multi_target_send, SendPktsError},
     std::{
         collections::{BTreeSet, HashMap, HashSet},
         net::UdpSocket,

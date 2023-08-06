@@ -34,7 +34,7 @@ use {
         timing::{duration_as_us, timestamp},
         transaction::{Transaction, VersionedTransaction},
     },
-    streamer::socket::SocketAddrSpace,
+    sino_streamer::socket::SocketAddrSpace,
     std::{
         collections::VecDeque,
         sync::{atomic::Ordering, mpsc::Receiver, Arc, RwLock},

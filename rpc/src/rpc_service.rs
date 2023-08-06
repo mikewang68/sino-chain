@@ -581,7 +581,7 @@ mod tests {
             signature::Signer,
             signer::keypair::Keypair,
         },
-        streamer::socket::SocketAddrSpace,
+        sino_streamer::socket::SocketAddrSpace,
         std::{
             io::Write,
             net::{IpAddr, Ipv4Addr},

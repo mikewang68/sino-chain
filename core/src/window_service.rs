@@ -728,7 +728,7 @@ mod test {
             signature::{Keypair, Signer},
             timing::timestamp,
         },
-        streamer::socket::SocketAddrSpace,
+        sino_streamer::socket::SocketAddrSpace,
     };
 
     fn local_entries_to_shred(

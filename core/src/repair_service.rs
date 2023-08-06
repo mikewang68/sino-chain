@@ -24,7 +24,7 @@ use {
     sdk::{
         clock::Slot, epoch_schedule::EpochSchedule, hash::Hash, pubkey::Pubkey, timing::timestamp,
     },
-    streamer::sendmmsg::{batch_send, SendPktsError},
+    sino_streamer::sendmmsg::{batch_send, SendPktsError},
     std::{
         collections::{HashMap, HashSet},
         iter::Iterator,
@@ -728,7 +728,7 @@ mod test {
             shred::max_ticks_per_n_shreds,
         },
         sdk::signature::Keypair,
-        streamer::socket::SocketAddrSpace,
+        sino_streamer::socket::SocketAddrSpace,
         std::collections::HashSet,
     };
 

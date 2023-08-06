@@ -3090,7 +3090,7 @@ pub mod tests {
             system_transaction,
             transaction::TransactionError,
         },
-        streamer::socket::SocketAddrSpace,
+        sino_streamer::socket::SocketAddrSpace,
         transaction_status::TransactionWithMetadata,
         vote_program::{
             vote_state::{VoteState, VoteStateVersions},

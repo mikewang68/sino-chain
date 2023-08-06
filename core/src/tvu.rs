@@ -450,7 +450,7 @@ pub mod tests {
         rpc::optimistically_confirmed_bank_tracker::OptimisticallyConfirmedBank,
         runtime::bank::Bank,
         sdk::signature::{Keypair, Signer},
-        streamer::socket::SocketAddrSpace,
+        sino_streamer::socket::SocketAddrSpace,
         std::sync::atomic::AtomicU64,
         std::sync::atomic::Ordering,
     };

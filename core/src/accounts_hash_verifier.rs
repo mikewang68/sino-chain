@@ -292,7 +292,7 @@ mod tests {
             hash::hash,
             signature::{Keypair, Signer},
         },
-        streamer::socket::SocketAddrSpace,
+        sino_streamer::socket::SocketAddrSpace,
     };
     use evm_state::AccountProvider;
 

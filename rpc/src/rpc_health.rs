@@ -123,7 +123,7 @@ impl RpcHealth {
     pub(crate) fn stub() -> Arc<Self> {
         use {
             gossip::contact_info::ContactInfo, sdk::signer::keypair::Keypair,
-            streamer::socket::SocketAddrSpace,
+            sino_streamer::socket::SocketAddrSpace,
         };
         Arc::new(Self::new(
             Arc::new(ClusterInfo::new(

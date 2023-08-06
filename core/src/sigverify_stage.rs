@@ -19,7 +19,7 @@ use {
         },
     },
     sdk::timing,
-    streamer::streamer::{self, PacketBatchReceiver, StreamerError},
+    sino_streamer::streamer::{self, PacketBatchReceiver, StreamerError},
     std::{
         sync::mpsc::{Receiver, RecvTimeoutError},
         thread::{self, Builder, JoinHandle},

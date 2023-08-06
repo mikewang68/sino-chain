@@ -29,7 +29,7 @@ use {
     sdk::{
         clock::Slot, hash::Hash, packet::PACKET_DATA_SIZE, pubkey::Pubkey, timing::duration_as_ms,
     },
-    streamer::streamer::{PacketBatchReceiver, PacketBatchSender},
+    sino_streamer::streamer::{PacketBatchReceiver, PacketBatchSender},
     std::{
         collections::HashSet,
         net::SocketAddr,
@@ -764,7 +764,7 @@ mod tests {
         },
         perf::packet::Packet,
         sdk::{hash::Hash, pubkey::Pubkey, signature::Keypair, timing::timestamp},
-        streamer::socket::SocketAddrSpace,
+        sino_streamer::socket::SocketAddrSpace,
     };
 
     #[test]

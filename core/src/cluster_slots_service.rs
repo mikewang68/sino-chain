@@ -183,7 +183,7 @@ mod test {
         super::*,
         gossip::{cluster_info::Node, crds_value::LowestSlot},
         sdk::{pubkey::Pubkey, signature::Keypair},
-        streamer::socket::SocketAddrSpace,
+        sino_streamer::socket::SocketAddrSpace,
     };
 
     #[test]

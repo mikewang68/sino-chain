@@ -25,7 +25,7 @@ use {
         system_transaction,
         timing::timestamp,
     },
-    streamer::socket::SocketAddrSpace,
+    sino_streamer::socket::SocketAddrSpace,
     std::{
         net::UdpSocket,
         sync::{

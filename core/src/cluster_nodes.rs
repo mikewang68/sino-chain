@@ -18,7 +18,7 @@ use {
         pubkey::Pubkey,
         timing::timestamp,
     },
-    streamer::socket::SocketAddrSpace,
+    sino_streamer::socket::SocketAddrSpace,
     std::{
         any::TypeId,
         cmp::Reverse,
@@ -436,7 +436,7 @@ mod tests {
             crds_value::{CrdsData, CrdsValue},
         },
         sdk::{signature::Keypair, timing::timestamp},
-        streamer::socket::SocketAddrSpace,
+        sino_streamer::socket::SocketAddrSpace,
         std::{iter::repeat_with, sync::Arc},
     };
 

@@ -156,7 +156,7 @@ mod tests {
     use {
         super::*,
         gossip::contact_info::ContactInfo,
-        streamer::socket::SocketAddrSpace,
+        sino_streamer::socket::SocketAddrSpace,
         std::net::{IpAddr, Ipv4Addr, SocketAddr},
     };
 

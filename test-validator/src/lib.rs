@@ -36,7 +36,7 @@ use {
         rent::Rent,
         signature::{read_keypair_file, write_keypair_file, Keypair, Signer},
     },
-    streamer::socket::SocketAddrSpace,
+    sino_streamer::socket::SocketAddrSpace,
     std::{
         collections::{HashMap, HashSet},
         fs::{remove_dir_all, File},

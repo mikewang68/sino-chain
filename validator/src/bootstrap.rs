@@ -26,7 +26,7 @@ use {
         pubkey::Pubkey,
         signature::{Keypair, Signer},
     },
-    streamer::socket::SocketAddrSpace,
+    sino_streamer::socket::SocketAddrSpace,
     std::{
         collections::{HashMap, HashSet},
         net::{SocketAddr, TcpListener, UdpSocket},

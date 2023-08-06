@@ -63,7 +63,7 @@ use {
         signature::{Keypair, Signer},
     },
     send_transaction_service::send_transaction_service,
-    streamer::socket::SocketAddrSpace,
+    sino_streamer::socket::SocketAddrSpace,
     std::{
         collections::{HashSet, VecDeque},
         env,

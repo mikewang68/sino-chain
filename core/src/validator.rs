@@ -93,7 +93,7 @@ use {
         timing::timestamp,
     },
     send_transaction_service::send_transaction_service,
-    streamer::socket::SocketAddrSpace,
+    sino_streamer::socket::SocketAddrSpace,
     vote_program::vote_state::VoteState,
     std::{
         collections::{HashMap, HashSet},
@@ -311,7 +311,7 @@ pub struct Validator {
     poh_service: PohService,
     tpu: Tpu,
     tvu: Tvu,
-    ip_echo_server: Option<net_utils::IpEchoServer>,
+    ip_echo_server: Option<sino_net_utils::IpEchoServer>,
     pub cluster_info: Arc<ClusterInfo>,
     pub bank_forks: Arc<RwLock<BankForks>>,
     accountsdb_repl_service: Option<AccountsDbReplService>,
@@ -773,7 +773,7 @@ impl Validator {
         }
         let ip_echo_server = match node.sockets.ip_echo {
             None => None,
-            Some(tcp_listener) => Some(net_utils::ip_echo_server(
+            Some(tcp_listener) => Some(sino_net_utils::ip_echo_server(
                 tcp_listener,
                 Some(node.info.shred_version),
             )),

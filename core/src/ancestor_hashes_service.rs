@@ -23,7 +23,7 @@ use {
         pubkey::Pubkey,
         timing::timestamp,
     },
-    streamer::streamer::{self, PacketBatchReceiver, StreamerReceiveStats},
+    sino_streamer::streamer::{self, PacketBatchReceiver, StreamerReceiveStats},
     std::{
         collections::HashSet,
         net::UdpSocket,
@@ -704,7 +704,7 @@ mod test {
         ledger::{blockstore::make_many_slot_entries, get_tmp_ledger_path},
         runtime::{accounts_background_service::AbsRequestSender, bank_forks::BankForks},
         sdk::{hash::Hash, signature::Keypair},
-        streamer::socket::SocketAddrSpace,
+        sino_streamer::socket::SocketAddrSpace,
         std::{collections::HashMap, sync::mpsc::channel},
         trees::tr,
     };

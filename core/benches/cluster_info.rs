@@ -24,7 +24,7 @@ use {
         signature::Keypair,
         timing::{timestamp, AtomicInterval},
     },
-    streamer::socket::SocketAddrSpace,
+    sino_streamer::socket::SocketAddrSpace,
     std::{
         collections::HashMap,
         net::UdpSocket,

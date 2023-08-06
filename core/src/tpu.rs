@@ -99,7 +99,7 @@ impl Tpu {
         );
         let (verified_sender, verified_receiver) = unbounded();
 
-        let tpu_quic_t = streamer::quic::spawn_server(
+        let tpu_quic_t = sino_streamer::quic::spawn_server(
             transactions_quic_socket,
             keypair,
             cluster_info.my_contact_info().tpu.ip(),

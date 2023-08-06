@@ -29,7 +29,7 @@ use {
         signature::Keypair,
         timing::{timestamp, AtomicInterval},
     },
-    streamer::{
+    sino_streamer::{
         sendmmsg::{batch_send, SendPktsError},
         socket::SocketAddrSpace,
     },

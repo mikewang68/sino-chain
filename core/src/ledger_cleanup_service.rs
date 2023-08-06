@@ -352,7 +352,7 @@ impl LedgerCleanupService {
 mod tests {
     use {
         super::*,
-        sino_ledger::{blockstore::make_many_slot_entries, get_tmp_ledger_path},
+        ledger::{blockstore::make_many_slot_entries, get_tmp_ledger_path},
         std::sync::mpsc::channel,
     };
 
