@@ -756,6 +756,118 @@ impl Blockstore {
         }))
     }
 
+    pub fn find_evm_transaction(&self, hash: H256) -> Result<Option<evm::TransactionReceipt>> {
+        // collect all transactions by hash, from both primary indexes (0 | 1), for any blocks.
+        let mut transactions: Vec<_> = self
+            .evm_transactions_cf
+            .iter(IteratorMode::From(
+                EvmTransactionReceiptsIndex {
+                    index: 0,
+                    hash,
+                    block_num: 0,
+                    slot: None,
+                },
+                IteratorDirection::Forward,
+            ))?
+            .take_while(
+                |(
+                    EvmTransactionReceiptsIndex {
+                        hash: found_hash, ..
+                    },
+                    _data,
+                )| *found_hash == hash,
+            )
+            .collect();
+        transactions.extend(
+            self.evm_transactions_cf
+                .iter(IteratorMode::From(
+                    EvmTransactionReceiptsIndex {
+                        index: 1,
+                        hash,
+                        block_num: 0,
+                        slot: None,
+                    },
+                    IteratorDirection::Forward,
+                ))?
+                .take_while(
+                    |(
+                        EvmTransactionReceiptsIndex {
+                            hash: found_hash, ..
+                        },
+                        _data,
+                    )| *found_hash == hash,
+                ),
+        );
+
+        // find first transaction with confirmed slot
+        let mut confirmed_transaction_data = transactions
+            .iter()
+            .find(|(EvmTransactionReceiptsIndex { slot, .. }, _)| {
+                if let Some(slot) = slot {
+                    if self.is_root(*slot) {
+                        return true;
+                    }
+                }
+                false
+            })
+            .map(|(_, data)| data);
+
+        if confirmed_transaction_data.is_none() {
+            // find transactions with confirmed blocks. (Old version of db where is no slot for transaction)
+            // need to remove it later.
+            for (
+                EvmTransactionReceiptsIndex {
+                    hash, block_num, ..
+                },
+                data,
+            ) in &transactions
+            {
+                let blocks = if let Ok(b) = self.evm_blocks_iterator(*block_num) {
+                    b
+                } else {
+                    continue;
+                };
+                let confirmed_block_found = blocks
+                    .take_while(|((block_index, _slot), _block)| block_index == block_num)
+                    .any(|(_, header)| {
+                        self.is_root(header.native_chain_slot) && header.transactions.contains(hash)
+                    });
+
+                if confirmed_block_found {
+                    confirmed_transaction_data = Some(data);
+                    break;
+                }
+            }
+        }
+
+        // if no confirmed block found for transaction, return any tx.
+        let transaction_data =
+            confirmed_transaction_data.or_else(|| transactions.first().map(|(_, data)| data));
+
+        let transaction_data = match transaction_data {
+            Some(tx_data) => {
+                let tx_receipt = self
+                    .evm_transactions_cf
+                    .deserialize_protobuf_or_bincode::<evm::TransactionReceipt>(tx_data)?;
+                let tx_receipt: evm::TransactionReceipt =
+                    tx_receipt.try_into().map_err(BlockstoreError::Other)?;
+                Some(tx_receipt)
+            }
+            None => None,
+        };
+
+        // let mb_tx = transaction_data
+        //     .map(|data| {
+        //         self.evm_transactions_cf
+        //             .deserialize_protobuf_or_bincode::<evm::TransactionReceipt>(&data)
+        //     })
+        //     .transpose()?
+        //     .map(|tx_receipt| tx_receipt.try_into())
+        //     .
+
+        Ok(transaction_data)
+    }
+
     fn get_primary_index_to_write(
         &self,
         slot: Slot,
