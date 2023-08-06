@@ -439,6 +439,10 @@ impl Blockstore {
         Ok(i)
     }
 
+    pub fn write_transaction_memos(&self, signature: &Signature, memos: String) -> Result<()> {
+        self.transaction_memos_cf.put(*signature, &memos)
+    }
+
     pub fn open_with_access_type(
         ledger_path: &Path,
         access_type: AccessType,
