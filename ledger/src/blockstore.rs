@@ -719,6 +719,39 @@ impl Blockstore {
         self.get_transaction_with_status(signature, &confirmed_unrooted_slots)
     }
 
+    /// Returns a transaction status
+    pub fn get_rooted_transaction_status(
+        &self,
+        signature: Signature,
+    ) -> Result<Option<(Slot, TransactionStatusMeta)>> {
+        datapoint_info!(
+            "blockstore-rpc-api",
+            (
+                "method",
+                "get_rooted_transaction_status",
+                String
+            )
+        );
+        self.get_transaction_status(signature, &[])
+    }
+
+    pub fn get_rooted_block(
+        &self,
+        slot: Slot,
+        require_previous_blockhash: bool,
+    ) -> Result<ConfirmedBlock> {
+        datapoint_info!(
+            "blockstore-rpc-api",
+            ("method", "get_rooted_block", String)
+        );
+        let _lock = self.check_lowest_cleanup_slot(slot)?;
+
+        if self.is_root(slot) {
+            return self.get_complete_block(slot, require_previous_blockhash);
+        }
+        Err(BlockstoreError::SlotNotRooted)
+    }
+
     pub fn read_evm_transaction(
         &self,
         index: (H256, evm::BlockNum, Option<Slot>),
