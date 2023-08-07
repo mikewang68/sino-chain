@@ -53,6 +53,26 @@ fn sort_stakes(stakes: &mut Vec<(Pubkey, u64)>) {
     stakes.dedup();
 }
 
+/// Map of leader base58 identity pubkeys to the slot indices relative to the first epoch slot
+pub type LeaderScheduleByIdentity = HashMap<String, Vec<usize>>;
+
+pub fn leader_schedule_by_identity<'a>(
+    upcoming_leaders: impl Iterator<Item = (usize, &'a Pubkey)>,
+) -> LeaderScheduleByIdentity {
+    let mut leader_schedule_by_identity = HashMap::new();
+
+    for (slot_index, identity_pubkey) in upcoming_leaders {
+        leader_schedule_by_identity
+            .entry(identity_pubkey)
+            .or_insert_with(Vec::new)
+            .push(slot_index);
+    }
+
+    leader_schedule_by_identity
+        .into_iter()
+        .map(|(identity_pubkey, slot_indices)| (identity_pubkey.to_string(), slot_indices))
+        .collect()
+}
 
 fn num_major_stakers(stakes: &[(Pubkey, u64)]) -> usize {
     stakes
