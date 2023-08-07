@@ -1,4 +1,6 @@
- use {
+use entry::entry::verify_transactions;
+
+use {
 //     crate::{
 //         bank_forks_utils::{EvmRecorderSender, EvmStateRecorderSender},
 //         block_error::BlockError,
@@ -11,515 +13,512 @@
      crossbeam_channel::Sender,
 //     itertools::Itertools,
 //     log::*,
-//     rand::{seq::SliceRandom, thread_rng},
-//     rayon::{prelude::*, ThreadPool},
-//     solana_entry::entry::{
-//         self, create_ticks, Entry, EntrySlice, EntryType, EntryVerificationStatus, VerifyRecyclers,
+     rand::{seq::SliceRandom, thread_rng},
+     rayon::{prelude::*, ThreadPool},
+     entry::entry::{Entry, EntryType},//{
+//         self, create_ticks, EntrySlice, EntryVerificationStatus, VerifyRecyclers,
 //     },
 //     solana_measure::measure::Measure,
 //     solana_metrics::{datapoint_error, inc_new_counter_debug},
-//     solana_program_runtime::timings::ExecuteTimings,
-//     solana_rayon_threadlimit::get_thread_count,
+     program_runtime::timings::ExecuteTimings,
+     rayon_threadlimit::get_thread_count,
      runtime::{
 //         accounts_db::{AccountShrinkThreshold, AccountsDbConfig},
 //         accounts_index::AccountSecondaryIndexes,
 //         accounts_update_notifier_interface::AccountsUpdateNotifier,
-         bank::{Bank, TransactionExecutionDetails, TransactionBalancesSet, RentDebits},//{
-//             TransactionExecutionResult, TransactionResults,
-//         },
+         bank::{Bank, TransactionExecutionDetails, TransactionBalancesSet, RentDebits, TransactionResults, TransactionExecutionResult},
 //         bank_forks::BankForks,
-//         bank_utils,
-//         block_cost_limits::*,
+         bank_utils,
+         block_cost_limits::*,
 //         commitment::VOTE_THRESHOLD_SIZE,
-//         cost_model::CostModel,
+         cost_model::CostModel,
 //         snapshot_config::SnapshotConfig,
 //         snapshot_package::{AccountsPackageSender, SnapshotType},
 //         snapshot_utils::{self, BankFromArchiveTimings},
-//         transaction_batch::TransactionBatch,
-//         transaction_cost_metrics_sender::TransactionCostMetricsSender,
+         transaction_batch::TransactionBatch,
+         transaction_cost_metrics_sender::TransactionCostMetricsSender,
 //         vote_account::VoteAccount,
-//         vote_sender_types::ReplayVoteSender,
+         vote_sender_types::ReplayVoteSender,
      },
      sdk::{
-         clock::Slot,//{Slot, MAX_PROCESSING_AGE},
-//         feature_set,
+         clock::{Slot, MAX_PROCESSING_AGE},
+         feature_set,
 //         genesis_config::GenesisConfig,
 //         hash::Hash,
-//         instruction::InstructionError,
-//         pubkey::Pubkey,
-//         signature::{Keypair, Signature},
+         instruction::InstructionError,
+         pubkey::Pubkey,
+         signature::Signature,//{Keypair, Signature},
 //         timing,
-         transaction::SanitizedTransaction,//{
-//             Result, SanitizedTransaction, TransactionError, TransactionVerificationMode,
-//             VersionedTransaction,
+         transaction::{SanitizedTransaction, Result, VersionedTransaction, TransactionVerificationMode, TransactionError},//{
+//             , SanitizedTransaction,
 //         },
      },
-     transaction_status::token_balances::TransactionTokenBalancesSet,//{
-//         collect_token_balances,
-//     },
+     transaction_status::token_balances::{
+        collect_token_balances, TransactionTokenBalancesSet
+    },
      std::{
-//         borrow::Cow,
-//         cell::RefCell,
-//         collections::{HashMap, HashSet},
+         borrow::Cow,
+         cell::RefCell,
+         collections::HashMap,//{HashMap, HashSet},
 //         path::{Path, PathBuf},
 //         result,
-         sync::Arc,//{Arc, RwLock},
+         sync::{Arc, RwLock},
 //         time::{Duration, Instant},
      },
 //     thiserror::Error,
  };
 
-// // it tracks the block cost available capacity - number of compute-units allowed
-// // by max blockl cost limit
-// #[derive(Debug)]
-// pub struct BlockCostCapacityMeter {
-//     pub capacity: u64,
-//     pub accumulated_cost: u64,
-// }
+// it tracks the block cost available capacity - number of compute-units allowed
+// by max blockl cost limit
+#[derive(Debug)]
+pub struct BlockCostCapacityMeter {
+    pub capacity: u64,
+    pub accumulated_cost: u64,
+}
 
-// impl Default for BlockCostCapacityMeter {
-//     fn default() -> Self {
-//         BlockCostCapacityMeter::new(MAX_BLOCK_UNITS)
-//     }
-// }
+impl Default for BlockCostCapacityMeter {
+    fn default() -> Self {
+        BlockCostCapacityMeter::new(MAX_BLOCK_UNITS)
+    }
+}
 
-// impl BlockCostCapacityMeter {
-//     pub fn new(capacity_limit: u64) -> Self {
-//         Self {
-//             capacity: capacity_limit,
-//             accumulated_cost: 0_u64,
-//         }
-//     }
+ impl BlockCostCapacityMeter {
+    pub fn new(capacity_limit: u64) -> Self {
+        Self {
+            capacity: capacity_limit,
+            accumulated_cost: 0_u64,
+        }
+    }
 
-//     // return the remaining capacity
-//     pub fn accumulate(&mut self, cost: u64) -> u64 {
-//         self.accumulated_cost += cost;
-//         self.capacity.saturating_sub(self.accumulated_cost)
-//     }
-// }
+    // return the remaining capacity
+    pub fn accumulate(&mut self, cost: u64) -> u64 {
+        self.accumulated_cost += cost;
+        self.capacity.saturating_sub(self.accumulated_cost)
+    }
+ }
 
 // pub type BlockstoreProcessorInner = (BankForks, LeaderScheduleCache, Option<Slot>);
 
 // pub type BlockstoreProcessorResult =
 //     result::Result<BlockstoreProcessorInner, BlockstoreProcessorError>;
 
-// thread_local!(static PAR_THREAD_POOL: RefCell<ThreadPool> = RefCell::new(rayon::ThreadPoolBuilder::new()
-//                     .num_threads(get_thread_count())
-//                     .thread_name(|ix| format!("blockstore_processor_{}", ix))
-//                     .build()
-//                     .unwrap())
-// );
+thread_local!(static PAR_THREAD_POOL: RefCell<ThreadPool> = RefCell::new(rayon::ThreadPoolBuilder::new()
+                    .num_threads(get_thread_count())
+                    .thread_name(|ix| format!("blockstore_processor_{}", ix))
+                    .build()
+                    .unwrap())
+);
 
-// fn first_err(results: &[Result<()>]) -> Result<()> {
-//     for r in results {
-//         if r.is_err() {
-//             return r.clone();
-//         }
-//     }
-//     Ok(())
-// }
+fn first_err(results: &[Result<()>]) -> Result<()> {
+    for r in results {
+        if r.is_err() {
+            return r.clone();
+        }
+    }
+    Ok(())
+}
 
-// // Includes transaction signature for unit-testing
-// fn get_first_error(
-//     batch: &TransactionBatch,
-//     fee_collection_results: Vec<Result<()>>,
-// ) -> Option<(Result<()>, Signature)> {
-//     let mut first_err = None;
-//     for (result, transaction) in fee_collection_results
-//         .iter()
-//         .zip(batch.sanitized_transactions())
-//     {
-//         if let Err(ref err) = result {
-//             if first_err.is_none() {
-//                 first_err = Some((result.clone(), *transaction.signature()));
-//             }
-//             warn!(
-//                 "Unexpected validator error: {:?}, transaction: {:?}",
-//                 err, transaction
-//             );
-//             datapoint_error!(
-//                 "validator_process_entry_error",
-//                 (
-//                     "error",
-//                     format!("error: {:?}, transaction: {:?}", err, transaction),
-//                     String
-//                 )
-//             );
-//         }
-//     }
-//     first_err
-// }
+// Includes transaction signature for unit-testing
+fn get_first_error(
+    batch: &TransactionBatch,
+    fee_collection_results: Vec<Result<()>>,
+) -> Option<(Result<()>, Signature)> {
+    let mut first_err = None;
+    for (result, transaction) in fee_collection_results
+        .iter()
+        .zip(batch.sanitized_transactions())
+    {
+        if let Err(ref err) = result {
+            if first_err.is_none() {
+                first_err = Some((result.clone(), *transaction.signature()));
+            }
+            warn!(
+                "Unexpected validator error: {:?}, transaction: {:?}",
+                err, transaction
+            );
+            datapoint_error!(
+                "validator_process_entry_error",
+                (
+                    "error",
+                    format!("error: {:?}, transaction: {:?}", err, transaction),
+                    String
+                )
+            );
+        }
+    }
+    first_err
+}
 
-// fn aggregate_total_execution_units(execute_timings: &ExecuteTimings) -> u64 {
-//     let mut execute_cost_units: u64 = 0;
-//     for (program_id, timing) in &execute_timings.details.per_program_timings {
-//         if timing.count < 1 {
-//             continue;
-//         }
-//         execute_cost_units =
-//             execute_cost_units.saturating_add(timing.accumulated_units / timing.count as u64);
-//         trace!("aggregated execution cost of {:?} {:?}", program_id, timing);
-//     }
-//     execute_cost_units
-// }
+fn aggregate_total_execution_units(execute_timings: &ExecuteTimings) -> u64 {
+    let mut execute_cost_units: u64 = 0;
+    for (program_id, timing) in &execute_timings.details.per_program_timings {
+        if timing.count < 1 {
+            continue;
+        }
+        execute_cost_units =
+            execute_cost_units.saturating_add(timing.accumulated_units / timing.count as u64);
+        trace!("aggregated execution cost of {:?} {:?}", program_id, timing);
+    }
+    execute_cost_units
+}
 
-// fn execute_batch(
-//     batch: &TransactionBatch,
-//     bank: &Arc<Bank>,
-//     transaction_status_sender: Option<&TransactionStatusSender>,
-//     replay_vote_sender: Option<&ReplayVoteSender>,
-//     timings: &mut ExecuteTimings,
-//     cost_capacity_meter: Arc<RwLock<BlockCostCapacityMeter>>,
-// ) -> Result<()> {
-//     let record_token_balances = transaction_status_sender.is_some();
+fn execute_batch(
+    batch: &TransactionBatch,
+    bank: &Arc<Bank>,
+    transaction_status_sender: Option<&TransactionStatusSender>,
+    replay_vote_sender: Option<&ReplayVoteSender>,
+    timings: &mut ExecuteTimings,
+    cost_capacity_meter: Arc<RwLock<BlockCostCapacityMeter>>,
+) -> Result<()> {
+    let record_token_balances = transaction_status_sender.is_some();
 
-//     let mut mint_decimals: HashMap<Pubkey, u8> = HashMap::new();
+    let mut mint_decimals: HashMap<Pubkey, u8> = HashMap::new();
 
-//     let pre_token_balances = if record_token_balances {
-//         collect_token_balances(bank, batch, &mut mint_decimals)
-//     } else {
-//         vec![]
-//     };
+    let pre_token_balances = if record_token_balances {
+        collect_token_balances(bank, batch, &mut mint_decimals)
+    } else {
+        vec![]
+    };
 
-//     let pre_process_units: u64 = aggregate_total_execution_units(timings);
+    let pre_process_units: u64 = aggregate_total_execution_units(timings);
 
-//     let (tx_results, balances) = batch.bank().load_execute_and_commit_transactions(
-//         batch,
-//         MAX_PROCESSING_AGE,
-//         transaction_status_sender.is_some(),
-//         transaction_status_sender.is_some(),
-//         transaction_status_sender.is_some(),
-//         timings,
-//     );
+    let (tx_results, balances) = batch.bank().load_execute_and_commit_transactions(
+        batch,
+        MAX_PROCESSING_AGE,
+        transaction_status_sender.is_some(),
+        transaction_status_sender.is_some(),
+        transaction_status_sender.is_some(),
+        timings,
+    );
 
-//     if bank
-//         .feature_set
-//         .is_active(&feature_set::gate_large_block::id())
-//     {
-//         let execution_cost_units = aggregate_total_execution_units(timings) - pre_process_units;
-//         let remaining_block_cost_cap = cost_capacity_meter
-//             .write()
-//             .unwrap()
-//             .accumulate(execution_cost_units);
+    if bank
+        .feature_set
+        .is_active(&feature_set::gate_large_block::id())
+    {
+        let execution_cost_units = aggregate_total_execution_units(timings) - pre_process_units;
+        let remaining_block_cost_cap = cost_capacity_meter
+            .write()
+            .unwrap()
+            .accumulate(execution_cost_units);
 
-//         debug!(
-//             "bank {} executed a batch, number of transactions {}, total execute cu {}, remaining block cost cap {}",
-//             bank.slot(),
-//             batch.sanitized_transactions().len(),
-//             execution_cost_units,
-//             remaining_block_cost_cap,
-//         );
+        debug!(
+            "bank {} executed a batch, number of transactions {}, total execute cu {}, remaining block cost cap {}",
+            bank.slot(),
+            batch.sanitized_transactions().len(),
+            execution_cost_units,
+            remaining_block_cost_cap,
+        );
 
-//         if remaining_block_cost_cap == 0_u64 {
-//             return Err(TransactionError::WouldExceedMaxBlockCostLimit);
-//         }
-//     }
+        if remaining_block_cost_cap == 0_u64 {
+            return Err(TransactionError::WouldExceedMaxBlockCostLimit);
+        }
+    }
 
-//     bank_utils::find_and_send_votes(
-//         batch.sanitized_transactions(),
-//         &tx_results,
-//         replay_vote_sender,
-//     );
+    bank_utils::find_and_send_votes(
+        batch.sanitized_transactions(),
+        &tx_results,
+        replay_vote_sender,
+    );
 
-//     let TransactionResults {
-//         fee_collection_results,
-//         execution_results,
-//         rent_debits,
-//         ..
-//     } = tx_results;
+    let TransactionResults {
+        fee_collection_results,
+        execution_results,
+        rent_debits,
+        ..
+    } = tx_results;
 
-//     if bank
-//         .feature_set
-//         .is_active(&feature_set::cap_accounts_data_len::id())
-//     {
-//         check_accounts_data_size(&execution_results)?;
-//     }
+    if bank
+        .feature_set
+        .is_active(&feature_set::cap_accounts_data_len::id())
+    {
+        check_accounts_data_size(&execution_results)?;
+    }
 
-//     if let Some(transaction_status_sender) = transaction_status_sender {
-//         let transactions = batch.sanitized_transactions().to_vec();
-//         let post_token_balances = if record_token_balances {
-//             collect_token_balances(bank, batch, &mut mint_decimals)
-//         } else {
-//             vec![]
-//         };
+    if let Some(transaction_status_sender) = transaction_status_sender {
+        let transactions = batch.sanitized_transactions().to_vec();
+        let post_token_balances = if record_token_balances {
+            collect_token_balances(bank, batch, &mut mint_decimals)
+        } else {
+            vec![]
+        };
 
-//         let token_balances =
-//             TransactionTokenBalancesSet::new(pre_token_balances, post_token_balances);
+        let token_balances =
+            TransactionTokenBalancesSet::new(pre_token_balances, post_token_balances);
 
-//         transaction_status_sender.send_transaction_status_batch(
-//             bank.clone(),
-//             transactions,
-//             execution_results,
-//             balances,
-//             token_balances,
-//             rent_debits,
-//         );
-//     }
+        transaction_status_sender.send_transaction_status_batch(
+            bank.clone(),
+            transactions,
+            execution_results,
+            balances,
+            token_balances,
+            rent_debits,
+        );
+    }
 
-//     let first_err = get_first_error(batch, fee_collection_results);
-//     first_err.map(|(result, _)| result).unwrap_or(Ok(()))
-// }
+    let first_err = get_first_error(batch, fee_collection_results);
+    first_err.map(|(result, _)| result).unwrap_or(Ok(()))
+}
 
-// fn execute_batches_internal(
-//     bank: &Arc<Bank>,
-//     batches: &[TransactionBatch],
-//     entry_callback: Option<&ProcessCallback>,
-//     transaction_status_sender: Option<&TransactionStatusSender>,
-//     replay_vote_sender: Option<&ReplayVoteSender>,
-//     timings: &mut ExecuteTimings,
-//     cost_capacity_meter: Arc<RwLock<BlockCostCapacityMeter>>,
-// ) -> Result<()> {
-//     inc_new_counter_debug!("bank-par_execute_entries-count", batches.len());
-//     let (results, new_timings): (Vec<Result<()>>, Vec<ExecuteTimings>) =
-//         PAR_THREAD_POOL.with(|thread_pool| {
-//             thread_pool.borrow().install(|| {
-//                 batches
-//                     .into_par_iter()
-//                     .map(|batch| {
-//                         let mut timings = ExecuteTimings::default();
-//                         let result = execute_batch(
-//                             batch,
-//                             bank,
-//                             transaction_status_sender,
-//                             replay_vote_sender,
-//                             &mut timings,
-//                             cost_capacity_meter.clone(),
-//                         );
-//                         if let Some(entry_callback) = entry_callback {
-//                             entry_callback(bank);
-//                         }
-//                         (result, timings)
-//                     })
-//                     .unzip()
-//             })
-//         });
+fn execute_batches_internal(
+    bank: &Arc<Bank>,
+    batches: &[TransactionBatch],
+    entry_callback: Option<&ProcessCallback>,
+    transaction_status_sender: Option<&TransactionStatusSender>,
+    replay_vote_sender: Option<&ReplayVoteSender>,
+    timings: &mut ExecuteTimings,
+    cost_capacity_meter: Arc<RwLock<BlockCostCapacityMeter>>,
+) -> Result<()> {
+    inc_new_counter_debug!("bank-par_execute_entries-count", batches.len());
+    let (results, new_timings): (Vec<Result<()>>, Vec<ExecuteTimings>) =
+        PAR_THREAD_POOL.with(|thread_pool| {
+            thread_pool.borrow().install(|| {
+                batches
+                    .into_par_iter()
+                    .map(|batch| {
+                        let mut timings = ExecuteTimings::default();
+                        let result = execute_batch(
+                            batch,
+                            bank,
+                            transaction_status_sender,
+                            replay_vote_sender,
+                            &mut timings,
+                            cost_capacity_meter.clone(),
+                        );
+                        if let Some(entry_callback) = entry_callback {
+                            entry_callback(bank);
+                        }
+                        (result, timings)
+                    })
+                    .unzip()
+            })
+        });
 
-//     timings.total_batches_len += batches.len();
-//     timings.num_execute_batches += 1;
-//     for timing in new_timings {
-//         timings.accumulate(&timing);
-//     }
+    timings.total_batches_len += batches.len();
+    timings.num_execute_batches += 1;
+    for timing in new_timings {
+        timings.accumulate(&timing);
+    }
 
-//     first_err(&results)
-// }
+    first_err(&results)
+}
 
-// fn execute_batches(
-//     bank: &Arc<Bank>,
-//     batches: &[TransactionBatch],
-//     entry_callback: Option<&ProcessCallback>,
-//     transaction_status_sender: Option<&TransactionStatusSender>,
-//     replay_vote_sender: Option<&ReplayVoteSender>,
-//     timings: &mut ExecuteTimings,
-//     cost_capacity_meter: Arc<RwLock<BlockCostCapacityMeter>>,
-// ) -> Result<()> {
-//     let lock_results = batches
-//         .iter()
-//         .flat_map(|batch| batch.lock_results().clone())
-//         .collect::<Vec<_>>();
-//     let sanitized_txs = batches
-//         .iter()
-//         .flat_map(|batch| batch.sanitized_transactions().to_vec())
-//         .collect::<Vec<_>>();
+fn execute_batches(
+    bank: &Arc<Bank>,
+    batches: &[TransactionBatch],
+    entry_callback: Option<&ProcessCallback>,
+    transaction_status_sender: Option<&TransactionStatusSender>,
+    replay_vote_sender: Option<&ReplayVoteSender>,
+    timings: &mut ExecuteTimings,
+    cost_capacity_meter: Arc<RwLock<BlockCostCapacityMeter>>,
+) -> Result<()> {
+    let lock_results = batches
+        .iter()
+        .flat_map(|batch| batch.lock_results().clone())
+        .collect::<Vec<_>>();
+    let sanitized_txs = batches
+        .iter()
+        .flat_map(|batch| batch.sanitized_transactions().to_vec())
+        .collect::<Vec<_>>();
 
-//     let cost_model = CostModel::new();
-//     let mut minimal_tx_cost = u64::MAX;
-//     let mut total_cost: u64 = 0;
-//     // Allowing collect here, since it also computes the minimal tx cost, and aggregate cost.
-//     // These two values are later used for checking if the tx_costs vector needs to be iterated over.
-//     #[allow(clippy::needless_collect)]
-//     let tx_costs = sanitized_txs
-//         .iter()
-//         .map(|tx| {
-//             let cost = cost_model.calculate_cost(tx).sum();
-//             minimal_tx_cost = std::cmp::min(minimal_tx_cost, cost);
-//             total_cost = total_cost.saturating_add(cost);
-//             cost
-//         })
-//         .collect::<Vec<_>>();
+    let cost_model = CostModel::new();
+    let mut minimal_tx_cost = u64::MAX;
+    let mut total_cost: u64 = 0;
+    // Allowing collect here, since it also computes the minimal tx cost, and aggregate cost.
+    // These two values are later used for checking if the tx_costs vector needs to be iterated over.
+    #[allow(clippy::needless_collect)]
+    let tx_costs = sanitized_txs
+        .iter()
+        .map(|tx| {
+            let cost = cost_model.calculate_cost(tx).sum();
+            minimal_tx_cost = std::cmp::min(minimal_tx_cost, cost);
+            total_cost = total_cost.saturating_add(cost);
+            cost
+        })
+        .collect::<Vec<_>>();
 
-//     let target_batch_count = get_thread_count() as u64;
+    let target_batch_count = get_thread_count() as u64;
 
-//     let mut tx_batches: Vec<TransactionBatch> = vec![];
-//     let rebatched_txs = if total_cost > target_batch_count.saturating_mul(minimal_tx_cost) {
-//         let target_batch_cost = total_cost / target_batch_count;
-//         let mut batch_cost: u64 = 0;
-//         let mut slice_start = 0;
-//         tx_costs.into_iter().enumerate().for_each(|(index, cost)| {
-//             let next_index = index + 1;
-//             batch_cost = batch_cost.saturating_add(cost);
-//             if batch_cost >= target_batch_cost || next_index == sanitized_txs.len() {
-//                 let txs = &sanitized_txs[slice_start..=index];
-//                 let results = &lock_results[slice_start..=index];
-//                 let tx_batch = TransactionBatch::new(results.to_vec(), bank, Cow::from(txs));
-//                 slice_start = next_index;
-//                 tx_batches.push(tx_batch);
-//                 batch_cost = 0;
-//             }
-//         });
-//         &tx_batches[..]
-//     } else {
-//         batches
-//     };
+    let mut tx_batches: Vec<TransactionBatch> = vec![];
+    let rebatched_txs = if total_cost > target_batch_count.saturating_mul(minimal_tx_cost) {
+        let target_batch_cost = total_cost / target_batch_count;
+        let mut batch_cost: u64 = 0;
+        let mut slice_start = 0;
+        tx_costs.into_iter().enumerate().for_each(|(index, cost)| {
+            let next_index = index + 1;
+            batch_cost = batch_cost.saturating_add(cost);
+            if batch_cost >= target_batch_cost || next_index == sanitized_txs.len() {
+                let txs = &sanitized_txs[slice_start..=index];
+                let results = &lock_results[slice_start..=index];
+                let tx_batch = TransactionBatch::new(results.to_vec(), bank, Cow::from(txs));
+                slice_start = next_index;
+                tx_batches.push(tx_batch);
+                batch_cost = 0;
+            }
+        });
+        &tx_batches[..]
+    } else {
+        batches
+    };
 
-//     execute_batches_internal(
-//         bank,
-//         rebatched_txs,
-//         entry_callback,
-//         transaction_status_sender,
-//         replay_vote_sender,
-//         timings,
-//         cost_capacity_meter,
-//     )
-// }
+    execute_batches_internal(
+        bank,
+        rebatched_txs,
+        entry_callback,
+        transaction_status_sender,
+        replay_vote_sender,
+        timings,
+        cost_capacity_meter,
+    )
+}
 
-// /// Process an ordered list of entries in parallel
-// /// 1. In order lock accounts for each entry while the lock succeeds, up to a Tick entry
-// /// 2. Process the locked group in parallel
-// /// 3. Register the `Tick` if it's available
-// /// 4. Update the leader scheduler, goto 1
-// pub fn process_entries_for_tests(
-//     bank: &Arc<Bank>,
-//     entries: Vec<Entry>,
-//     randomize: bool,
-//     transaction_status_sender: Option<&TransactionStatusSender>,
-//     replay_vote_sender: Option<&ReplayVoteSender>,
-// ) -> Result<()> {
-//     let verify_transaction = {
-//         let bank = bank.clone();
-//         move |versioned_tx: VersionedTransaction| -> Result<SanitizedTransaction> {
-//             bank.verify_transaction(versioned_tx, TransactionVerificationMode::FullVerification)
-//         }
-//     };
+/// Process an ordered list of entries in parallel
+/// 1. In order lock accounts for each entry while the lock succeeds, up to a Tick entry
+/// 2. Process the locked group in parallel
+/// 3. Register the `Tick` if it's available
+/// 4. Update the leader scheduler, goto 1
+pub fn process_entries_for_tests(
+    bank: &Arc<Bank>,
+    entries: Vec<Entry>,
+    randomize: bool,
+    transaction_status_sender: Option<&TransactionStatusSender>,
+    replay_vote_sender: Option<&ReplayVoteSender>,
+) -> Result<()> {
+    let verify_transaction = {
+        let bank = bank.clone();
+        move |versioned_tx: VersionedTransaction| -> Result<SanitizedTransaction> {
+            bank.verify_transaction(versioned_tx, TransactionVerificationMode::FullVerification)
+        }
+    };
 
-//     let mut timings = ExecuteTimings::default();
-//     let mut entries = entry::verify_transactions(entries, Arc::new(verify_transaction))?;
-//     let result = process_entries_with_callback(
-//         bank,
-//         &mut entries,
-//         randomize,
-//         None,
-//         transaction_status_sender,
-//         replay_vote_sender,
-//         None,
-//         &mut timings,
-//         Arc::new(RwLock::new(BlockCostCapacityMeter::default())),
-//     );
+    let mut timings = ExecuteTimings::default();
+    let mut entries = verify_transactions(entries, Arc::new(verify_transaction))?;
+    let result = process_entries_with_callback(
+        bank,
+        &mut entries,
+        randomize,
+        None,
+        transaction_status_sender,
+        replay_vote_sender,
+        None,
+        &mut timings,
+        Arc::new(RwLock::new(BlockCostCapacityMeter::default())),
+    );
 
-//     debug!("process_entries: {:?}", timings);
-//     result
-// }
+    debug!("process_entries: {:?}", timings);
+    result
+}
 
-// // Note: If randomize is true this will shuffle entries' transactions in-place.
-// fn process_entries_with_callback(
-//     bank: &Arc<Bank>,
-//     entries: &mut [EntryType],
-//     randomize: bool,
-//     entry_callback: Option<&ProcessCallback>,
-//     transaction_status_sender: Option<&TransactionStatusSender>,
-//     replay_vote_sender: Option<&ReplayVoteSender>,
-//     transaction_cost_metrics_sender: Option<&TransactionCostMetricsSender>,
-//     timings: &mut ExecuteTimings,
-//     cost_capacity_meter: Arc<RwLock<BlockCostCapacityMeter>>,
-// ) -> Result<()> {
-//     // accumulator for entries that can be processed in parallel
-//     let mut batches = vec![];
-//     let mut tick_hashes = vec![];
-//     let mut rng = thread_rng();
+// Note: If randomize is true this will shuffle entries' transactions in-place.
+fn process_entries_with_callback(
+    bank: &Arc<Bank>,
+    entries: &mut [EntryType],
+    randomize: bool,
+    entry_callback: Option<&ProcessCallback>,
+    transaction_status_sender: Option<&TransactionStatusSender>,
+    replay_vote_sender: Option<&ReplayVoteSender>,
+    transaction_cost_metrics_sender: Option<&TransactionCostMetricsSender>,
+    timings: &mut ExecuteTimings,
+    cost_capacity_meter: Arc<RwLock<BlockCostCapacityMeter>>,
+) -> Result<()> {
+    // accumulator for entries that can be processed in parallel
+    let mut batches = vec![];
+    let mut tick_hashes = vec![];
+    let mut rng = thread_rng();
 
-//     for entry in entries {
-//         match entry {
-//             EntryType::Tick(hash) => {
-//                 // If it's a tick, save it for later
-//                 tick_hashes.push(hash);
-//                 if bank.is_block_boundary(bank.tick_height() + tick_hashes.len() as u64) {
-//                     // If it's a tick that will cause a new blockhash to be created,
-//                     // execute the group and register the tick
-//                     execute_batches(
-//                         bank,
-//                         &batches,
-//                         entry_callback,
-//                         transaction_status_sender,
-//                         replay_vote_sender,
-//                         timings,
-//                         cost_capacity_meter.clone(),
-//                     )?;
-//                     batches.clear();
-//                     for hash in &tick_hashes {
-//                         bank.register_tick(hash);
-//                     }
-//                     tick_hashes.clear();
-//                 }
-//             }
-//             EntryType::Transactions(transactions) => {
-//                 if let Some(transaction_cost_metrics_sender) = transaction_cost_metrics_sender {
-//                     transaction_cost_metrics_sender
-//                         .send_cost_details(bank.clone(), transactions.iter());
-//                 }
+    for entry in entries {
+        match entry {
+            EntryType::Tick(hash) => {
+                // If it's a tick, save it for later
+                tick_hashes.push(hash);
+                if bank.is_block_boundary(bank.tick_height() + tick_hashes.len() as u64) {
+                    // If it's a tick that will cause a new blockhash to be created,
+                    // execute the group and register the tick
+                    execute_batches(
+                        bank,
+                        &batches,
+                        entry_callback,
+                        transaction_status_sender,
+                        replay_vote_sender,
+                        timings,
+                        cost_capacity_meter.clone(),
+                    )?;
+                    batches.clear();
+                    for hash in &tick_hashes {
+                        bank.register_tick(hash);
+                    }
+                    tick_hashes.clear();
+                }
+            }
+            EntryType::Transactions(transactions) => {
+                if let Some(transaction_cost_metrics_sender) = transaction_cost_metrics_sender {
+                    transaction_cost_metrics_sender
+                        .send_cost_details(bank.clone(), transactions.iter());
+                }
 
-//                 if randomize {
-//                     transactions.shuffle(&mut rng);
-//                 }
+                if randomize {
+                    transactions.shuffle(&mut rng);
+                }
 
-//                 loop {
-//                     // try to lock the accounts
-//                     let batch = bank.prepare_sanitized_batch(transactions);
-//                     let first_lock_err = first_err(batch.lock_results());
+                loop {
+                    // try to lock the accounts
+                    let batch = bank.prepare_sanitized_batch(transactions);
+                    let first_lock_err = first_err(batch.lock_results());
 
-//                     // if locking worked
-//                     if first_lock_err.is_ok() {
-//                         batches.push(batch);
-//                         // done with this entry
-//                         break;
-//                     }
-//                     // else we failed to lock, 2 possible reasons
-//                     if batches.is_empty() {
-//                         // An entry has account lock conflicts with *itself*, which should not happen
-//                         // if generated by a properly functioning leader
-//                         datapoint_error!(
-//                             "validator_process_entry_error",
-//                             (
-//                                 "error",
-//                                 format!(
-//                                     "Lock accounts error, entry conflicts with itself, txs: {:?}",
-//                                     transactions
-//                                 ),
-//                                 String
-//                             )
-//                         );
-//                         // bail
-//                         first_lock_err?;
-//                     } else {
-//                         // else we have an entry that conflicts with a prior entry
-//                         // execute the current queue and try to process this entry again
-//                         execute_batches(
-//                             bank,
-//                             &batches,
-//                             entry_callback,
-//                             transaction_status_sender,
-//                             replay_vote_sender,
-//                             timings,
-//                             cost_capacity_meter.clone(),
-//                         )?;
-//                         batches.clear();
-//                     }
-//                 }
-//             }
-//         }
-//     }
-//     execute_batches(
-//         bank,
-//         &batches,
-//         entry_callback,
-//         transaction_status_sender,
-//         replay_vote_sender,
-//         timings,
-//         cost_capacity_meter,
-//     )?;
-//     for hash in tick_hashes {
-//         bank.register_tick(hash);
-//     }
-//     Ok(())
-// }
+                    // if locking worked
+                    if first_lock_err.is_ok() {
+                        batches.push(batch);
+                        // done with this entry
+                        break;
+                    }
+                    // else we failed to lock, 2 possible reasons
+                    if batches.is_empty() {
+                        // An entry has account lock conflicts with *itself*, which should not happen
+                        // if generated by a properly functioning leader
+                        datapoint_error!(
+                            "validator_process_entry_error",
+                            (
+                                "error",
+                                format!(
+                                    "Lock accounts error, entry conflicts with itself, txs: {:?}",
+                                    transactions
+                                ),
+                                String
+                            )
+                        );
+                        // bail
+                        first_lock_err?;
+                    } else {
+                        // else we have an entry that conflicts with a prior entry
+                        // execute the current queue and try to process this entry again
+                        execute_batches(
+                            bank,
+                            &batches,
+                            entry_callback,
+                            transaction_status_sender,
+                            replay_vote_sender,
+                            timings,
+                            cost_capacity_meter.clone(),
+                        )?;
+                        batches.clear();
+                    }
+                }
+            }
+        }
+    }
+    execute_batches(
+        bank,
+        &batches,
+        entry_callback,
+        transaction_status_sender,
+        replay_vote_sender,
+        timings,
+        cost_capacity_meter,
+    )?;
+    for hash in tick_hashes {
+        bank.register_tick(hash);
+    }
+    Ok(())
+}
 
 // #[derive(Error, Debug)]
 // pub enum BlockstoreProcessorError {
@@ -545,8 +544,8 @@
 //     RootBankWithMismatchedCapitalization(Slot),
 // }
 
-// /// Callback for accessing bank state while processing the blockstore
-// pub type ProcessCallback = Arc<dyn Fn(&Bank) + Sync + Send>;
+/// Callback for accessing bank state while processing the blockstore
+pub type ProcessCallback = Arc<dyn Fn(&Bank) + Sync + Send>;
 
 // #[derive(Default, Clone)]
 // pub struct ProcessOptions {
@@ -1559,49 +1558,49 @@ pub struct TransactionStatusSender {
     pub enable_cpi_and_log_storage: bool,
 }
 
-// impl TransactionStatusSender {
-//     pub fn send_transaction_status_batch(
-//         &self,
-//         bank: Arc<Bank>,
-//         transactions: Vec<SanitizedTransaction>,
-//         mut execution_results: Vec<TransactionExecutionResult>,
-//         balances: TransactionBalancesSet,
-//         token_balances: TransactionTokenBalancesSet,
-//         rent_debits: Vec<RentDebits>,
-//     ) {
-//         let slot = bank.slot();
-//         if !self.enable_cpi_and_log_storage {
-//             execution_results.iter_mut().for_each(|execution_result| {
-//                 if let TransactionExecutionResult::Executed { details, .. } = execution_result {
-//                     details.log_messages.take();
-//                     details.inner_instructions.take();
-//                 }
-//             });
-//         }
-//         if let Err(e) = self
-//             .sender
-//             .send(TransactionStatusMessage::Batch(TransactionStatusBatch {
-//                 bank,
-//                 transactions,
-//                 execution_results: execution_results
-//                     .into_iter()
-//                     .map(|result| match result {
-//                         TransactionExecutionResult::Executed { details, .. } => Some(details),
-//                         TransactionExecutionResult::NotExecuted(_) => None,
-//                     })
-//                     .collect(),
-//                 balances,
-//                 token_balances,
-//                 rent_debits,
-//             }))
-//         {
-//             trace!(
-//                 "Slot {} transaction_status send batch failed: {:?}",
-//                 slot,
-//                 e
-//             );
-//         }
-//     }
+ impl TransactionStatusSender {
+    pub fn send_transaction_status_batch(
+        &self,
+        bank: Arc<Bank>,
+        transactions: Vec<SanitizedTransaction>,
+        mut execution_results: Vec<TransactionExecutionResult>,
+        balances: TransactionBalancesSet,
+        token_balances: TransactionTokenBalancesSet,
+        rent_debits: Vec<RentDebits>,
+    ) {
+        let slot = bank.slot();
+        if !self.enable_cpi_and_log_storage {
+            execution_results.iter_mut().for_each(|execution_result| {
+                if let TransactionExecutionResult::Executed { details, .. } = execution_result {
+                    details.log_messages.take();
+                    details.inner_instructions.take();
+                }
+            });
+        }
+        if let Err(e) = self
+            .sender
+            .send(TransactionStatusMessage::Batch(TransactionStatusBatch {
+                bank,
+                transactions,
+                execution_results: execution_results
+                    .into_iter()
+                    .map(|result| match result {
+                        TransactionExecutionResult::Executed { details, .. } => Some(details),
+                        TransactionExecutionResult::NotExecuted(_) => None,
+                    })
+                    .collect(),
+                balances,
+                token_balances,
+                rent_debits,
+            }))
+        {
+            trace!(
+                "Slot {} transaction_status send batch failed: {:?}",
+                slot,
+                e
+            );
+        }
+    }
 
 //     pub fn send_transaction_status_freeze_message(&self, bank: &Arc<Bank>) {
 //         let slot = bank.slot();
@@ -1613,7 +1612,7 @@ pub struct TransactionStatusSender {
 //             );
 //         }
 //     }
-// }
+ }
 
 // pub type CacheBlockMetaSender = Sender<Arc<Bank>>;
 
@@ -1656,29 +1655,29 @@ pub struct TransactionStatusSender {
 //     last_entry_hash
 // }
 
-// /// Check the transaction execution results to see if any instruction errored by exceeding the max
-// /// accounts data size limit for all slots.  If yes, the whole block needs to be failed.
-// fn check_accounts_data_size<'a>(
-//     execution_results: impl IntoIterator<Item = &'a TransactionExecutionResult>,
-// ) -> Result<()> {
-//     if let Some(result) = execution_results
-//         .into_iter()
-//         .map(|execution_result| execution_result.flattened_result())
-//         .find(|result| {
-//             matches!(
-//                 result,
-//                 Err(TransactionError::InstructionError(
-//                     _,
-//                     InstructionError::MaxAccountsDataSizeExceeded
-//                 )),
-//             )
-//         })
-//     {
-//         return result;
-//     }
+/// Check the transaction execution results to see if any instruction errored by exceeding the max
+/// accounts data size limit for all slots.  If yes, the whole block needs to be failed.
+fn check_accounts_data_size<'a>(
+    execution_results: impl IntoIterator<Item = &'a TransactionExecutionResult>,
+) -> Result<()> {
+    if let Some(result) = execution_results
+        .into_iter()
+        .map(|execution_result| execution_result.flattened_result())
+        .find(|result| {
+            matches!(
+                result,
+                Err(TransactionError::InstructionError(
+                    _,
+                    InstructionError::MaxAccountsDataSizeExceeded
+                )),
+            )
+        })
+    {
+        return result;
+    }
 
-//     Ok(())
-// }
+    Ok(())
+}
 
 // #[cfg(test)]
 // pub mod tests {

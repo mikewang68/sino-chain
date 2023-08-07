@@ -2,6 +2,11 @@
 //! unique ID that is the hash of the Entry before it, plus the hash of the
 //! transactions within it. Entries cannot be reordered, and its field `num_hashes`
 //! represents an approximate amount of time since the last Entry was created.
+
+use std::{sync::Arc, cell::RefCell};
+
+use rayon::{ThreadPool, prelude::{IntoParallelIterator, ParallelIterator}};
+use rayon_threadlimit::get_thread_count;
 use {
     crate::poh::Poh,
     serde::{Deserialize, Serialize},
@@ -9,7 +14,7 @@ use {
     sdk::{
         hash::Hash,
         transaction::{
-            SanitizedTransaction, Transaction, VersionedTransaction,
+            Result, SanitizedTransaction, Transaction, VersionedTransaction,
         },
     },
 };
@@ -43,6 +48,12 @@ pub struct Entry {
     /// pushed back into this list to ensure deterministic interpretation of the ledger.
     pub transactions: Vec<VersionedTransaction>,
 }
+
+thread_local!(static PAR_THREAD_POOL: RefCell<ThreadPool> = RefCell::new(rayon::ThreadPoolBuilder::new()
+                    .num_threads(get_thread_count())
+                    .thread_name(|ix| format!("entry_{}", ix))
+                    .build()
+                    .unwrap()));
 
 /// Typed entry to distinguish between transaction and tick entries
 pub enum EntryType {
@@ -135,4 +146,30 @@ pub fn next_entry(prev_hash: &Hash, num_hashes: u64, transactions: Vec<Transacti
         hash: next_hash(prev_hash, num_hashes, &transactions),
         transactions,
     }
+}
+
+pub fn verify_transactions(
+    entries: Vec<Entry>,
+    verify: Arc<dyn Fn(VersionedTransaction) -> Result<SanitizedTransaction> + Send + Sync>,
+) -> Result<Vec<EntryType>> {
+    PAR_THREAD_POOL.with(|thread_pool| {
+        thread_pool.borrow().install(|| {
+            entries
+                .into_par_iter()
+                .map(|entry| {
+                    if entry.transactions.is_empty() {
+                        Ok(EntryType::Tick(entry.hash))
+                    } else {
+                        Ok(EntryType::Transactions(
+                            entry
+                                .transactions
+                                .into_par_iter()
+                                .map(verify.as_ref())
+                                .collect::<Result<Vec<_>>>()?,
+                        ))
+                    }
+                })
+                .collect()
+        })
+    })
 }
