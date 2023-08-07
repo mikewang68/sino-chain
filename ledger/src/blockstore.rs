@@ -1,6 +1,6 @@
 use {
     crate::{
-        // ancestor_iterator::AncestorIterator,
+        ancestor_iterator::AncestorIterator,
         blockstore_db::{
         columns as cf, AccessType, BlockstoreRecoveryMode, Column, Database,
         EvmTransactionReceiptsIndex, IteratorDirection, IteratorMode, LedgerColumn, Result,
@@ -699,6 +699,24 @@ impl Blockstore {
             .take_while(|((block_num, _slot), _block)| *block_num == block_index)
             .map(|((_block_num, _slot), block)| block)
             .collect())
+    }
+
+    /// Returns a complete transaction
+    pub fn get_complete_transaction(
+        &self,
+        signature: Signature,
+        highest_confirmed_slot: Slot,
+    ) -> Result<Option<ConfirmedTransaction>> {
+        datapoint_info!(
+            "blockstore-rpc-api",
+            ("method", "get_complete_transaction", String)
+        );
+        let last_root = self.last_root();
+        let confirmed_unrooted_slots: Vec<_> =
+            AncestorIterator::new_inclusive(highest_confirmed_slot, self)
+                .take_while(|&slot| slot > last_root)
+                .collect();
+        self.get_transaction_with_status(signature, &confirmed_unrooted_slots)
     }
 
     pub fn read_evm_transaction(

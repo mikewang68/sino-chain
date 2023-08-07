@@ -8,6 +8,7 @@ pub mod blockstore;
 pub mod blockstore_db;
 pub mod blockstore_meta;
 pub mod shred;
+pub mod ancestor_iterator;
 pub mod erasure;
 pub mod leader_schedule_cache;
 pub mod leader_schedule;
