@@ -14,7 +14,7 @@ pub mod leader_schedule_cache;
 pub mod leader_schedule;
 pub mod leader_schedule_utils;
 pub mod genesis_utils;
-
+pub mod blockstore_processor;
 
 #[macro_use]
 extern crate metrics;
