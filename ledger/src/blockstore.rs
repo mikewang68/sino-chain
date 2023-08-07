@@ -79,6 +79,7 @@ pub use crate::blockstore_db::BlockstoreError;
 
 pub const BLOCKSTORE_DIRECTORY: &str = "rocksdb";
 pub type CompletedSlotsSender = SyncSender<Vec<Slot>>;
+pub type CompletedSlotsReceiver = Receiver<Vec<Slot>>;
 type CompletedRanges = Vec<(u32, u32)>;
 
 // An upper bound on maximum number of data shreds we can handle in a slot
