@@ -3115,6 +3115,25 @@ pub fn verify_shred_slots(slot: Slot, parent_slot: Slot, last_root: Slot) -> boo
     true
 }
 
+pub fn entries_to_test_shreds(
+    entries: Vec<Entry>,
+    slot: Slot,
+    parent_slot: Slot,
+    is_full_slot: bool,
+    version: u16,
+) -> Vec<Shred> {
+    Shredder::new(slot, parent_slot, 0, version)
+        .unwrap()
+        .entries_to_shreds(
+            &Keypair::new(),
+            &entries,
+            is_full_slot,
+            0, // next_shred_index,
+            0, // next_code_index
+        )
+        .0
+}
+
 fn update_slot_meta(
     is_last_in_slot: bool,
     is_last_in_data: bool,
