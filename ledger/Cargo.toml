@@ -44,7 +44,7 @@ program-runtime = { path = "../program-runtime", version = "=1.9.29" }
 rayon-threadlimit = { path = "../rayon-threadlimit", version = "=1.9.29" }
 runtime = { path = "../runtime", version = "=1.9.29" }
 sdk = { path = "../sdk", version = "=1.9.29" }
-#storage-bigtable = { path = "../storage-bigtable", version = "=1.9.29" }
+storage-bigtable = { path = "../storage-bigtable", version = "=1.9.29" }
 storage-proto = { path = "../storage-proto", version = "=1.9.29" }
 vote-program = { path = "../programs/vote", version = "=1.9.29" }
 tempfile = "3.2.0"

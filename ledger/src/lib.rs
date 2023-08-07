@@ -3,6 +3,8 @@
 // #[macro_use]
 // extern crate solana_bpf_loader_program;
 
+pub mod bigtable_upload_service;
+pub mod bigtable_upload;
 #[macro_use]
 pub mod blockstore;
 pub mod blockstore_db;
