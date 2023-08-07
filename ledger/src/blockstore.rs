@@ -41,7 +41,7 @@ use {
     },
     storage_proto::{StoredExtendedRewards, StoredTransactionStatusMeta},
     transaction_status::{
-        ConfirmedBlock, //ConfirmedTransaction, 
+        ConfirmedBlock, ConfirmedTransaction, 
         ConfirmedTransactionStatusWithSignature, 
         Rewards,
         TransactionStatusMeta, 
@@ -1123,6 +1123,131 @@ impl Blockstore {
         );
 
         Ok((completed_ranges, Some(slot_meta)))
+    }
+
+    /// Returns a complete transaction if it was processed in a root
+    pub fn get_rooted_transaction(
+        &self,
+        signature: Signature,
+    ) -> Result<Option<ConfirmedTransaction>> {
+        datapoint_info!(
+            "blockstore-rpc-api",
+            ("method", "get_rooted_transaction", String)
+        );
+        self.get_transaction_with_status(signature, &[])
+    }
+
+    fn get_transaction_with_status(
+        &self,
+        signature: Signature,
+        confirmed_unrooted_slots: &[Slot],
+    ) -> Result<Option<ConfirmedTransaction>> {
+        if let Some((slot, meta)) = self.get_transaction_status(signature, confirmed_unrooted_slots)?
+        {
+            let transaction = self
+                .find_transaction_in_slot(slot, signature)?
+                .ok_or(BlockstoreError::TransactionStatusSlotMismatch)?; // Should not happen
+
+            // TODO: support retrieving versioned transactions
+            let transaction = transaction
+                .into_legacy_transaction()
+                .ok_or(BlockstoreError::UnsupportedTransactionVersion)?;
+
+            let block_time = self.get_block_time(slot)?;
+            Ok(Some(ConfirmedTransaction {
+                slot,
+                transaction: TransactionWithMetadata { transaction, meta },
+                block_time,
+            }))
+        } else {
+            Ok(None)
+        }
+    }
+
+    /// Returns a transaction status
+    pub fn get_transaction_status(
+        &self,
+        signature: Signature,
+        confirmed_unrooted_slots: &[Slot],
+    ) -> Result<Option<(Slot, TransactionStatusMeta)>> {
+        datapoint_info!(
+            "blockstore-rpc-api",
+            ("method", "get_transaction_status", String)
+        );
+        self.get_transaction_status_with_counter(signature, confirmed_unrooted_slots)
+            .map(|(status, _)| status)
+    }
+
+    // Returns a transaction status, as well as a loop counter for unit testing
+    fn get_transaction_status_with_counter(
+        &self,
+        signature: Signature,
+        confirmed_unrooted_slots: &[Slot],
+    ) -> Result<(Option<(Slot, TransactionStatusMeta)>, u64)> {
+        let mut counter = 0;
+        let (lock, lowest_available_slot) = self.ensure_lowest_cleanup_slot();
+
+        for transaction_status_cf_primary_index in 0..=1 {
+            let index_iterator = self.transaction_status_cf.iter(IteratorMode::From(
+                (
+                    transaction_status_cf_primary_index,
+                    signature,
+                    lowest_available_slot,
+                ),
+                IteratorDirection::Forward,
+            ))?;
+            for ((i, sig, slot), _data) in index_iterator {
+                counter += 1;
+                if i != transaction_status_cf_primary_index || sig != signature {
+                    break;
+                }
+                if !self.is_root(slot) && !confirmed_unrooted_slots.contains(&slot) {
+                    continue;
+                }
+                let status = self
+                    .transaction_status_cf
+                    .get_protobuf_or_bincode::<StoredTransactionStatusMeta>((i, sig, slot))?
+                    .and_then(|status| status.try_into().ok())
+                    .map(|status| (slot, status));
+                return Ok((status, counter));
+            }
+        }
+        drop(lock);
+
+        Ok((None, counter))
+    }
+
+    fn find_transaction_in_slot(
+        &self,
+        slot: Slot,
+        signature: Signature,
+    ) -> Result<Option<VersionedTransaction>> {
+        let slot_entries = self.get_slot_entries(slot, 0)?;
+        Ok(slot_entries
+            .iter()
+            .cloned()
+            .flat_map(|entry| entry.transactions)
+            .map(|transaction| {
+                if let Err(err) = transaction.sanitize() {
+                    warn!(
+                        "Blockstore::find_transaction_in_slot sanitize failed: {:?}, \
+                        slot: {:?}, \
+                        {:?}",
+                        err, slot, transaction,
+                    );
+                }
+                transaction
+            })
+            .find(|transaction| transaction.signatures[0] == signature))
+    }
+
+    pub fn get_block_time(&self, slot: Slot) -> Result<Option<UnixTimestamp>> {
+        datapoint_info!(
+            "blockstore-rpc-api",
+            ("method", "get_block_time", String)
+        );
+        let _lock = self.check_lowest_cleanup_slot(slot)?;
+        self.blocktime_cf.get(slot)
     }
 
     pub fn is_dead(&self, slot: Slot) -> bool {
