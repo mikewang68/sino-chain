@@ -735,6 +735,303 @@ impl Blockstore {
         self.get_transaction_status(signature, &[])
     }
 
+    pub fn get_confirmed_signatures_for_address2(
+        &self,
+        address: Pubkey,
+        highest_slot: Slot, // highest_confirmed_root or highest_confirmed_slot
+        before: Option<Signature>,
+        until: Option<Signature>,
+        limit: usize,
+    ) -> Result<SignatureInfosForAddress> {
+        datapoint_info!(
+            "blockstore-rpc-api",
+            (
+                "method",
+                "get_confirmed_signatures_for_address2",
+                String
+            )
+        );
+        let last_root = self.last_root();
+        let confirmed_unrooted_slots: Vec<_> = AncestorIterator::new_inclusive(highest_slot, self)
+            .take_while(|&slot| slot > last_root)
+            .collect();
+
+        // Figure the `slot` to start listing signatures at, based on the ledger location of the
+        // `before` signature if present.  Also generate a HashSet of signatures that should
+        // be excluded from the results.
+        let mut get_before_slot_timer = Measure::start("get_before_slot_timer");
+        let (slot, mut before_excluded_signatures) = match before {
+            None => (highest_slot, None),
+            Some(before) => {
+                let transaction_status =
+                    self.get_transaction_status(before, &confirmed_unrooted_slots)?;
+                match transaction_status {
+                    None => return Ok(SignatureInfosForAddress::default()),
+                    Some((slot, _)) => {
+                        let mut slot_signatures = self.get_sorted_block_signatures(slot)?;
+                        if let Some(pos) = slot_signatures.iter().position(|&x| x == before) {
+                            slot_signatures.truncate(pos + 1);
+                        }
+
+                        (
+                            slot,
+                            Some(slot_signatures.into_iter().collect::<HashSet<_>>()),
+                        )
+                    }
+                }
+            }
+        };
+        get_before_slot_timer.stop();
+
+        // Generate a HashSet of signatures that should be excluded from the results based on
+        // `until` signature
+        let mut get_until_slot_timer = Measure::start("get_until_slot_timer");
+        let (lowest_slot, until_excluded_signatures) = match until {
+            None => (0, HashSet::new()),
+            Some(until) => {
+                let transaction_status =
+                    self.get_transaction_status(until, &confirmed_unrooted_slots)?;
+                match transaction_status {
+                    None => (0, HashSet::new()),
+                    Some((slot, _)) => {
+                        let mut slot_signatures = self.get_sorted_block_signatures(slot)?;
+                        if let Some(pos) = slot_signatures.iter().position(|&x| x == until) {
+                            slot_signatures = slot_signatures.split_off(pos);
+                        }
+
+                        (slot, slot_signatures.into_iter().collect::<HashSet<_>>())
+                    }
+                }
+            }
+        };
+        get_until_slot_timer.stop();
+
+        // Fetch the list of signatures that affect the given address
+        let first_available_block = self.get_first_available_block()?;
+        let mut address_signatures = vec![];
+
+        // Get signatures in `slot`
+        let mut get_initial_slot_timer = Measure::start("get_initial_slot_timer");
+        let mut signatures = self.find_address_signatures_for_slot(address, slot)?;
+        signatures.reverse();
+        if let Some(excluded_signatures) = before_excluded_signatures.take() {
+            address_signatures.extend(
+                signatures
+                    .into_iter()
+                    .filter(|(_, signature)| !excluded_signatures.contains(signature)),
+            )
+        } else {
+            address_signatures.append(&mut signatures);
+        }
+        get_initial_slot_timer.stop();
+
+        // Check the active_transaction_status_index to see if it contains slot. If so, start with
+        // that index, as it will contain higher slots
+        let starting_primary_index = *self.active_transaction_status_index.read().unwrap();
+        let next_primary_index = u64::from(starting_primary_index == 0);
+        let next_max_slot = self
+            .transaction_status_index_cf
+            .get(next_primary_index)?
+            .unwrap()
+            .max_slot;
+
+        let mut starting_primary_index_iter_timer = Measure::start("starting_primary_index_iter");
+        if slot > next_max_slot {
+            let mut starting_iterator = self.address_signatures_cf.iter(IteratorMode::From(
+                (starting_primary_index, address, slot, Signature::default()),
+                IteratorDirection::Reverse,
+            ))?;
+
+            // Iterate through starting_iterator until limit is reached
+            while address_signatures.len() < limit {
+                if let Some(((i, key_address, slot, signature), _)) = starting_iterator.next() {
+                    if slot == next_max_slot || slot < lowest_slot {
+                        break;
+                    }
+                    if i == starting_primary_index
+                        && key_address == address
+                        && slot >= first_available_block
+                    {
+                        if self.is_root(slot) || confirmed_unrooted_slots.contains(&slot) {
+                            address_signatures.push((slot, signature));
+                        }
+                        continue;
+                    }
+                }
+                break;
+            }
+
+            // Handle slots that cross primary indexes
+            if next_max_slot >= lowest_slot {
+                let mut signatures =
+                    self.find_address_signatures_for_slot(address, next_max_slot)?;
+                signatures.reverse();
+                address_signatures.append(&mut signatures);
+            }
+        }
+        starting_primary_index_iter_timer.stop();
+
+        // Iterate through next_iterator until limit is reached
+        let mut next_primary_index_iter_timer = Measure::start("next_primary_index_iter_timer");
+        let mut next_iterator = self.address_signatures_cf.iter(IteratorMode::From(
+            (next_primary_index, address, slot, Signature::default()),
+            IteratorDirection::Reverse,
+        ))?;
+        while address_signatures.len() < limit {
+            if let Some(((i, key_address, slot, signature), _)) = next_iterator.next() {
+                // Skip next_max_slot, which is already included
+                if slot == next_max_slot {
+                    continue;
+                }
+                if slot < lowest_slot {
+                    break;
+                }
+                if i == next_primary_index
+                    && key_address == address
+                    && slot >= first_available_block
+                {
+                    if self.is_root(slot) || confirmed_unrooted_slots.contains(&slot) {
+                        address_signatures.push((slot, signature));
+                    }
+                    continue;
+                }
+            }
+            break;
+        }
+        next_primary_index_iter_timer.stop();
+        let mut address_signatures: Vec<(Slot, Signature)> = address_signatures
+            .into_iter()
+            .filter(|(_, signature)| !until_excluded_signatures.contains(signature))
+            .collect();
+        address_signatures.truncate(limit);
+
+        // Fill in the status information for each found transaction
+        let mut get_status_info_timer = Measure::start("get_status_info_timer");
+        let mut infos = vec![];
+        for (slot, signature) in address_signatures.into_iter() {
+            let transaction_status =
+                self.get_transaction_status(signature, &confirmed_unrooted_slots)?;
+            let err = transaction_status.and_then(|(_slot, status)| status.status.err());
+            let memo = self.read_transaction_memos(signature)?;
+            let block_time = self.get_block_time(slot)?;
+            infos.push(ConfirmedTransactionStatusWithSignature {
+                signature,
+                slot,
+                err,
+                memo,
+                block_time,
+            });
+        }
+        get_status_info_timer.stop();
+
+        datapoint_info!(
+            "blockstore-get-conf-sigs-for-addr-2",
+            (
+                "get_before_slot_us",
+                get_before_slot_timer.as_us() as i64,
+                i64
+            ),
+            (
+                "get_initial_slot_us",
+                get_initial_slot_timer.as_us() as i64,
+                i64
+            ),
+            (
+                "starting_primary_index_iter_us",
+                starting_primary_index_iter_timer.as_us() as i64,
+                i64
+            ),
+            (
+                "next_primary_index_iter_us",
+                next_primary_index_iter_timer.as_us() as i64,
+                i64
+            ),
+            (
+                "get_status_info_us",
+                get_status_info_timer.as_us() as i64,
+                i64
+            ),
+            (
+                "get_until_slot_us",
+                get_until_slot_timer.as_us() as i64,
+                i64
+            )
+        );
+
+        Ok(SignatureInfosForAddress {
+            infos,
+            found_before: true, // if `before` signature was not found, this method returned early
+        })
+    }
+
+    fn get_sorted_block_signatures(&self, slot: Slot) -> Result<Vec<Signature>> {
+        let block = self.get_complete_block(slot, false).map_err(|err| {
+                BlockstoreError::Io(IoError::new(
+                    ErrorKind::Other,
+                format!("Unable to get block: {}", err),
+                ))
+            })?;
+
+// Load all signatures for the block
+        let mut slot_signatures: Vec<_> = block
+.transactions
+.into_iter()
+.filter_map(|transaction_with_meta| {
+transaction_with_meta
+    .transaction
+    .signatures
+    .into_iter()
+    .next()
+})
+.collect();
+
+// Reverse sort signatures as a way to entire a stable ordering within a slot, as
+// the AddressSignatures column is ordered by signatures within a slot,
+// not by block ordering
+slot_signatures.sort_unstable_by(|a, b| b.cmp(a));
+
+Ok(slot_signatures)
+}
+
+pub fn read_transaction_memos(&self, signature: Signature) -> Result<Option<String>> {
+    self.transaction_memos_cf.get(signature)
+}
+
+// Returns all signatures for an address in a particular slot, regardless of whether that slot
+    // has been rooted. The transactions will be ordered by signature, and NOT by the order in
+    // which the transactions exist in the block
+    fn find_address_signatures_for_slot(
+        &self,
+        pubkey: Pubkey,
+        slot: Slot,
+    ) -> Result<Vec<(Slot, Signature)>> {
+        let (lock, lowest_available_slot) = self.ensure_lowest_cleanup_slot();
+        let mut signatures: Vec<(Slot, Signature)> = vec![];
+        for transaction_status_cf_primary_index in 0..=1 {
+            let index_iterator = self.address_signatures_cf.iter(IteratorMode::From(
+                (
+                    transaction_status_cf_primary_index,
+                    pubkey,
+                    slot.max(lowest_available_slot),
+                    Signature::default(),
+                ),
+                IteratorDirection::Forward,
+            ))?;
+            for ((i, address, transaction_slot, signature), _) in index_iterator {
+                if i != transaction_status_cf_primary_index
+                    || transaction_slot > slot
+                    || address != pubkey
+                {
+                    break;
+                }
+                signatures.push((slot, signature));
+            }
+        }
+        drop(lock);
+        signatures.sort_by(|a, b| a.0.partial_cmp(&b.0).unwrap().then(a.1.cmp(&b.1)));
+        Ok(signatures)
+    }
+
     pub fn get_rooted_block(
         &self,
         slot: Slot,
