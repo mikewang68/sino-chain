@@ -2,7 +2,7 @@ use {
     gossip::cluster_info::ClusterInfo,
     poh::poh_recorder::PohRecorder,
     sdk::{clock::NUM_CONSECUTIVE_LEADER_SLOTS, pubkey::Pubkey},
-    send_transaction_service::tpu_info::TpuInfo,
+    sino_send_transaction_service::tpu_info::TpuInfo,
     std::{
         collections::HashMap,
         net::SocketAddr,

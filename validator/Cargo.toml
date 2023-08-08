@@ -43,7 +43,7 @@ replica-lib = { path = "../replica-lib", version = "=1.9.29" }
 rpc = { path = "../rpc", version = "=1.9.29" }
 runtime = { path = "../runtime", version = "=1.9.29" }
 sdk = { path = "../sdk", version = "=1.9.29" }
-send-transaction-service = { path = "../send-transaction-service", version = "=1.9.29" }
+sino-send-transaction-service = { path = "../send-transaction-service", version = "=1.9.29" }
 streamer = { path = "../streamer", version = "=1.9.29" }
 test-validator = { path = "../test-validator", version = "=1.9.29" }
 version = { path = "../version", version = "=0.6.3" }

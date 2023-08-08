@@ -1,5 +1,5 @@
 [package]
-name = "send-transaction-service"
+name = "sino-send-transaction-service"
 version = "1.9.29"
 description = "send transaction service"
 authors = [""]

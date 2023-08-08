@@ -37,7 +37,7 @@ use {
         exit::Exit, genesis_config::DEFAULT_GENESIS_DOWNLOAD_PATH, hash::Hash,
         native_token::lamports_to_sol, pubkey::Pubkey,
     },
-    send_transaction_service::send_transaction_service::{self, SendTransactionService},
+    sino_send_transaction_service::send_transaction_service::{self, SendTransactionService},
     std::{
         collections::HashSet,
         net::SocketAddr,

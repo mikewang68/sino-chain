@@ -53,7 +53,7 @@ runtime = { path = "../runtime", version = "=1.9.29" }
 sdk = { path = "../sdk", version = "=1.9.29" }
 frozen-abi = { path = "../frozen-abi", version = "=1.9.29" }
 frozen-abi-macro = { path = "../frozen-abi/macro", version = "=1.9.29" }
-send-transaction-service = { path = "../send-transaction-service", version = "=1.9.29" }
+sino-send-transaction-service = { path = "../send-transaction-service", version = "=1.9.29" }
 streamer = { path = "../streamer", version = "=1.9.29" }
 transaction-status = { path = "../transaction-status", version = "=1.9.29" }
 version = { path = "../version", version = "=0.6.3" }

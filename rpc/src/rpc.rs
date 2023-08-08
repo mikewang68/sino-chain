@@ -70,7 +70,7 @@ use {
         sysvar::stake_history,
         transaction::{self, SanitizedTransaction, TransactionError, VersionedTransaction},
     },
-    send_transaction_service::{
+    sino_send_transaction_service::{
         send_transaction_service::{SendTransactionService, TransactionInfo},
         tpu_info::NullTpuInfo,
     },
