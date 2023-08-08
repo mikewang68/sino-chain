@@ -108,8 +108,8 @@ use {
 use tracing_attributes::instrument;
 
 use runtime::accounts_index::ScanResult;
-// use account_program::{VelasAccountType, ACCOUNT_LEN as VELAS_ACCOUNT_SIZE};
-// use velas_relying_party_program::RelyingPartyData;
+use account_program::{VelasAccountType, ACCOUNT_LEN as ACCOUNT_SIZE};
+use relying_party_program::RelyingPartyData;
 
 type RpcCustomResult<T> = std::result::Result<T, RpcCustomError>;
 
@@ -2435,8 +2435,8 @@ impl JsonRpcRequestProcessor {
     ) -> Option<ScanResult<Vec<(Pubkey, AccountSharedData)>>> {
         // this filter doesn't dismiss accounts which are not related to specified storage_key
         let is_target_velas_account = |account: &AccountSharedData| -> bool {
-            *account.owner() == velas_account_program::id()
-                && account.data().len() == VELAS_ACCOUNT_SIZE
+            *account.owner() == account_program::id()
+                && account.data().len() == ACCOUNT_SIZE
                 && matches!(
                     VelasAccountType::try_from(account.data()),
                     Ok(VelasAccountType::Account(_account_info))
@@ -2462,7 +2462,7 @@ impl JsonRpcRequestProcessor {
         owner_key: Pubkey,
     ) -> Option<ScanResult<Vec<(Pubkey, AccountSharedData)>>> {
         let is_target_velas_account_storage = |account: &AccountSharedData| -> bool {
-            *account.owner() == velas_account_program::id()
+            *account.owner() == account_program::id()
                 && match VelasAccountType::try_from(account.data()) {
                     Ok(VelasAccountType::Account(account)) => account.owners.contains(&owner_key),
                     _ => false,
@@ -2488,7 +2488,7 @@ impl JsonRpcRequestProcessor {
         owner_key: Pubkey,
     ) -> Option<ScanResult<Vec<(Pubkey, AccountSharedData)>>> {
         let is_target_velas_account_storage = |account: &AccountSharedData| -> bool {
-            *account.owner() == velas_relying_party_program::id()
+            *account.owner() == relying_party_program::id()
                 && match RelyingPartyData::try_from(account.data()) {
                     Ok(acc) => acc.authority == owner_key,
                     _ => false,
@@ -2514,7 +2514,7 @@ impl JsonRpcRequestProcessor {
         operational_key: Pubkey,
     ) -> Option<ScanResult<Vec<(Pubkey, AccountSharedData)>>> {
         let is_target_velas_account_storage = |account: &AccountSharedData| -> bool {
-            *account.owner() == velas_account_program::id()
+            *account.owner() == account_program::id()
                 && match VelasAccountType::try_from(account.data()) {
                     Ok(VelasAccountType::Storage(account_storage)) => account_storage
                         .operationals

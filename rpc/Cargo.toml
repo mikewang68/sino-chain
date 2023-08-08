@@ -32,7 +32,8 @@ serde_derive = "1.0.103"
 serde_json = "1.0.72"
 soketto = "0.7"
 account-decoder = { path = "../account-decoder", version = "=1.9.29" }
-# account-program = { path = "../programs/velas-account-program" }
+account-program = { path = "../programs/account-program" }
+relying-party-program = { path = "../programs/relying-party-program" }
 client = { path = "../client", version = "=1.9.29" }
 entry = { path = "../entry", version = "=1.9.29" }
 faucet = { path = "../faucet", version = "=1.9.29" }
