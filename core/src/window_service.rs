@@ -714,7 +714,7 @@ impl WindowService {
 mod test {
     use {
         super::*,
-        entry::entry::{create_ticks, Entry},
+        sino_entry::entry::{create_ticks, Entry},
         gossip::contact_info::ContactInfo,
         ledger::{
             blockstore::{make_many_slot_entries, Blockstore},

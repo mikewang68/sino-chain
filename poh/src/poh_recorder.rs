@@ -17,7 +17,7 @@ use {
         unbounded, Receiver as CrossbeamReceiver, RecvTimeoutError, Sender as CrossbeamSender,
     },
     log::*,
-    entry::{entry::Entry, poh::Poh},
+    sino_entry::{entry::Entry, poh::Poh},
     ledger::{
         blockstore::Blockstore,
         genesis_utils::{create_genesis_config, GenesisConfigInfo},

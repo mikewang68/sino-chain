@@ -1,5 +1,3 @@
-use metrics::datapoint_error;
-
 use {
     crate::{
         erasure::ErasureConfig,

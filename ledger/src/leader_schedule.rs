@@ -40,10 +40,6 @@ impl LeaderSchedule {
         Self::new_from_schedule(slot_leaders)
     }
 
-    pub fn get_slot_leaders(&self) -> &[Pubkey] {
-        &self.slot_leaders
-    }
-
     pub fn new_from_schedule(slot_leaders: Vec<Pubkey>) -> Self {
         let index = slot_leaders
             .iter()
@@ -59,13 +55,13 @@ impl LeaderSchedule {
         }
     }
 
-//     pub fn get_slot_leaders(&self) -> &[Pubkey] {
-//         &self.slot_leaders
-//     }
+    pub fn get_slot_leaders(&self) -> &[Pubkey] {
+        &self.slot_leaders
+    }
 
-//     pub fn num_slots(&self) -> usize {
-//         self.slot_leaders.len()
-//     }
+    pub fn num_slots(&self) -> usize {
+        self.slot_leaders.len()
+    }
 
     /// 'offset' is an index into the leader schedule. The function returns an
     /// iterator of indices i >= offset where the given pubkey is the leader.
@@ -100,5 +96,129 @@ impl Index<u64> for LeaderSchedule {
     fn index(&self, index: u64) -> &Pubkey {
         let index = index as usize;
         &self.slot_leaders[index % self.slot_leaders.len()]
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use {super::*, rand::Rng, std::iter::repeat_with};
+
+    #[test]
+    fn test_leader_schedule_index() {
+        let pubkey0 = sdk::pubkey::new_rand();
+        let pubkey1 = sdk::pubkey::new_rand();
+        let leader_schedule = LeaderSchedule::new_from_schedule(vec![pubkey0, pubkey1]);
+        assert_eq!(leader_schedule[0], pubkey0);
+        assert_eq!(leader_schedule[1], pubkey1);
+        assert_eq!(leader_schedule[2], pubkey0);
+    }
+
+    #[test]
+    fn test_leader_schedule_basic() {
+        let num_keys = 10;
+        let stakes: Vec<_> = (0..num_keys)
+            .map(|i| (sdk::pubkey::new_rand(), i))
+            .collect();
+
+        let seed = sdk::pubkey::new_rand();
+        let mut seed_bytes = [0u8; 32];
+        seed_bytes.copy_from_slice(seed.as_ref());
+        let len = num_keys * 10;
+        let leader_schedule = LeaderSchedule::new(&stakes, seed_bytes, len, 1);
+        let leader_schedule2 = LeaderSchedule::new(&stakes, seed_bytes, len, 1);
+        assert_eq!(leader_schedule.slot_leaders.len() as u64, len);
+        // Check that the same schedule is reproducibly generated
+        assert_eq!(leader_schedule, leader_schedule2);
+    }
+
+    #[test]
+    fn test_repeated_leader_schedule() {
+        let num_keys = 10;
+        let stakes: Vec<_> = (0..num_keys)
+            .map(|i| (sdk::pubkey::new_rand(), i))
+            .collect();
+
+        let seed = sdk::pubkey::new_rand();
+        let mut seed_bytes = [0u8; 32];
+        seed_bytes.copy_from_slice(seed.as_ref());
+        let len = num_keys * 10;
+        let repeat = 8;
+        let leader_schedule = LeaderSchedule::new(&stakes, seed_bytes, len, repeat);
+        assert_eq!(leader_schedule.slot_leaders.len() as u64, len);
+        let mut leader_node = Pubkey::default();
+        for (i, node) in leader_schedule.slot_leaders.iter().enumerate() {
+            if i % repeat as usize == 0 {
+                leader_node = *node;
+            } else {
+                assert_eq!(leader_node, *node);
+            }
+        }
+    }
+
+    #[test]
+    fn test_repeated_leader_schedule_specific() {
+        let alice_pubkey = sdk::pubkey::new_rand();
+        let bob_pubkey = sdk::pubkey::new_rand();
+        let stakes = vec![(alice_pubkey, 2), (bob_pubkey, 1)];
+
+        let seed = Pubkey::default();
+        let mut seed_bytes = [0u8; 32];
+        seed_bytes.copy_from_slice(seed.as_ref());
+        let len = 8;
+        // What the schedule looks like without any repeats
+        let leaders1 = LeaderSchedule::new(&stakes, seed_bytes, len, 1).slot_leaders;
+
+        // What the schedule looks like with repeats
+        let leaders2 = LeaderSchedule::new(&stakes, seed_bytes, len, 2).slot_leaders;
+        assert_eq!(leaders1.len(), leaders2.len());
+
+        let leaders1_expected = vec![
+            alice_pubkey,
+            alice_pubkey,
+            alice_pubkey,
+            bob_pubkey,
+            alice_pubkey,
+            alice_pubkey,
+            alice_pubkey,
+            alice_pubkey,
+        ];
+        let leaders2_expected = vec![
+            alice_pubkey,
+            alice_pubkey,
+            alice_pubkey,
+            alice_pubkey,
+            alice_pubkey,
+            alice_pubkey,
+            bob_pubkey,
+            bob_pubkey,
+        ];
+
+        assert_eq!(leaders1, leaders1_expected);
+        assert_eq!(leaders2, leaders2_expected);
+    }
+
+    #[test]
+    fn test_get_indices() {
+        const NUM_SLOTS: usize = 97;
+        let mut rng = rand::thread_rng();
+        let pubkeys: Vec<_> = repeat_with(Pubkey::new_unique).take(4).collect();
+        let schedule: Vec<_> = repeat_with(|| pubkeys[rng.gen_range(0, 3)])
+            .take(19)
+            .collect();
+        let schedule = LeaderSchedule::new_from_schedule(schedule);
+        let leaders = (0..NUM_SLOTS)
+            .map(|i| (schedule[i as u64], i))
+            .into_group_map();
+        for pubkey in &pubkeys {
+            let index = leaders.get(pubkey).cloned().unwrap_or_default();
+            for offset in 0..NUM_SLOTS {
+                let schedule: Vec<_> = schedule
+                    .get_indices(pubkey, offset)
+                    .take_while(|s| *s < NUM_SLOTS)
+                    .collect();
+                let index: Vec<_> = index.iter().copied().skip_while(|s| *s < offset).collect();
+                assert_eq!(schedule, index);
+            }
+        }
     }
 }

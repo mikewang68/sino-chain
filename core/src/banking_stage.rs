@@ -12,7 +12,7 @@ use {
     crossbeam_channel::{Receiver as CrossbeamReceiver, RecvTimeoutError},
     histogram::Histogram,
     itertools::Itertools,
-    entry::entry::hash_transactions,
+    sino_entry::entry::hash_transactions,
     gossip::{cluster_info::ClusterInfo, contact_info::ContactInfo},
     ledger::blockstore_processor::TransactionStatusSender,
     measure::measure::Measure,
@@ -2094,7 +2094,7 @@ mod tests {
         super::*,
         crossbeam_channel::unbounded,
         itertools::Itertools,
-        entry::entry::{next_entry, Entry, EntrySlice},
+        sino_entry::entry::{next_entry, Entry, EntrySlice},
         gossip::{cluster_info::Node, contact_info::ContactInfo},
         ledger::{
             blockstore::{entries_to_test_shreds, Blockstore},

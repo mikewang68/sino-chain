@@ -28,7 +28,7 @@ use {
         window_service::DuplicateSlotReceiver,
     },
     client::rpc_response::SlotUpdate,
-    entry::entry::VerifyRecyclers,
+    sino_entry::entry::VerifyRecyclers,
     geyser_plugin_manager::block_metadata_notifier_interface::BlockMetadataNotifierLock,
     gossip::cluster_info::ClusterInfo,
     ledger::{
@@ -3058,7 +3058,7 @@ pub mod tests {
             vote_simulator::{self, VoteSimulator},
         },
         crossbeam_channel::unbounded,
-        entry::entry::{self, Entry},
+        sino_entry::entry::{self, Entry},
         gossip::{cluster_info::Node, crds::Cursor},
         ledger::{
             blockstore::{entries_to_test_shreds, make_slot_entries, BlockstoreError},

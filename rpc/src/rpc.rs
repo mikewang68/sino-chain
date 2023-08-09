@@ -4943,7 +4943,7 @@ pub fn create_test_transactions_and_populate_blockstore(
         blockhash,
     );
     let success_signature = success_tx.signatures[0];
-    let entry_1 = entry::entry::next_entry(&blockhash, 1, vec![success_tx]);
+    let entry_1 = sino_entry::entry::next_entry(&blockhash, 1, vec![success_tx]);
     // Failed transaction, InstructionError
     let ix_error_tx = sdk::system_transaction::transfer(
         keypair2,
@@ -4952,7 +4952,7 @@ pub fn create_test_transactions_and_populate_blockstore(
         blockhash,
     );
     let ix_error_signature = ix_error_tx.signatures[0];
-    let entry_2 = entry::entry::next_entry(&entry_1.hash, 1, vec![ix_error_tx]);
+    let entry_2 = sino_entry::entry::next_entry(&entry_1.hash, 1, vec![ix_error_tx]);
     let entries = vec![entry_1, entry_2];
 
     let shreds = ledger::blockstore::entries_to_test_shreds(

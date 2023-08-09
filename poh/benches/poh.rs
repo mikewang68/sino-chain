@@ -4,7 +4,7 @@
 extern crate test;
 
 use {
-    entry::poh::Poh,
+    sino_entry::poh::Poh,
     poh::poh_service::DEFAULT_HASHES_PER_BATCH,
     sdk::hash::Hash,
     std::sync::{

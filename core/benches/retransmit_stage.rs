@@ -6,7 +6,7 @@ extern crate test;
 use {
     log::*,
     core::retransmit_stage::retransmitter,
-    entry::entry::Entry,
+    sino_entry::entry::Entry,
     gossip::{
         cluster_info::{ClusterInfo, Node},
         contact_info::ContactInfo,

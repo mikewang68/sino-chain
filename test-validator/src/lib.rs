@@ -13,7 +13,7 @@ use {
         socketaddr,
     },
     ledger::{blockstore::create_new_ledger, create_new_tmp_ledger},
-    net_utils::PortRange,
+    sino_net_utils::PortRange,
     rpc::{rpc::JsonRpcConfig, rpc_pubsub_service::PubSubConfig},
     runtime::{
         bank_forks::BankForks, genesis_utils::create_genesis_config_with_leader_ex,
@@ -265,7 +265,7 @@ impl TestValidatorGenesis {
             info!("Fetching {} over RPC...", address);
             let account = rpc_client.get_account(&address).unwrap_or_else(|err| {
                 error!("Failed to fetch {}: {}", address, err);
-                solana_core::validator::abort();
+                core::validator::abort();
             });
             self.add_account(address, AccountSharedData::from(account));
         }
@@ -275,9 +275,9 @@ impl TestValidatorGenesis {
     pub fn add_accounts_from_json_files(&mut self, accounts: &[AccountInfo]) -> &mut Self {
         for account in accounts {
             let account_path =
-                solana_program_test::find_file(account.filename).unwrap_or_else(|| {
+                program_test::find_file(account.filename).unwrap_or_else(|| {
                     error!("Unable to locate {}", account.filename);
-                    solana_core::validator::abort();
+                    core::validator::abort();
                 });
             let mut file = File::open(&account_path).unwrap();
             let mut account_info_raw = String::new();
@@ -291,7 +291,7 @@ impl TestValidatorGenesis {
                         account_path.to_str().unwrap(),
                         err
                     );
-                    solana_core::validator::abort();
+                    core::validator::abort();
                 }
                 Ok(deserialized) => deserialized,
             };
@@ -307,7 +307,7 @@ impl TestValidatorGenesis {
         self
     }
 
-    /// Add an account to the test environment with the account data in the provided `filename`
+    // Add an account to the test environment with the account data in the provided `filename`
     pub fn add_account_with_file_data(
         &mut self,
         address: Pubkey,
@@ -319,8 +319,8 @@ impl TestValidatorGenesis {
             address,
             AccountSharedData::from(Account {
                 lamports,
-                data: solana_program_test::read_file(
-                    solana_program_test::find_file(filename).unwrap_or_else(|| {
+                data: program_test::read_file(
+                    program_test::find_file(filename).unwrap_or_else(|| {
                         panic!("Unable to locate {}", filename);
                     }),
                 ),
@@ -353,17 +353,17 @@ impl TestValidatorGenesis {
         )
     }
 
-    /// Add a BPF program to the test environment.
-    ///
-    /// `program_name` will also used to locate the BPF shared object in the current or fixtures
-    /// directory.
+    // Add a BPF program to the test environment.
+    //
+    // `program_name` will also used to locate the BPF shared object in the current or fixtures
+    // directory.
     pub fn add_program(&mut self, program_name: &str, program_id: Pubkey) -> &mut Self {
-        let program_path = solana_program_test::find_file(&format!("{}.so", program_name))
+        let program_path = program_test::find_file(&format!("{}.so", program_name))
             .unwrap_or_else(|| panic!("Unable to locate program {}", program_name));
 
         self.programs.push(ProgramInfo {
             program_id,
-            loader: solana_sdk::bpf_loader::id(),
+            loader: sdk::bpf_loader::id(),
             program_path,
         });
         self
@@ -471,12 +471,12 @@ impl TestValidator {
             .expect("validator start failed")
     }
 
-    /// Initialize the ledger directory
-    ///
-    /// If `ledger_path` is `None`, a temporary ledger will be created.  Otherwise the ledger will
-    /// be initialized in the provided directory if it doesn't already exist.
-    ///
-    /// Returns the path to the ledger directory.
+    // Initialize the ledger directory
+    //
+    // If `ledger_path` is `None`, a temporary ledger will be created.  Otherwise the ledger will
+    // be initialized in the provided directory if it doesn't already exist.
+    //
+    // Returns the path to the ledger directory.
     fn initialize_ledger(
         mint_address: Pubkey,
         config: &TestValidatorGenesis,
@@ -489,11 +489,11 @@ impl TestValidator {
         let mint_lamports = sol_to_lamports(500_000_000.);
 
         let mut accounts = config.accounts.clone();
-        for (address, account) in solana_program_test::programs::spl_programs(&config.rent) {
+        for (address, account) in program_test::programs::spl_programs(&config.rent) {
             accounts.entry(address).or_insert(account);
         }
         for program in &config.programs {
-            let data = solana_program_test::read_file(&program.program_path);
+            let data = program_test::read_file(&program.program_path);
             accounts.insert(
                 program.program_id,
                 AccountSharedData::from(Account {
@@ -516,7 +516,7 @@ impl TestValidator {
             validator_identity_lamports,
             config.fee_rate_governor.clone(),
             config.rent,
-            solana_sdk::genesis_config::ClusterType::Development,
+            sdk::genesis_config::ClusterType::Development,
             accounts.into_iter().collect(),
         );
         genesis_config.epoch_schedule = config
@@ -559,7 +559,7 @@ impl TestValidator {
                     config
                         .max_genesis_archive_unpacked_size
                         .unwrap_or(MAX_GENESIS_ARCHIVE_UNPACKED_SIZE),
-                    solana_ledger::blockstore_db::AccessType::PrimaryOnly,
+                    ledger::blockstore_db::AccessType::PrimaryOnly,
                 )
                 .map_err(|err| {
                     format!(

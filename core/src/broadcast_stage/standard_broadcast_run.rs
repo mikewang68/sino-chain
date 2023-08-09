@@ -8,7 +8,7 @@ use {
     crate::{
         broadcast_stage::broadcast_utils::UnfinishedSlotInfo, cluster_nodes::ClusterNodesCache,
     },
-    entry::entry::Entry,
+    sino_entry::entry::Entry,
     ledger::shred::{
         ProcessShredsStats, Shred, Shredder, MAX_DATA_SHREDS_PER_FEC_BLOCK,
         SHRED_TICK_REFERENCE_MASK,
@@ -535,7 +535,7 @@ impl BroadcastRun for StandardBroadcastRun {
 mod test {
     use {
         super::*,
-        entry::entry::create_ticks,
+        sino_entry::entry::create_ticks,
         gossip::cluster_info::{ClusterInfo, Node},
         ledger::{
             blockstore::Blockstore, genesis_utils::create_genesis_config, get_tmp_ledger_path,

@@ -1,6 +1,6 @@
 use {
     super::*,
-    entry::entry::Entry,
+    sino_entry::entry::Entry,
     ledger::shred::Shredder,
     sdk::{hash::Hash, signature::Keypair},
 };

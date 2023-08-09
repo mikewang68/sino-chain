@@ -15,7 +15,7 @@ use {
             is_pubkey_or_keypair, is_rfc3339_datetime, is_slot, is_valid_percentage,
         },
     },
-    entry::poh::compute_hashes_per_tick,
+    sino_entry::poh::compute_hashes_per_tick,
     genesis::Base64Account,
     ledger::{blockstore::create_new_ledger,blockstore_db::AccessType},//blockstore::create_new_ledger,
     runtime::hardened_unpack::MAX_GENESIS_ARCHIVE_UNPACKED_SIZE,//定义了创世档案文件解压后的最大大小。700MB

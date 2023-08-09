@@ -13,7 +13,7 @@ use {
         leader_slot_banking_stage_metrics::LeaderSlotMetricsTracker,
         qos_service::QosService,
     },
-    entry::entry::{next_hash, Entry},
+    sino_entry::entry::{next_hash, Entry},
     gossip::cluster_info::{ClusterInfo, Node},
     ledger::{
         blockstore::Blockstore,

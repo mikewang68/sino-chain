@@ -62,7 +62,7 @@ use {
         pubkey::Pubkey,
         signature::{Keypair, Signer},
     },
-    send_transaction_service::send_transaction_service,
+    sino_send_transaction_service::send_transaction_service,
     sino_streamer::socket::SocketAddrSpace,
     std::{
         collections::{HashSet, VecDeque},
@@ -399,7 +399,7 @@ fn get_cluster_shred_version(entrypoints: &[SocketAddr]) -> Option<u16> {
         index.into_iter().map(|i| &entrypoints[i])
     };
     for entrypoint in entrypoints {
-        match solana_net_utils::get_cluster_shred_version(entrypoint) {
+        match sino_net_utils::get_cluster_shred_version(entrypoint) {
             Err(err) => eprintln!("get_cluster_shred_version failed: {}, {}", entrypoint, err),
             Ok(0) => eprintln!("zero sherd-version from entrypoint: {}", entrypoint),
             Ok(shred_version) => {
@@ -425,7 +425,7 @@ fn platform_id() -> String {
 
 #[cfg(target_os = "linux")]
 fn check_os_network_limits() {
-    use {solana_metrics::datapoint_warn, std::collections::HashMap, sysctl::Sysctl};
+    use {metrics::datapoint_warn, std::collections::HashMap, sysctl::Sysctl};
 
     fn sysctl_read(name: &str) -> Result<String, sysctl::SysctlError> {
         let ctl = sysctl::Ctl::new(name)?;
@@ -532,7 +532,7 @@ pub fn main() {
     let default_accounts_shrink_ratio = &DEFAULT_ACCOUNTS_SHRINK_RATIO.to_string();
 
     let matches = App::new(crate_name!()).about(crate_description!())
-        .version(solana_version::version!())
+        .version(sino_version::version!())
         .setting(AppSettings::VersionlessSubcommands)
         .setting(AppSettings::InferSubcommands)
         .arg(
@@ -605,7 +605,7 @@ pub fn main() {
                 .takes_value(true)
                 .requires("evm_state_archive_path")
                 .requires("evm_height_index_source")
-                .validator(velas_validator::port_validator)
+                .validator(validator::port_validator)
                 .help("Enable evm state rpc on this port"),
         )
         .arg(
@@ -654,7 +654,7 @@ pub fn main() {
                 .value_name("HOST:PORT")
                 .takes_value(true)
                 .multiple(true)
-                .validator(solana_net_utils::is_host_port)
+                .validator(sino_net_utils::is_host_port)
                 .help("Rendezvous with the cluster at this gossip entrypoint"),
         )
         .arg(
@@ -718,7 +718,7 @@ pub fn main() {
                 .long("rpc-port")
                 .value_name("PORT")
                 .takes_value(true)
-                .validator(velas_validator::port_validator)
+                .validator(validator::port_validator)
                 .help("Enable JSON RPC on this port, and the next port for the RPC websocket"),
         )
         .arg(
@@ -810,7 +810,7 @@ pub fn main() {
                 .long("rpc-faucet-address")
                 .value_name("HOST:PORT")
                 .takes_value(true)
-                .validator(solana_net_utils::is_host_port)
+                .validator(sino_net_utils::is_host_port)
                 .help("Enable the JSON RPC 'requestAirdrop' API with this faucet address."),
         )
         .arg(
@@ -858,7 +858,7 @@ pub fn main() {
                 .value_name("HOST:PORT")
                 .takes_value(true)
                 .multiple(true)
-                .validator(solana_net_utils::is_host_port)
+                .validator(sino_net_utils::is_host_port)
                 .help("etcd gRPC endpoint to connect with")
         )
         .arg(
@@ -906,7 +906,7 @@ pub fn main() {
                 .long("gossip-host")
                 .value_name("HOST")
                 .takes_value(true)
-                .validator(solana_net_utils::is_host)
+                .validator(sino_net_utils::is_host)
                 .help("Gossip DNS name or IP address for the validator to advertise in gossip \
                        [default: ask --entrypoint, or 127.0.0.1 when --entrypoint is not provided]"),
         )
@@ -916,7 +916,7 @@ pub fn main() {
                 .value_name("HOST:PORT")
                 .takes_value(true)
                 .conflicts_with("private_rpc")
-                .validator(solana_net_utils::is_host_port)
+                .validator(sino_net_utils::is_host_port)
                 .help("RPC address for the validator to advertise publicly in gossip. \
                       Useful for validators running behind a load balancer or proxy \
                       [default: use --rpc-bind-address / --rpc-port]"),
@@ -927,7 +927,7 @@ pub fn main() {
                 .value_name("MIN_PORT-MAX_PORT")
                 .takes_value(true)
                 .default_value(default_dynamic_port_range)
-                .validator(velas_validator::port_range_validator)
+                .validator(validator::port_range_validator)
                 .help("Range to use for dynamically assigned ports"),
         )
         .arg(
@@ -1239,7 +1239,7 @@ pub fn main() {
                 .long("bind-address")
                 .value_name("HOST")
                 .takes_value(true)
-                .validator(solana_net_utils::is_host)
+                .validator(sino_net_utils::is_host)
                 .default_value("0.0.0.0")
                 .help("IP address to bind the validator ports"),
         )
@@ -1248,7 +1248,7 @@ pub fn main() {
                 .long("rpc-bind-address")
                 .value_name("HOST")
                 .takes_value(true)
-                .validator(solana_net_utils::is_host)
+                .validator(sino_net_utils::is_host)
                 .help("IP address to bind the RPC port [default: 127.0.0.1 if --private-rpc is present, otherwise use --bind-address]"),
         )
         .arg(
@@ -1443,7 +1443,7 @@ pub fn main() {
                 .long("accountsdb-repl-bind-address")
                 .value_name("HOST")
                 .takes_value(true)
-                .validator(solana_net_utils::is_host)
+                .validator(sino_net_utils::is_host)
                 .hidden(true)
                 .help("IP address to bind the AccountsDb Replication port [default: use --bind-address]"),
         )
@@ -1452,7 +1452,7 @@ pub fn main() {
                 .long("accountsdb-repl-port")
                 .value_name("PORT")
                 .takes_value(true)
-                .validator(velas_validator::port_validator)
+                .validator(validator::port_validator)
                 .hidden(true)
                 .help("Enable AccountsDb Replication Service on this port"),
         )
@@ -2086,16 +2086,16 @@ pub fn main() {
     let use_progress_bar = logfile.is_none();
     let _logger_thread = redirect_stderr_to_file(logfile);
 
-    info!("{} {}", crate_name!(), solana_version::version!());
+    info!("{} {}", crate_name!(), sino_version::version!());
     info!("Starting validator with: {:#?}", std::env::args_os());
 
     let cuda = matches.is_present("cuda");
     if cuda {
-        solana_perf::perf_libs::init_cuda();
+        perf::perf_libs::init_cuda();
         enable_recycler_warming();
     }
 
-    solana_core::validator::report_target_features();
+    core::validator::report_target_features();
 
     let evm_state_path = if let Ok(evm_state_path) = value_t!(matches, "evm_state_path", String) {
         PathBuf::from(evm_state_path)
@@ -2183,24 +2183,24 @@ pub fn main() {
         "--gossip-validator",
     );
 
-    let bind_address = solana_net_utils::parse_host(matches.value_of("bind_address").unwrap())
+    let bind_address = sino_net_utils::parse_host(matches.value_of("bind_address").unwrap())
         .expect("invalid bind_address");
     let rpc_bind_address = if matches.is_present("rpc_bind_address") {
-        solana_net_utils::parse_host(matches.value_of("rpc_bind_address").unwrap())
+        sino_net_utils::parse_host(matches.value_of("rpc_bind_address").unwrap())
             .expect("invalid rpc_bind_address")
     } else if private_rpc {
-        solana_net_utils::parse_host("127.0.0.1").unwrap()
+        sino_net_utils::parse_host("127.0.0.1").unwrap()
     } else {
         bind_address
     };
 
-    let (evm_state_rpc_addr, evm_state_rpc_config): (Option<SocketAddr>, Option<solana_replica_lib::triedb::Config>) = match evm_state_archive {
+    let (evm_state_rpc_addr, evm_state_rpc_config): (Option<SocketAddr>, Option<replica_lib::triedb::Config>) = match evm_state_archive {
         Some(..) => {
             let addr = value_t!(matches, "evm_state_rpc_port", u16).ok().map(|rpc_port| {
                 SocketAddr::new(rpc_bind_address, rpc_port)
             });
 
-            let config = match solana_replica_lib::triedb::Config::parse_validator(&matches) {
+            let config = match replica_lib::triedb::Config::parse_validator(&matches) {
                 Ok(config) => Some(config),
                 Err(err) => {
                     
@@ -2240,7 +2240,7 @@ pub fn main() {
         .unwrap_or_default()
         .into_iter()
         .map(|entrypoint| {
-            solana_net_utils::parse_host_port(&entrypoint).unwrap_or_else(|e| {
+            sino_net_utils::parse_host_port(&entrypoint).unwrap_or_else(|e| {
                 eprintln!("failed to parse entrypoint address: {}", e);
                 exit(1);
             })
@@ -2256,7 +2256,7 @@ pub fn main() {
         .ok()
         .or_else(|| get_cluster_shred_version(&entrypoint_addrs));
 
-    let tower_storage: Arc<dyn solana_core::tower_storage::TowerStorage> =
+    let tower_storage: Arc<dyn core::tower_storage::TowerStorage> =
         match value_t_or_exit!(matches, "tower_storage", String).as_str() {
             "file" => {
                 let tower_path = value_t!(matches, "tower", PathBuf)
@@ -2345,7 +2345,7 @@ pub fn main() {
 
     let accountsdb_repl_service_config = if matches.is_present("enable_accountsdb_repl") {
         let accountsdb_repl_bind_address = if matches.is_present("accountsdb_repl_bind_address") {
-            solana_net_utils::parse_host(matches.value_of("accountsdb_repl_bind_address").unwrap())
+            sino_net_utils::parse_host(matches.value_of("accountsdb_repl_bind_address").unwrap())
                 .expect("invalid accountsdb_repl_bind_address")
         } else {
             bind_address
@@ -2397,7 +2397,7 @@ pub fn main() {
                 .is_present("enable_rpc_bigtable_ledger_storage"),
             enable_bigtable_ledger_upload: matches.is_present("enable_bigtable_ledger_upload"),
             faucet_addr: matches.value_of("rpc_faucet_addr").map(|address| {
-                solana_net_utils::parse_host_port(address).expect("failed to parse faucet address")
+                sino_net_utils::parse_host_port(address).expect("failed to parse faucet address")
             }),
             full_api: matches.is_present("full_rpc_api"),
             obsolete_v1_7_api: matches.is_present("obsolete_v1_7_rpc_api"),
@@ -2517,7 +2517,7 @@ pub fn main() {
     });
 
     let dynamic_port_range =
-        solana_net_utils::parse_port_range(matches.value_of("dynamic_port_range").unwrap())
+        sino_net_utils::parse_port_range(matches.value_of("dynamic_port_range").unwrap())
             .expect("invalid dynamic_port_range");
 
     let account_paths: Vec<PathBuf> =
@@ -2698,7 +2698,7 @@ pub fn main() {
     }
 
     let public_rpc_addr = matches.value_of("public_rpc_addr").map(|addr| {
-        solana_net_utils::parse_host_port(addr).unwrap_or_else(|e| {
+        sino_net_utils::parse_host_port(addr).unwrap_or_else(|e| {
             eprintln!("failed to parse public rpc address: {}", e);
             exit(1);
         })
@@ -2730,7 +2730,7 @@ pub fn main() {
     let gossip_host: IpAddr = matches
         .value_of("gossip_host")
         .map(|gossip_host| {
-            solana_net_utils::parse_host(gossip_host).unwrap_or_else(|err| {
+            sino_net_utils::parse_host(gossip_host).unwrap_or_else(|err| {
                 eprintln!("Failed to parse --gossip-host: {}", err);
                 exit(1);
             })
@@ -2746,7 +2746,7 @@ pub fn main() {
                         "Contacting {} to determine the validator's public IP address",
                         entrypoint_addr
                     );
-                    solana_net_utils::get_public_ip_addr(entrypoint_addr).map_or_else(
+                    sino_net_utils::get_public_ip_addr(entrypoint_addr).map_or_else(
                         |err| {
                             eprintln!(
                                 "Failed to contact cluster entrypoint {}: {}",
@@ -2770,7 +2770,7 @@ pub fn main() {
     let gossip_addr = SocketAddr::new(
         gossip_host,
         value_t!(matches, "gossip_port", u16).unwrap_or_else(|_| {
-            solana_net_utils::find_available_port_in_range(bind_address, (0, 1)).unwrap_or_else(
+            sino_net_utils::find_available_port_in_range(bind_address, (0, 1)).unwrap_or_else(
                 |err| {
                     eprintln!("Unable to find an available gossip port: {}", err);
                     exit(1);
@@ -2816,12 +2816,12 @@ pub fn main() {
         }
     }
 
-    solana_metrics::set_host_id(identity_keypair.pubkey().to_string());
-    solana_metrics::set_panic_hook("validator", {
-        let version = format!("{:?}", solana_version::version!());
+    metrics::set_host_id(identity_keypair.pubkey().to_string());
+    metrics::set_panic_hook("validator", {
+        let version = format!("{:?}", sino_version::version!());
         Some(version)
     });
-    solana_entry::entry::init_poh();
+    sino_entry::entry::init_poh();
     snapshot_utils::remove_tmp_snapshot_archives(&snapshot_archives_dir);
 
     let identity_keypair = identity_keypair;

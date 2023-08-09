@@ -1,6 +1,6 @@
 use {
     crossbeam_channel::{Receiver, RecvTimeoutError, Sender},
-    entry::entry::Entry,
+    sino_entry::entry::Entry,
     ledger::blockstore::{Blockstore, CompletedDataSetInfo},
     rpc::{max_slots::MaxSlots, rpc_subscriptions::RpcSubscriptions},
     sdk::signature::Signature,

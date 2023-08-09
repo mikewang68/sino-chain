@@ -1,6 +1,6 @@
 use {
     crate::result::Result,
-    entry::entry::Entry,
+    sino_entry::entry::Entry,
     ledger::shred::Shred,
     poh::poh_recorder::WorkingBankEntry,
     runtime::bank::Bank,

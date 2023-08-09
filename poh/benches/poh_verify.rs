@@ -2,7 +2,7 @@
 extern crate test;
 
 use {
-    entry::entry::{next_entry_mut, Entry, EntrySlice},
+    sino_entry::entry::{next_entry_mut, Entry, EntrySlice},
     sdk::{
         hash::{hash, Hash},
         signature::{Keypair, Signer},

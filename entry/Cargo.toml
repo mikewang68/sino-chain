@@ -29,7 +29,7 @@ logger = { path = "../logger", version = "=1.9.29" }
 
 [lib]
 crate-type = ["lib"]
-name = "entry"
+name = "sino_entry"
 
 #[[bench]]
 #name = "entry_sigverify"

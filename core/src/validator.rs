@@ -24,7 +24,7 @@ use {
     },
     crossbeam_channel::{bounded, unbounded},
     rand::{thread_rng, Rng},
-    entry::poh::compute_hash_time_ns,
+    sino_entry::poh::compute_hash_time_ns,
     geyser_plugin_manager::geyser_plugin_service::GeyserPluginService,
     gossip::{
         cluster_info::{
@@ -92,7 +92,7 @@ use {
         signature::{Keypair, Signer},
         timing::timestamp,
     },
-    send_transaction_service::send_transaction_service,
+    sino_send_transaction_service::send_transaction_service,
     sino_streamer::socket::SocketAddrSpace,
     vote_program::vote_state::VoteState,
     std::{
@@ -993,7 +993,7 @@ impl Validator {
         datapoint_info!(
             "validator-new",
             ("id", id.to_string(), String),
-            ("version", version::version!(), String)
+            ("version", sino_version::version!(), String)
         );
 
         *start_progress.write().unwrap() = ValidatorStartProgress::Running;
@@ -1983,14 +1983,14 @@ mod tests {
         use std::time::Instant;
         sino_logger::setup();
         use {
-            entry::entry,
+            sino_entry::entry,
             ledger::{blockstore, get_tmp_ledger_path},
         };
         let blockstore_path = get_tmp_ledger_path!();
         {
             let blockstore = Blockstore::open(&blockstore_path).unwrap();
 
-            let entries = entry::create_ticks(1, 0, Hash::default());
+            let entries = sino_entry::create_ticks(1, 0, Hash::default());
 
             info!("creating shreds");
             let mut last_print = Instant::now();

@@ -2,7 +2,7 @@ use {
     super::*,
     crate::cluster_nodes::ClusterNodesCache,
     itertools::Itertools,
-    entry::entry::Entry,
+    sino_entry::entry::Entry,
     gossip::cluster_info::DATA_PLANE_FANOUT,
     ledger::shred::Shredder,
     sdk::{

@@ -1,0 +1,12 @@
+/home/djtu15/.cargo/registry/src/github.com-1ecc6299db9ec823/spl-token-3.2.0/target/debug/deps/generic_array-103d257407f5bca7.rmeta: /home/djtu15/.cargo/registry/src/github.com-1ecc6299db9ec823/generic-array-0.14.7/src/lib.rs /home/djtu15/.cargo/registry/src/github.com-1ecc6299db9ec823/generic-array-0.14.7/src/hex.rs /home/djtu15/.cargo/registry/src/github.com-1ecc6299db9ec823/generic-array-0.14.7/src/impls.rs /home/djtu15/.cargo/registry/src/github.com-1ecc6299db9ec823/generic-array-0.14.7/src/impl_serde.rs /home/djtu15/.cargo/registry/src/github.com-1ecc6299db9ec823/generic-array-0.14.7/src/arr.rs /home/djtu15/.cargo/registry/src/github.com-1ecc6299db9ec823/generic-array-0.14.7/src/functional.rs /home/djtu15/.cargo/registry/src/github.com-1ecc6299db9ec823/generic-array-0.14.7/src/iter.rs /home/djtu15/.cargo/registry/src/github.com-1ecc6299db9ec823/generic-array-0.14.7/src/sequence.rs
+
+/home/djtu15/.cargo/registry/src/github.com-1ecc6299db9ec823/spl-token-3.2.0/target/debug/deps/generic_array-103d257407f5bca7.d: /home/djtu15/.cargo/registry/src/github.com-1ecc6299db9ec823/generic-array-0.14.7/src/lib.rs /home/djtu15/.cargo/registry/src/github.com-1ecc6299db9ec823/generic-array-0.14.7/src/hex.rs /home/djtu15/.cargo/registry/src/github.com-1ecc6299db9ec823/generic-array-0.14.7/src/impls.rs /home/djtu15/.cargo/registry/src/github.com-1ecc6299db9ec823/generic-array-0.14.7/src/impl_serde.rs /home/djtu15/.cargo/registry/src/github.com-1ecc6299db9ec823/generic-array-0.14.7/src/arr.rs /home/djtu15/.cargo/registry/src/github.com-1ecc6299db9ec823/generic-array-0.14.7/src/functional.rs /home/djtu15/.cargo/registry/src/github.com-1ecc6299db9ec823/generic-array-0.14.7/src/iter.rs /home/djtu15/.cargo/registry/src/github.com-1ecc6299db9ec823/generic-array-0.14.7/src/sequence.rs
+
+/home/djtu15/.cargo/registry/src/github.com-1ecc6299db9ec823/generic-array-0.14.7/src/lib.rs:
+/home/djtu15/.cargo/registry/src/github.com-1ecc6299db9ec823/generic-array-0.14.7/src/hex.rs:
+/home/djtu15/.cargo/registry/src/github.com-1ecc6299db9ec823/generic-array-0.14.7/src/impls.rs:
+/home/djtu15/.cargo/registry/src/github.com-1ecc6299db9ec823/generic-array-0.14.7/src/impl_serde.rs:
+/home/djtu15/.cargo/registry/src/github.com-1ecc6299db9ec823/generic-array-0.14.7/src/arr.rs:
+/home/djtu15/.cargo/registry/src/github.com-1ecc6299db9ec823/generic-array-0.14.7/src/functional.rs:
+/home/djtu15/.cargo/registry/src/github.com-1ecc6299db9ec823/generic-array-0.14.7/src/iter.rs:
+/home/djtu15/.cargo/registry/src/github.com-1ecc6299db9ec823/generic-array-0.14.7/src/sequence.rs:

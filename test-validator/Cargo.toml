@@ -22,7 +22,7 @@ gossip = { path = "../gossip", version = "=1.9.29" }
 ledger = { path = "../ledger", version = "=1.9.29" }
 logger = { path = "../logger", version = "=1.9.29" }
 net-utils = { path = "../net-utils", version = "=1.9.29" }
-# program-test = { path = "../program-test", version = "=1.9.29" }
+program-test = { path = "../program-test", version = "=1.9.29" }
 rpc = { path = "../rpc", version = "=1.9.29" }
 runtime = { path = "../runtime", version = "=1.9.29" }
 sdk = { path = "../sdk", version = "=1.9.29" }

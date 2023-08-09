@@ -129,7 +129,7 @@ impl AdminRpc for AdminRpcImpl {
 
     fn set_log_filter(&self, filter: String) -> Result<()> {
         debug!("set_log_filter admin rpc request received");
-        solana_logger::setup_with(&filter);
+        sino_logger::setup_with(&filter);
         Ok(())
     }
 
@@ -247,7 +247,7 @@ impl AdminRpc for AdminRpcImpl {
                     })?;
             }
 
-            solana_metrics::set_host_id(identity_keypair.pubkey().to_string());
+            metrics::set_host_id(identity_keypair.pubkey().to_string());
             post_init
                 .cluster_info
                 .set_keypair(Arc::new(identity_keypair));

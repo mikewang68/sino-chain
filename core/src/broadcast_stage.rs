@@ -457,7 +457,7 @@ pub mod test {
     use {
         super::*,
         crossbeam_channel::unbounded,
-        entry::entry::create_ticks,
+        sino_entry::entry::create_ticks,
         gossip::cluster_info::{ClusterInfo, Node},
         ledger::{
             blockstore::{make_slot_entries, Blockstore},

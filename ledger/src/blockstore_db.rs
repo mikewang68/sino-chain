@@ -330,7 +330,7 @@ impl Rocks {
 
         // Use default database options
         if matches!(access_type, AccessType::PrimaryOnlyForMaintenance) {
-            warn!("Disabling rocksdb's auto compaction for maintenance bulk ledger update...");// 禁用 rocksdb 的自动压缩以维护大容量分类帐更新
+            warn!("Disabling rocksdb's auto compaction for maintenance bulk ledger update...");
         }
         let mut db_options = get_db_options(&access_type);
         if let Some(recovery_mode) = recovery_mode {
@@ -488,7 +488,7 @@ impl Rocks {
                 match DB::open_cf_descriptors(&db_options, path, cfs.into_iter().map(|c| c.1)) {
                     Ok(db) => Rocks(db, ActualAccessType::Primary, oldest_slot, oldest_block_num),
                     Err(err) => {
-                        let secondary_path = path.join("sino-secondary");
+                        let secondary_path = path.join("solana-secondary");
 
                         warn!("Error when opening as primary: {}", err);
                         warn!("Trying as secondary at : {:?}", secondary_path);
@@ -515,7 +515,8 @@ impl Rocks {
         // this is only needed for LedgerCleanupService. so guard with PrimaryOnly (i.e. running velas-validator)
         if matches!(access_type, AccessType::PrimaryOnly) {
             for cf_name in cf_names {
-                // these special column families must be excluded from LedgerCleanupService's rocksdb compactions
+                // these special column families must be excluded from LedgerCleanupService's rocksdb
+                // compactions
                 if excludes_from_compaction(cf_name) {
                     continue;
                 }
@@ -1772,7 +1773,7 @@ fn get_db_options(access_type: &AccessType) -> Options {
     // A good value for this is the number of cores on the machine
     options.increase_parallelism(num_cpus::get() as i32);
 
-    let mut env = rocksdb::Env::new().unwrap(); // 创建一个默认的env
+    let mut env = rocksdb::Env::new().unwrap();
 
     // While a compaction is ongoing, all the background threads
     // could be used by the compaction. This can stall writes which
@@ -1805,4 +1806,66 @@ fn excludes_from_compaction(cf_name: &str) -> bool {
     no_compaction_cfs.get(cf_name).is_some()
 }
 
+#[cfg(test)]
+pub mod tests {
+    use {super::*, crate::blockstore_db::columns::ShredData};
 
+    #[test]
+    fn test_compaction_filter() {
+        // this doesn't implement Clone...
+        let dummy_compaction_filter_context = || CompactionFilterContext {
+            is_full_compaction: true,
+            is_manual_compaction: true,
+        };
+        let oldest_slot = OldestSlot::default();
+
+        let mut factory = PurgedSlotFilterFactory::<ShredData> {
+            oldest_slot: oldest_slot.clone(),
+            name: CString::new("test compaction filter").unwrap(),
+            _phantom: PhantomData::default(),
+        };
+        let mut compaction_filter = factory.create(dummy_compaction_filter_context());
+
+        let dummy_level = 0;
+        let key = ShredData::key(ShredData::as_index(0));
+        let dummy_value = vec![];
+
+        // we can't use assert_matches! because CompactionDecision doesn't implement Debug
+        assert!(matches!(
+            compaction_filter.filter(dummy_level, &key, &dummy_value),
+            CompactionDecision::Keep
+        ));
+
+        // mutating oledst_slot doen't affect existing compaction filters...
+        oldest_slot.set(1);
+        assert!(matches!(
+            compaction_filter.filter(dummy_level, &key, &dummy_value),
+            CompactionDecision::Keep
+        ));
+
+        // recreating compaction filter starts to expire the key
+        let mut compaction_filter = factory.create(dummy_compaction_filter_context());
+        assert!(matches!(
+            compaction_filter.filter(dummy_level, &key, &dummy_value),
+            CompactionDecision::Remove
+        ));
+
+        // newer key shouldn't be removed
+        let key = ShredData::key(ShredData::as_index(1));
+        matches!(
+            compaction_filter.filter(dummy_level, &key, &dummy_value),
+            CompactionDecision::Keep
+        );
+    }
+
+    #[test]
+    fn test_excludes_from_compaction() {
+        // currently there are two CFs are excluded from compaction:
+        assert!(excludes_from_compaction(
+            columns::TransactionStatusIndex::NAME
+        ));
+        assert!(excludes_from_compaction(columns::ProgramCosts::NAME));
+        assert!(excludes_from_compaction(columns::TransactionMemos::NAME));
+        assert!(!excludes_from_compaction("something else"));
+    }
+}
