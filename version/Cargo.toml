@@ -13,7 +13,7 @@ frozen-abi-macro = { path = "../frozen-abi/macro", version = "=1.9.29" }
 sdk = { path = "../sdk", version = "=1.9.29" }
 
 [lib]
-name = "version"
+name = "sino_version"
 
 [package.metadata.docs.rs]
 targets = ["x86_64-unknown-linux-gnu"]
