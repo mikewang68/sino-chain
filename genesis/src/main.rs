@@ -145,7 +145,7 @@ fn main() -> Result<(), Box<dyn error::Error>> {
     let default_ticks_per_slot = &clock::DEFAULT_TICKS_PER_SLOT.to_string();
     let default_cluster_type = "mainnet-beta";
     let default_genesis_archive_unpacked_size = MAX_GENESIS_ARCHIVE_UNPACKED_SIZE.to_string();
-    let version = version::version!();
+    let version = sino_version::version!();
     let app = App::new(crate_name!())
         .about(crate_description!())
         .version(version)

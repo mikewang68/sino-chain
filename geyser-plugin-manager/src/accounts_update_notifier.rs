@@ -100,7 +100,7 @@ impl AccountsUpdateNotifierImpl {
     ) -> Option<ReplicaAccountInfo<'a>> {
         Some(ReplicaAccountInfo {
             pubkey: meta.pubkey.as_ref(),
-            lamports: account.lamports(),
+            lamports: account.wens(),
             owner: account.owner().as_ref(),
             executable: account.executable(),
             rent_epoch: account.rent_epoch(),

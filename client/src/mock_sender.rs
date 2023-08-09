@@ -35,7 +35,7 @@ use {
         TransactionStatus, UiCompiledInstruction, UiMessage, UiRawMessage, UiTransaction,
         UiTransactionEncoding, UiTransactionStatusMeta,
     },
-    version::Version,
+    sino_version::Version,
     std::{collections::HashMap, net::SocketAddr, str::FromStr, sync::RwLock},
 };
 

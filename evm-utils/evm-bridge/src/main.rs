@@ -650,7 +650,7 @@ impl GeneralERPC for GeneralErpcProxy {
 
     #[instrument]
     fn protocol_version(&self, _meta: Self::Metadata) -> EvmResult<String> {
-        Ok(version::semver!().into())
+        Ok(sino_version::semver!().into())
     }
 
     #[instrument]
@@ -691,6 +691,27 @@ impl ChainERPC for ChainErpcProxy {          //ChainERPC内的接口函数有一
     }
 
     #[instrument]
+    fn balance(
+        &self,
+        _meta: Self::Metadata,
+        _address: Hex<Address>,
+        _block: Option<BlockId>,
+    ) -> BoxFuture<EvmResult<Hex<U256>>> {
+        Box::pin(ready(Err(evm_rpc::Error::ProxyRequest)))
+    }
+
+    #[instrument]
+    fn storage_at(
+        &self,
+        _meta: Self::Metadata,
+        _address: Hex<Address>,
+        _data: Hex<U256>,
+        _block: Option<BlockId>,
+    ) -> BoxFuture<EvmResult<Hex<H256>>> {
+        Box::pin(ready(Err(evm_rpc::Error::ProxyRequest)))
+    }
+
+    #[instrument]
     fn transaction_count(
         &self,
         meta: Self::Metadata,
@@ -703,6 +724,34 @@ impl ChainERPC for ChainErpcProxy {          //ChainERPC内的接口函数有一
             }
         }
 
+        Box::pin(ready(Err(evm_rpc::Error::ProxyRequest)))
+    }
+
+    #[instrument]
+    fn block_transaction_count_by_number(
+        &self,
+        meta: Self::Metadata,
+        block: BlockId,
+    ) -> BoxFuture<EvmResult<Hex<usize>>> {
+        Box::pin(ready(Err(evm_rpc::Error::ProxyRequest)))
+    }
+
+    #[instrument]
+    fn block_transaction_count_by_hash(
+        &self,
+        meta: Self::Metadata,
+        block_hash: Hex<H256>,
+    ) -> BoxFuture<EvmResult<Hex<usize>>> {
+        Box::pin(ready(Err(evm_rpc::Error::ProxyRequest)))
+    }
+
+    #[instrument]
+    fn code(
+        &self,
+        _meta: Self::Metadata,
+        _address: Hex<Address>,
+        _block: Option<BlockId>,
+    ) -> BoxFuture<EvmResult<Bytes>> {
         Box::pin(ready(Err(evm_rpc::Error::ProxyRequest)))
     }
 
@@ -768,6 +817,57 @@ impl ChainERPC for ChainErpcProxy {          //ChainERPC内的接口函数有一
         })
     }
 
+    #[instrument]
+    fn transaction_by_block_hash_and_index(
+        &self,
+        meta: Self::Metadata,
+        block_hash: Hex<H256>,
+        tx_id: Hex<usize>,
+    ) -> BoxFuture<EvmResult<Option<RPCTransaction>>> {
+        Box::pin(ready(Err(evm_rpc::Error::ProxyRequest)))
+    }
+
+    #[instrument]
+    fn transaction_by_block_number_and_index(
+        &self,
+        meta: Self::Metadata,
+        block: BlockId,
+        tx_id: Hex<usize>,
+    ) -> BoxFuture<EvmResult<Option<RPCTransaction>>> {
+        Box::pin(ready(Err(evm_rpc::Error::ProxyRequest)))
+    }
+
+    #[instrument]
+    fn transaction_receipt(
+        &self,
+        _meta: Self::Metadata,
+        _tx_hash: Hex<H256>,
+    ) -> BoxFuture<EvmResult<Option<RPCReceipt>>> {
+        Box::pin(ready(Err(evm_rpc::Error::ProxyRequest)))
+    }
+
+    #[instrument]
+    fn call(
+        &self,
+        _meta: Self::Metadata,
+        _tx: RPCTransaction,
+        _block: Option<BlockId>,
+        _meta_keys: Option<Vec<String>>,
+    ) -> BoxFuture<EvmResult<Bytes>> {
+        Box::pin(ready(Err(evm_rpc::Error::ProxyRequest)))
+    }
+
+    #[instrument]
+    fn estimate_gas(
+        &self,
+        _meta: Self::Metadata,
+        _tx: RPCTransaction,
+        _block: Option<BlockId>,
+        _meta_keys: Option<Vec<String>>,
+    ) -> BoxFuture<EvmResult<Hex<Gas>>> {
+        Box::pin(ready(Err(evm_rpc::Error::ProxyRequest)))
+    }
+
     #[instrument(skip(self, meta))]
     fn logs(
         &self,
@@ -828,6 +928,44 @@ impl ChainERPC for ChainErpcProxy {          //ChainERPC内的接口函数有一
             }
             Ok(result)
         })
+    }
+
+    #[instrument]
+    fn uncle_by_block_hash_and_index(
+        &self,
+        _meta: Self::Metadata,
+        _block_hash: Hex<H256>,
+        _uncle_id: Hex<U256>,
+    ) -> EvmResult<Option<RPCBlock>> {
+        Ok(None)
+    }
+
+    #[instrument]
+    fn uncle_by_block_number_and_index(
+        &self,
+        _meta: Self::Metadata,
+        _block: String,
+        _uncle_id: Hex<U256>,
+    ) -> EvmResult<Option<RPCBlock>> {
+        Ok(None)
+    }
+
+    #[instrument]
+    fn block_uncles_count_by_hash(
+        &self,
+        _meta: Self::Metadata,
+        _block_hash: Hex<H256>,
+    ) -> EvmResult<Hex<usize>> {
+        Ok(Hex(0))
+    }
+
+    #[instrument]
+    fn block_uncles_count_by_number(
+        &self,
+        _meta: Self::Metadata,
+        _block: String,
+    ) -> EvmResult<Hex<usize>> {
+        Ok(Hex(0))
     }
 }
 

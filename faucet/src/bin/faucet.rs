@@ -23,7 +23,7 @@ async fn main() {
     metrics::set_panic_hook("faucet", /*version:*/ None);
     let matches = App::new(crate_name!())
         .about(crate_description!())
-        .version(version::version!())
+        .version(sino_version::version!())
         .arg(
             Arg::with_name("keypair")
                 .short("k")

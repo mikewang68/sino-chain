@@ -3052,7 +3052,7 @@ pub mod rpc_minimal {
 
         fn get_version(&self, _: Self::Metadata) -> Result<RpcVersionInfo> {
             debug!("get_version rpc request received");
-            let version = version::Version::default();
+            let version = sino_version::Version::default();
             Ok(RpcVersionInfo {
                 sino_core: version.to_string(),
                 feature_set: Some(version.feature_set),

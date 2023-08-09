@@ -3,7 +3,7 @@ use clap::{App, Arg};
 fn main() {
     sino_logger::setup();
     let matches = App::new("sino-ip-address")
-        .version(version::version!())
+        .version(sino_version::version!())
         .arg(
             Arg::with_name("host_port")
                 .index(1)

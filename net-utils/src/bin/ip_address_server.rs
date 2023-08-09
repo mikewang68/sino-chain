@@ -7,7 +7,7 @@ use {
 fn main() {
     sino_logger::setup();
     let matches = App::new("sino-ip-address-server")
-        .version(version::version!())
+        .version(sino_version::version!())
         .arg(
             Arg::with_name("port")
                 .index(1)

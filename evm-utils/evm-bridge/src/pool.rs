@@ -642,7 +642,7 @@ async fn process_tx(
 #[instrument]
 async fn deploy_big_tx(
     bridge: &EvmBridge,
-    payer: &dk::signature::Keypair,
+    payer: &sdk::signature::Keypair,
     tx: &evm::Transaction,
 ) -> EvmResult<()> {
     let payer_pubkey = payer.pubkey();
