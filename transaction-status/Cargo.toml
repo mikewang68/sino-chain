@@ -27,7 +27,8 @@ sdk = { path = "../sdk", version = "=1.9.29" }
 vote-program = { path = "../programs/vote", version = "=1.9.29" }
 spl-associated-token-account = { version = "=1.0.3", features = ["no-entrypoint"] }
 spl-memo = { version = "=3.0.1", features = ["no-entrypoint"] }
-spl-token = { version = "=3.2.0", features = ["no-entrypoint"] }
+#spl-token = { version = "=3.2.0", features = ["no-entrypoint"] }
+spl-token = { path = "../spl-token-3.2.0", version = "=3.2.0", features = ["no-entrypoint"] }
 evm-state = { path = "../evm-utils/evm-state" }
 evm-rpc = { path = "../evm-utils/evm-rpc" }
 evm-loader-program = { path = "../evm-utils/programs/evm_loader" }

@@ -1,9 +1,0 @@
-/home/djtu15/.cargo/registry/src/github.com-1ecc6299db9ec823/spl-token-3.2.0/target/debug/deps/bumpalo-ab0c148227e18b50.rmeta: /home/djtu15/.cargo/registry/src/github.com-1ecc6299db9ec823/bumpalo-3.13.0/src/lib.rs /home/djtu15/.cargo/registry/src/github.com-1ecc6299db9ec823/bumpalo-3.13.0/src/alloc.rs /home/djtu15/.cargo/registry/src/github.com-1ecc6299db9ec823/bumpalo-3.13.0/src/../README.md
-
-/home/djtu15/.cargo/registry/src/github.com-1ecc6299db9ec823/spl-token-3.2.0/target/debug/deps/libbumpalo-ab0c148227e18b50.rlib: /home/djtu15/.cargo/registry/src/github.com-1ecc6299db9ec823/bumpalo-3.13.0/src/lib.rs /home/djtu15/.cargo/registry/src/github.com-1ecc6299db9ec823/bumpalo-3.13.0/src/alloc.rs /home/djtu15/.cargo/registry/src/github.com-1ecc6299db9ec823/bumpalo-3.13.0/src/../README.md
-
-/home/djtu15/.cargo/registry/src/github.com-1ecc6299db9ec823/spl-token-3.2.0/target/debug/deps/bumpalo-ab0c148227e18b50.d: /home/djtu15/.cargo/registry/src/github.com-1ecc6299db9ec823/bumpalo-3.13.0/src/lib.rs /home/djtu15/.cargo/registry/src/github.com-1ecc6299db9ec823/bumpalo-3.13.0/src/alloc.rs /home/djtu15/.cargo/registry/src/github.com-1ecc6299db9ec823/bumpalo-3.13.0/src/../README.md
-
-/home/djtu15/.cargo/registry/src/github.com-1ecc6299db9ec823/bumpalo-3.13.0/src/lib.rs:
-/home/djtu15/.cargo/registry/src/github.com-1ecc6299db9ec823/bumpalo-3.13.0/src/alloc.rs:
-/home/djtu15/.cargo/registry/src/github.com-1ecc6299db9ec823/bumpalo-3.13.0/src/../README.md:

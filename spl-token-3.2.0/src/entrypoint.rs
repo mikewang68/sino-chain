@@ -1,7 +1,7 @@
 //! Program entrypoint
 
 use crate::{error::TokenError, processor::Processor};
-use solana_program::{
+use sino_program::{
     account_info::AccountInfo, entrypoint, entrypoint::ProgramResult,
     program_error::PrintProgramError, pubkey::Pubkey,
 };

@@ -6,7 +6,7 @@ use crate::{
     state::{Account, AccountState, Mint, Multisig},
 };
 use num_traits::FromPrimitive;
-use solana_program::{
+use sino_program::{
     account_info::{next_account_info, AccountInfo},
     decode_error::DecodeError,
     entrypoint::ProgramResult,
@@ -848,10 +848,10 @@ impl PrintProgramError for TokenError {
 mod tests {
     use super::*;
     use crate::instruction::*;
-    use solana_program::{
+    use sino_program::{
         account_info::IntoAccountInfo, clock::Epoch, instruction::Instruction, sysvar::rent,
     };
-    use solana_sdk::account::{
+    use sdk::account::{
         create_account_for_test, create_is_signer_account_infos, Account as SolanaAccount,
     };
 

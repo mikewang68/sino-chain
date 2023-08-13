@@ -10,7 +10,7 @@ use {
     },
     spl_token::{
         instruction::{AuthorityType, TokenInstruction},
-        solana_program::{
+        sino_program::{
             instruction::Instruction as SplTokenInstruction, program_option::COption,
         },
     },
@@ -461,7 +461,7 @@ mod test {
         sdk::instruction::CompiledInstruction,
         spl_token::{
             instruction::*,
-            solana_program::{
+            sino_program::{
                 instruction::CompiledInstruction as SplTokenCompiledInstruction, message::Message,
                 pubkey::Pubkey as SplTokenPubkey,
             },

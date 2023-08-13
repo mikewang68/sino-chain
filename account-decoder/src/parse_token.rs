@@ -5,7 +5,7 @@ use {
     },
     sdk::pubkey::Pubkey,
     spl_token::{
-        solana_program::{
+        sino_program::{
             program_option::COption, program_pack::Pack, pubkey::Pubkey as SplTokenPubkey,
         },
         state::{Account, AccountState, Mint, Multisig},
