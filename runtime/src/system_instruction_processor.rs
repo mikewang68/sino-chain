@@ -157,7 +157,7 @@ fn create_account(
     from: &KeyedAccount,
     to: &KeyedAccount,
     to_address: &Address,
-    lamports: u64,
+    wens: u64,
     space: u64,
     owner: &Pubkey,
     signers: &HashSet<Pubkey>,
@@ -177,44 +177,44 @@ fn create_account(
 
         allocate_and_assign(to, to_address, space, owner, signers, invoke_context)?;
     }
-    transfer(from, to, lamports, invoke_context)
+    transfer(from, to, wens, invoke_context)
 }
 
 fn transfer_verified(
     from: &KeyedAccount,
     to: &KeyedAccount,
-    lamports: u64,
+    wens: u64,
     invoke_context: &InvokeContext,
 ) -> Result<(), InstructionError> {
     if !from.data_is_empty()? {
         ic_msg!(invoke_context, "Transfer: `from` must not carry data");
         return Err(InstructionError::InvalidArgument);
     }
-    if lamports > from.lamports()? {
+    if wens > from.wens()? {
         ic_msg!(
             invoke_context,
-            "Transfer: insufficient lamports {}, need {}",
-            from.lamports()?,
-            lamports
+            "Transfer: insufficient wens {}, need {}",
+            from.wens()?,
+            wens
         );
-        return Err(SystemError::ResultWithNegativeLamports.into());
+        return Err(SystemError::ResultWithNegativeWens.into());
     }
 
-    from.try_account_ref_mut()?.checked_sub_lamports(lamports)?;
-    to.try_account_ref_mut()?.checked_add_lamports(lamports)?;
+    from.try_account_ref_mut()?.checked_sub_wens(wens)?;
+    to.try_account_ref_mut()?.checked_add_wens(wens)?;
     Ok(())
 }
 
 fn transfer(
     from: &KeyedAccount,
     to: &KeyedAccount,
-    lamports: u64,
+    wens: u64,
     invoke_context: &InvokeContext,
 ) -> Result<(), InstructionError> {
     if !invoke_context
         .feature_set
         .is_active(&feature_set::system_transfer_zero_check::id())
-        && lamports == 0
+        && wens == 0
     {
         return Ok(());
     }
@@ -228,7 +228,7 @@ fn transfer(
         return Err(InstructionError::MissingRequiredSignature);
     }
 
-    transfer_verified(from, to, lamports, invoke_context)
+    transfer_verified(from, to, wens, invoke_context)
 }
 
 fn transfer_with_seed(
@@ -237,13 +237,13 @@ fn transfer_with_seed(
     from_seed: &str,
     from_owner: &Pubkey,
     to: &KeyedAccount,
-    lamports: u64,
+    wens: u64,
     invoke_context: &InvokeContext,
 ) -> Result<(), InstructionError> {
     if !invoke_context
         .feature_set
         .is_active(&feature_set::system_transfer_zero_check::id())
-        && lamports == 0
+        && wens == 0
     {
         return Ok(());
     }
@@ -269,7 +269,7 @@ fn transfer_with_seed(
         return Err(SystemError::AddressWithSeedMismatch.into());
     }
 
-    transfer_verified(from, to, lamports, invoke_context)
+    transfer_verified(from, to, wens, invoke_context)
 }
 
 pub fn process_instruction(
@@ -287,7 +287,7 @@ pub fn process_instruction(
     let signers = get_signers(&keyed_accounts[first_instruction_account..]);
     match instruction {
         SystemInstruction::CreateAccount {
-            lamports,
+            wens,
             space,
             owner,
         } => {
@@ -298,7 +298,7 @@ pub fn process_instruction(
                 from,
                 to,
                 &to_address,
-                lamports,
+                wens,
                 space,
                 &owner,
                 &signers,
@@ -308,7 +308,7 @@ pub fn process_instruction(
         SystemInstruction::CreateAccountWithSeed {
             base,
             seed,
-            lamports,
+            wens,
             space,
             owner,
         } => {
@@ -323,7 +323,7 @@ pub fn process_instruction(
                 from,
                 to,
                 &to_address,
-                lamports,
+                wens,
                 space,
                 &owner,
                 &signers,
@@ -336,13 +336,13 @@ pub fn process_instruction(
             let address = Address::create(keyed_account.unsigned_key(), None, invoke_context)?;
             assign(&mut account, &address, &owner, &signers, invoke_context)
         }
-        SystemInstruction::Transfer { lamports } => {
+        SystemInstruction::Transfer { wens } => {
             let from = keyed_account_at_index(keyed_accounts, first_instruction_account)?;
             let to = keyed_account_at_index(keyed_accounts, first_instruction_account + 1)?;
-            transfer(from, to, lamports, invoke_context)
+            transfer(from, to, wens, invoke_context)
         }
         SystemInstruction::TransferWithSeed {
-            lamports,
+            wens,
             from_seed,
             from_owner,
         } => {
@@ -355,7 +355,7 @@ pub fn process_instruction(
                 &from_seed,
                 &from_owner,
                 to,
-                lamports,
+                wens,
                 invoke_context,
             )
         }
@@ -375,7 +375,7 @@ pub fn process_instruction(
             }
             me.advance_nonce_account(&signers, invoke_context)
         }
-        SystemInstruction::WithdrawNonceAccount(lamports) => {
+        SystemInstruction::WithdrawNonceAccount(wens) => {
             let me = &mut keyed_account_at_index(keyed_accounts, first_instruction_account)?;
             let to = &mut keyed_account_at_index(keyed_accounts, first_instruction_account + 1)?;
             #[allow(deprecated)]
@@ -383,7 +383,7 @@ pub fn process_instruction(
                 keyed_account_at_index(keyed_accounts, first_instruction_account + 2)?,
             )?;
             me.withdraw_nonce_account(
-                lamports,
+                wens,
                 to,
                 &from_keyed_account::<Rent>(keyed_account_at_index(
                     keyed_accounts,
@@ -588,7 +588,7 @@ mod tests {
         assert_eq!(
             process_instruction(
                 &bincode::serialize(&SystemInstruction::CreateAccount {
-                    lamports: 50,
+                    wens: 50,
                     space: 2,
                     owner: new_owner
                 })
@@ -620,7 +620,7 @@ mod tests {
                 &bincode::serialize(&SystemInstruction::CreateAccountWithSeed {
                     base: from,
                     seed: seed.to_string(),
-                    lamports: 50,
+                    wens: 50,
                     space: 2,
                     owner: new_owner
                 })
@@ -654,7 +654,7 @@ mod tests {
                 &bincode::serialize(&SystemInstruction::CreateAccountWithSeed {
                     base,
                     seed: seed.to_string(),
-                    lamports: 50,
+                    wens: 50,
                     space: 2,
                     owner: new_owner
                 })
@@ -718,9 +718,9 @@ mod tests {
     }
 
     #[test]
-    fn test_create_with_zero_lamports() {
+    fn test_create_with_zero_wens() {
         let invoke_context = InvokeContext::new_mock(&[], &[]);
-        // create account with zero lamports transferred
+        // create account with zero wens transferred
         let new_owner = Pubkey::new(&[9; 32]);
         let from = Pubkey::new_unique();
         let from_account = AccountSharedData::new_ref(100, 0, &Pubkey::new_unique()); // not from system account
@@ -742,19 +742,19 @@ mod tests {
             Ok(())
         );
 
-        let from_lamports = from_account.borrow().wens();
-        let to_lamports = to_account.borrow().wens();
+        let from_wens = from_account.borrow().wens();
+        let to_wens = to_account.borrow().wens();
         let to_owner = *to_account.borrow().owner();
-        assert_eq!(from_lamports, 100);
-        assert_eq!(to_lamports, 0);
+        assert_eq!(from_wens, 100);
+        assert_eq!(to_wens, 0);
         assert_eq!(to_owner, new_owner);
         assert_eq!(to_account.borrow().data(), &[0, 0]);
     }
 
     #[test]
-    fn test_create_negative_lamports() {
+    fn test_create_negative_wens() {
         let invoke_context = InvokeContext::new_mock(&[], &[]);
-        // Attempt to create account with more lamports than remaining in from_account
+        // Attempt to create account with more wens than remaining in from_account
         let new_owner = Pubkey::new(&[9; 32]);
         let from = Pubkey::new_unique();
         let from_account = AccountSharedData::new_ref(100, 0, &system_program::id());
@@ -772,7 +772,7 @@ mod tests {
             &[from, to].iter().cloned().collect::<HashSet<_>>(),
             &invoke_context,
         );
-        assert_eq!(result, Err(SystemError::ResultWithNegativeLamports.into()));
+        assert_eq!(result, Err(SystemError::ResultWithNegativeWens.into()));
     }
 
     #[test]
@@ -850,8 +850,8 @@ mod tests {
         );
         assert_eq!(result, Err(SystemError::AccountAlreadyInUse.into()));
 
-        let from_lamports = from_account.borrow().wens();
-        assert_eq!(from_lamports, 100);
+        let from_wens = from_account.borrow().wens();
+        assert_eq!(from_wens, 100);
         assert_eq!(owned_account, unchanged_account);
 
         // Attempt to create system account in account that already has data
@@ -868,11 +868,11 @@ mod tests {
             &invoke_context,
         );
         assert_eq!(result, Err(SystemError::AccountAlreadyInUse.into()));
-        let from_lamports = from_account.borrow().wens();
-        assert_eq!(from_lamports, 100);
+        let from_wens = from_account.borrow().wens();
+        assert_eq!(from_wens, 100);
         assert_eq!(*owned_account.borrow(), unchanged_account);
 
-        // Attempt to create an account that already has lamports
+        // Attempt to create an account that already has wens
         let owned_account = AccountSharedData::new_ref(1, 0, &Pubkey::default());
         let unchanged_account = owned_account.borrow().clone();
         let result = create_account(
@@ -886,7 +886,7 @@ mod tests {
             &invoke_context,
         );
         assert_eq!(result, Err(SystemError::AccountAlreadyInUse.into()));
-        assert_eq!(from_lamports, 100);
+        assert_eq!(from_wens, 100);
         assert_eq!(*owned_account.borrow(), unchanged_account);
     }
 
@@ -930,7 +930,7 @@ mod tests {
         );
         assert_eq!(result, Err(InstructionError::MissingRequiredSignature));
 
-        // Don't support unsigned creation with zero lamports (ephemeral account)
+        // Don't support unsigned creation with zero wens (ephemeral account)
         let owned_account = AccountSharedData::new_ref(0, 0, &Pubkey::default());
         let result = create_account(
             &KeyedAccount::new(&from, false, &from_account),
@@ -1176,14 +1176,14 @@ mod tests {
         // Attempt to transfer with no destination
         let from = Pubkey::new_unique();
         let from_account = AccountSharedData::new_ref(100, 0, &system_program::id());
-        let instruction = SystemInstruction::Transfer { lamports: 0 };
+        let instruction = SystemInstruction::Transfer { wens: 0 };
         let data = serialize(&instruction).unwrap();
         let result = process_instruction(&data, &[(true, false, from, from_account)]);
         assert_eq!(result, Err(InstructionError::NotEnoughAccountKeys));
     }
 
     #[test]
-    fn test_transfer_lamports() {
+    fn test_transfer_wens() {
         let invoke_context = InvokeContext::new_mock(&[], &[]);
         let from = Pubkey::new_unique();
         let from_account = AccountSharedData::new_ref(100, 0, &Pubkey::new(&[2; 32])); // account owner should not matter
@@ -1192,15 +1192,15 @@ mod tests {
         let from_keyed_account = KeyedAccount::new(&from, true, &from_account);
         let to_keyed_account = KeyedAccount::new(&to, false, &to_account);
         transfer(&from_keyed_account, &to_keyed_account, 50, &invoke_context).unwrap();
-        let from_lamports = from_keyed_account.account.borrow().wens();
-        let to_lamports = to_keyed_account.account.borrow().wens();
-        assert_eq!(from_lamports, 50);
-        assert_eq!(to_lamports, 51);
+        let from_wens = from_keyed_account.account.borrow().wens();
+        let to_wens = to_keyed_account.account.borrow().wens();
+        assert_eq!(from_wens, 50);
+        assert_eq!(to_wens, 51);
 
-        // Attempt to move more lamports than remaining in from_account
+        // Attempt to move more wens than remaining in from_account
         let from_keyed_account = KeyedAccount::new(&from, true, &from_account);
         let result = transfer(&from_keyed_account, &to_keyed_account, 100, &invoke_context);
-        assert_eq!(result, Err(SystemError::ResultWithNegativeLamports.into()));
+        assert_eq!(result, Err(SystemError::ResultWithNegativeWens.into()));
         assert_eq!(from_keyed_account.account.borrow().wens(), 50);
         assert_eq!(to_keyed_account.account.borrow().wens(), 51);
 
@@ -1244,12 +1244,12 @@ mod tests {
             &invoke_context,
         )
         .unwrap();
-        let from_lamports = from_keyed_account.account.borrow().wens();
-        let to_lamports = to_keyed_account.account.borrow().wens();
-        assert_eq!(from_lamports, 50);
-        assert_eq!(to_lamports, 51);
+        let from_wens = from_keyed_account.account.borrow().wens();
+        let to_wens = to_keyed_account.account.borrow().wens();
+        assert_eq!(from_wens, 50);
+        assert_eq!(to_wens, 51);
 
-        // Attempt to move more lamports than remaining in from_account
+        // Attempt to move more wens than remaining in from_account
         let from_keyed_account = KeyedAccount::new(&from, true, &from_account);
         let result = transfer_with_seed(
             &from_keyed_account,
@@ -1260,7 +1260,7 @@ mod tests {
             100,
             &invoke_context,
         );
-        assert_eq!(result, Err(SystemError::ResultWithNegativeLamports.into()));
+        assert_eq!(result, Err(SystemError::ResultWithNegativeWens.into()));
         assert_eq!(from_keyed_account.account.borrow().wens(), 50);
         assert_eq!(to_keyed_account.account.borrow().wens(), 51);
 
@@ -1281,7 +1281,7 @@ mod tests {
     }
 
     #[test]
-    fn test_transfer_lamports_from_nonce_account_fail() {
+    fn test_transfer_wens_from_nonce_account_fail() {
         let invoke_context = InvokeContext::new_mock(&[], &[]);
         let from = Pubkey::new_unique();
         let from_account = AccountSharedData::new_ref_data(
@@ -1352,7 +1352,7 @@ mod tests {
             .is_ok());
     }
 
-    fn with_create_zero_lamport<F>(callback: F)
+    fn with_create_zero_wen<F>(callback: F)
     where
         F: Fn(&Bank),
     {
@@ -1367,19 +1367,19 @@ mod tests {
         let program = Pubkey::new_unique();
         let collector = Pubkey::new_unique();
 
-        let mint_lamports = 10000;
+        let mint_wens = 10000;
         let len1 = 123;
         let len2 = 456;
 
         // create initial bank and fund the alice account
-        let (genesis_config, mint_keypair) = create_genesis_config(mint_lamports);
+        let (genesis_config, mint_keypair) = create_genesis_config(mint_wens);
         let bank = Arc::new(Bank::new_for_tests(&genesis_config));
         let bank_client = BankClient::new_shared(&bank);
         bank_client
-            .transfer_and_confirm(mint_lamports, &mint_keypair, &alice_pubkey)
+            .transfer_and_confirm(mint_wens, &mint_keypair, &alice_pubkey)
             .unwrap();
 
-        // create zero-lamports account to be cleaned
+        // create zero-wens account to be cleaned
         let bank = Arc::new(Bank::new_from_parent(&bank, &collector, bank.slot() + 1));
         let bank_client = BankClient::new_shared(&bank);
         let ix = system_instruction::create_account(&alice_pubkey, &bob_pubkey, 0, len1, &program);
@@ -1397,7 +1397,7 @@ mod tests {
         // super fun time; callback chooses to .clean_accounts(None) or not
         callback(&*bank);
 
-        // create a normal account at the same pubkey as the zero-lamports account
+        // create a normal account at the same pubkey as the zero-wens account
         let bank = Arc::new(Bank::new_from_parent(&bank, &collector, bank.slot() + 1));
         let bank_client = BankClient::new_shared(&bank);
         let ix = system_instruction::create_account(&alice_pubkey, &bob_pubkey, 1, len2, &program);
@@ -1407,8 +1407,8 @@ mod tests {
     }
 
     #[test]
-    fn test_create_zero_lamport_with_clean() {
-        with_create_zero_lamport(|bank| {
+    fn test_create_zero_wen_with_clean() {
+        with_create_zero_wen(|bank| {
             bank.freeze();
             bank.squash();
             bank.force_flush_accounts_cache();
@@ -1420,9 +1420,9 @@ mod tests {
     }
 
     #[test]
-    fn test_create_zero_lamport_without_clean() {
-        with_create_zero_lamport(|_| {
-            // just do nothing; this should behave identically with test_create_zero_lamport_with_clean
+    fn test_create_zero_wen_without_clean() {
+        with_create_zero_wen(|_| {
+            // just do nothing; this should behave identically with test_create_zero_wen_with_clean
         });
     }
 
@@ -1479,7 +1479,7 @@ mod tests {
         ];
         let malicious_instruction = Instruction::new_with_bincode(
             system_program::id(),
-            &SystemInstruction::Transfer { lamports: 10 },
+            &SystemInstruction::Transfer { wens: 10 },
             account_metas,
         );
         assert_eq!(
@@ -2073,7 +2073,7 @@ mod tests {
         let nonce_address = Pubkey::new_unique();
         let versions = NonceVersions::Legacy(Box::new(NonceState::Uninitialized));
         let nonce_account = AccountSharedData::new_data(
-            1_000_000,             // lamports
+            1_000_000,             // wens
             &versions,             // state
             &Pubkey::new_unique(), // owner
         )
@@ -2096,7 +2096,7 @@ mod tests {
 
     fn new_nonce_account(versions: NonceVersions) -> AccountSharedData {
         let nonce_account = AccountSharedData::new_data(
-            1_000_000,             // lamports
+            1_000_000,             // wens
             &versions,             // state
             &system_program::id(), // owner
         )

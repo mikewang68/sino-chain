@@ -281,8 +281,8 @@ impl Message {
     /// #[derive(BorshSerialize, BorshDeserialize)]
     /// enum BankInstruction {
     ///     Initialize,
-    ///     Deposit { lamports: u64 },
-    ///     Withdraw { lamports: u64 },
+    ///     Deposit { wens: u64 },
+    ///     Withdraw { wens: u64 },
     /// }
     ///
     /// fn send_initialize_tx(
@@ -352,8 +352,8 @@ impl Message {
     /// #[derive(BorshSerialize, BorshDeserialize)]
     /// enum BankInstruction {
     ///     Initialize,
-    ///     Deposit { lamports: u64 },
-    ///     Withdraw { lamports: u64 },
+    ///     Deposit { wens: u64 },
+    ///     Withdraw { wens: u64 },
     /// }
     ///
     /// fn send_initialize_tx(
@@ -455,8 +455,8 @@ impl Message {
     /// #[derive(BorshSerialize, BorshDeserialize)]
     /// enum BankInstruction {
     ///     Initialize,
-    ///     Deposit { lamports: u64 },
-    ///     Withdraw { lamports: u64 },
+    ///     Deposit { wens: u64 },
+    ///     Withdraw { wens: u64 },
     /// }
     ///
     /// // Create a nonced transaction for later signing and submission,

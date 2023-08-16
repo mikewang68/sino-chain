@@ -28,7 +28,7 @@ impl Bank {
                 let account = account_refcell.borrow();
 
                 let rent_state = if message.is_writable(i) {
-                    // Native programs appear to be RentPaying because they carry low lamport
+                    // Native programs appear to be RentPaying because they carry low wen
                     // balances; however they will never be loaded as writable
                     debug_assert!(!native_loader::check_id(account.owner()));
 

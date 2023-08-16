@@ -180,11 +180,11 @@ pub fn create_account(
     from_pubkey: &Pubkey,
     vote_pubkey: &Pubkey,
     vote_init: &VoteInit,
-    lamports: u64,
+    wens: u64,
 ) -> Vec<Instruction> {
     let space = VoteState::size_of() as u64;
     let create_ix =
-        system_instruction::create_account(from_pubkey, vote_pubkey, lamports, space, &id());
+        system_instruction::create_account(from_pubkey, vote_pubkey, wens, space, &id());
     let init_ix = initialize_account(vote_pubkey, vote_init);
     vec![create_ix, init_ix]
 }
@@ -195,7 +195,7 @@ pub fn create_account_with_seed(
     base: &Pubkey,
     seed: &str,
     vote_init: &VoteInit,
-    lamports: u64,
+    wens: u64,
 ) -> Vec<Instruction> {
     let space = VoteState::size_of() as u64;
     let create_ix = system_instruction::create_account_with_seed(
@@ -203,7 +203,7 @@ pub fn create_account_with_seed(
         vote_pubkey,
         base,
         seed,
-        lamports,
+        wens,
         space,
         &id(),
     );
@@ -319,7 +319,7 @@ pub fn vote_switch(
 pub fn withdraw(
     vote_pubkey: &Pubkey,
     authorized_withdrawer_pubkey: &Pubkey,
-    lamports: u64,
+    wens: u64,
     to_pubkey: &Pubkey,
 ) -> Instruction {
     let account_metas = vec![
@@ -328,14 +328,14 @@ pub fn withdraw(
         AccountMeta::new_readonly(*authorized_withdrawer_pubkey, true),
     ];
 
-    Instruction::new_with_bincode(id(), &VoteInstruction::Withdraw(lamports), account_metas)
+    Instruction::new_with_bincode(id(), &VoteInstruction::Withdraw(wens), account_metas)
 }
 
 fn verify_rent_exemption(
     keyed_account: &KeyedAccount,
     rent: &Rent,
 ) -> Result<(), InstructionError> {
-    if !rent.is_exempt(keyed_account.lamports()?, keyed_account.data_len()?) {
+    if !rent.is_exempt(keyed_account.wens()?, keyed_account.data_len()?) {
         Err(InstructionError::InsufficientFunds)
     } else {
         Ok(())
@@ -438,7 +438,7 @@ pub fn process_instruction(
             )?;
             vote_state::process_vote(me, &slot_hashes, &clock, &vote, &signers)
         }
-        VoteInstruction::Withdraw(lamports) => {
+        VoteInstruction::Withdraw(wens) => {
             let to = keyed_account_at_index(keyed_accounts, first_instruction_account + 1)?;
             let rent_sysvar = if invoke_context
                 .feature_set
@@ -458,7 +458,7 @@ pub fn process_instruction(
             };
             vote_state::withdraw(
                 me,
-                lamports,
+                wens,
                 to,
                 &signers,
                 rent_sysvar.as_deref(),

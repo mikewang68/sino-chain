@@ -161,7 +161,7 @@ impl SnapshotRequestHandler {
                 hash_time.stop();
 
                 let mut clean_time = Measure::start("clean_time");
-                // Don't clean the slot we're snapshotting because it may have zero-lamport
+                // Don't clean the slot we're snapshotting because it may have zero-wen
                 // accounts that were included in the bank delta hash when the bank was frozen,
                 // and if we clean them here, the newly created snapshot's hash may not match
                 // the frozen hash.

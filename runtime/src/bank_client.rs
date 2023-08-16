@@ -77,16 +77,16 @@ impl AsyncClient for BankClient {
         self.async_send_message(&[keypair], message, recent_blockhash)
     }
 
-    /// Transfer `lamports` from `keypair` to `pubkey`
+    /// Transfer `wens` from `keypair` to `pubkey`
     fn async_transfer(
         &self,
-        lamports: u64,
+        wens: u64,
         keypair: &Keypair,
         pubkey: &Pubkey,
         recent_blockhash: Hash,
     ) -> Result<Signature> {
         let transfer_instruction =
-            system_instruction::transfer(&keypair.pubkey(), pubkey, lamports);
+            system_instruction::transfer(&keypair.pubkey(), pubkey, wens);
         self.async_send_instruction(keypair, transfer_instruction, recent_blockhash)
     }
 }
@@ -113,15 +113,15 @@ impl SyncClient for BankClient {
         self.send_and_confirm_message(&[keypair], message)
     }
 
-    /// Transfer `lamports` from `keypair` to `pubkey`
+    /// Transfer `wens` from `keypair` to `pubkey`
     fn transfer_and_confirm(
         &self,
-        lamports: u64,
+        wens: u64,
         keypair: &Keypair,
         pubkey: &Pubkey,
     ) -> Result<Signature> {
         let transfer_instruction =
-            system_instruction::transfer(&keypair.pubkey(), pubkey, lamports);
+            system_instruction::transfer(&keypair.pubkey(), pubkey, wens);
         self.send_and_confirm_instruction(keypair, transfer_instruction)
     }
 
@@ -163,7 +163,7 @@ impl SyncClient for BankClient {
     fn get_recent_blockhash(&self) -> Result<(Hash, FeeCalculator)> {
         Ok((
             self.bank.last_blockhash(),
-            FeeCalculator::new(self.bank.get_lamports_per_signature()),
+            FeeCalculator::new(self.bank.get_wens_per_signature()),
         ))
     }
 
@@ -179,7 +179,7 @@ impl SyncClient for BankClient {
             .expect("bank blockhash queue should contain blockhash");
         Ok((
             blockhash,
-            FeeCalculator::new(self.bank.get_lamports_per_signature()),
+            FeeCalculator::new(self.bank.get_wens_per_signature()),
             last_valid_slot,
         ))
     }
@@ -187,7 +187,7 @@ impl SyncClient for BankClient {
     fn get_fee_calculator_for_blockhash(&self, blockhash: &Hash) -> Result<Option<FeeCalculator>> {
         Ok(self
             .bank
-            .get_lamports_per_signature_for_blockhash(blockhash)
+            .get_wens_per_signature_for_blockhash(blockhash)
             .map(FeeCalculator::new))
     }
 
@@ -286,7 +286,7 @@ impl SyncClient for BankClient {
         if recent_blockhash != *blockhash {
             Ok((
                 recent_blockhash,
-                FeeCalculator::new(self.bank.get_lamports_per_signature()),
+                FeeCalculator::new(self.bank.get_wens_per_signature()),
             ))
         } else {
             Err(TransportError::IoError(io::Error::new(

@@ -56,8 +56,8 @@ impl VoteAccount {
         &self.0.account
     }
 
-    pub(crate) fn lamports(&self) -> u64 {
-        self.account().lamports
+    pub(crate) fn wens(&self) -> u64 {
+        self.account().wens
     }
 
     pub fn vote_state(&self) -> RwLockReadGuard<Result<VoteState, InstructionError>> {
@@ -361,7 +361,7 @@ mod tests {
         };
         let vote_state = VoteState::new(&vote_init, &clock);
         let account = Account::new_data(
-            rng.gen(), // lamports
+            rng.gen(), // wens
             &VoteStateVersions::new_current(vote_state.clone()),
             &Pubkey::new_unique(), // owner
         )
@@ -405,9 +405,9 @@ mod tests {
     fn test_vote_account() {
         let mut rng = rand::thread_rng();
         let (account, vote_state) = new_rand_vote_account(&mut rng, None);
-        let lamports = account.lamports;
+        let wens = account.wens;
         let vote_account = VoteAccount::from(account);
-        assert_eq!(lamports, vote_account.lamports());
+        assert_eq!(wens, vote_account.wens());
         assert_eq!(vote_state, *vote_account.vote_state().as_ref().unwrap());
         // 2nd call to .vote_state() should return the cached value.
         assert_eq!(vote_state, *vote_account.vote_state().as_ref().unwrap());

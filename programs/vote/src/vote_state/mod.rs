@@ -276,8 +276,8 @@ impl VoteState {
                 // Calculate mine and theirs independently and symmetrically instead of
                 // using the remainder of the other to treat them strictly equally.
                 // This is also to cancel the rewarding if either of the parties
-                // should receive only fractional lamports, resulting in not being rewarded at all.
-                // Thus, note that we intentionally discard any residual fractional lamports.
+                // should receive only fractional wens, resulting in not being rewarded at all.
+                // Thus, note that we intentionally discard any residual fractional wens.
                 let mine = on * u128::from(split) / 100u128;
                 let theirs = on * u128::from(100 - split) / 100u128;
 
@@ -668,7 +668,7 @@ impl VoteState {
     }
 
     /// Number of "credits" owed to this account from the mining pool. Submit this
-    /// VoteState to the Rewards program to trade credits for lamports.
+    /// VoteState to the Rewards program to trade credits for wens.
     pub fn credits(&self) -> u64 {
         if self.epoch_credits.is_empty() {
             0
@@ -905,7 +905,7 @@ fn verify_authorized_signer<S: std::hash::BuildHasher>(
 /// Withdraw funds from the vote account
 pub fn withdraw<S: std::hash::BuildHasher>(
     vote_account: &KeyedAccount,
-    lamports: u64,
+    wens: u64,
     to_account: &KeyedAccount,
     signers: &HashSet<Pubkey, S>,
     rent_sysvar: Option<&Rent>,
@@ -917,8 +917,8 @@ pub fn withdraw<S: std::hash::BuildHasher>(
     verify_authorized_signer(&vote_state.authorized_withdrawer, signers)?;
 
     let remaining_balance = vote_account
-        .lamports()?
-        .checked_sub(lamports)
+        .wens()?
+        .checked_sub(wens)
         .ok_or(InstructionError::InsufficientFunds)?;
 
     if remaining_balance == 0 {
@@ -950,10 +950,10 @@ pub fn withdraw<S: std::hash::BuildHasher>(
 
     vote_account
         .try_account_ref_mut()?
-        .checked_sub_lamports(lamports)?;
+        .checked_sub_wens(wens)?;
     to_account
         .try_account_ref_mut()?
-        .checked_add_lamports(lamports)?;
+        .checked_add_wens(wens)?;
     Ok(())
 }
 
@@ -1016,9 +1016,9 @@ pub fn create_account_with_authorized(
     authorized_voter: &Pubkey,
     authorized_withdrawer: &Pubkey,
     commission: u8,
-    lamports: u64,
+    wens: u64,
 ) -> AccountSharedData {
-    let mut vote_account = AccountSharedData::new(lamports, VoteState::size_of(), &id());
+    let mut vote_account = AccountSharedData::new(wens, VoteState::size_of(), &id());
 
     let vote_state = VoteState::new(
         &VoteInit {
@@ -1041,9 +1041,9 @@ pub fn create_account(
     vote_pubkey: &Pubkey,
     node_pubkey: &Pubkey,
     commission: u8,
-    lamports: u64,
+    wens: u64,
 ) -> AccountSharedData {
-    create_account_with_authorized(node_pubkey, vote_pubkey, vote_pubkey, commission, lamports)
+    create_account_with_authorized(node_pubkey, vote_pubkey, vote_pubkey, commission, wens)
 }
 
 #[cfg(test)]
@@ -1208,9 +1208,9 @@ mod tests {
             previous_epoch_credits = current_epoch_credits;
         }
 
-        let lamports = vote_account.borrow().wens();
+        let wens = vote_account.borrow().wens();
         let mut vote_account_with_epoch_credits =
-            AccountSharedData::new(lamports, vote_account_space, &vote_pubkey);
+            AccountSharedData::new(wens, vote_account_space, &vote_pubkey);
         let versioned = VoteStateVersions::new_current(vote_state);
         VoteState::to(&versioned, &mut vote_account_with_epoch_credits);
         let ref_vote_account_with_epoch_credits = RefCell::new(vote_account_with_epoch_credits);
@@ -2007,11 +2007,11 @@ mod tests {
 
         // insufficient funds
         let keyed_accounts = &[KeyedAccount::new(&vote_pubkey, true, &vote_account)];
-        let lamports = vote_account.borrow().wens();
+        let wens = vote_account.borrow().wens();
         let signers: HashSet<Pubkey> = get_signers(keyed_accounts);
         let res = withdraw(
             &keyed_accounts[0],
-            lamports + 1,
+            wens + 1,
             &KeyedAccount::new(
                 &sdk::pubkey::new_rand(),
                 false,
@@ -2033,16 +2033,16 @@ mod tests {
                 true,
                 &vote_account_with_epoch_credits,
             )];
-            let lamports = vote_account_with_epoch_credits.borrow().wens();
+            let wens = vote_account_with_epoch_credits.borrow().wens();
             let rent_sysvar = Rent::default();
             let minimum_balance = rent_sysvar
                 .minimum_balance(vote_account_with_epoch_credits.borrow().data().len())
                 .max(1);
-            assert!(minimum_balance <= lamports);
+            assert!(minimum_balance <= wens);
             let signers: HashSet<Pubkey> = get_signers(keyed_accounts);
             let res = withdraw(
                 &keyed_accounts[0],
-                lamports - minimum_balance + 1,
+                wens - minimum_balance + 1,
                 &KeyedAccount::new(
                     &sdk::pubkey::new_rand(),
                     false,
@@ -2065,16 +2065,16 @@ mod tests {
                 true,
                 &vote_account_with_epoch_credits,
             )];
-            let lamports = vote_account_with_epoch_credits.borrow().wens();
+            let wens = vote_account_with_epoch_credits.borrow().wens();
             let rent_sysvar = Rent::default();
             let minimum_balance = rent_sysvar
                 .minimum_balance(vote_account_with_epoch_credits.borrow().data().len())
                 .max(1);
-            assert!(minimum_balance <= lamports);
+            assert!(minimum_balance <= wens);
             let signers: HashSet<Pubkey> = get_signers(keyed_accounts);
             let res = withdraw(
                 &keyed_accounts[0],
-                lamports - minimum_balance + 1,
+                wens - minimum_balance + 1,
                 &KeyedAccount::new(
                     &sdk::pubkey::new_rand(),
                     false,
@@ -2097,16 +2097,16 @@ mod tests {
                 true,
                 &vote_account_with_epoch_credits,
             )];
-            let lamports = vote_account_with_epoch_credits.borrow().wens();
+            let wens = vote_account_with_epoch_credits.borrow().wens();
             let rent_sysvar = Rent::default();
             let minimum_balance = rent_sysvar
                 .minimum_balance(vote_account_with_epoch_credits.borrow().data().len())
                 .max(1);
-            assert!(minimum_balance <= lamports);
+            assert!(minimum_balance <= wens);
             let signers: HashSet<Pubkey> = get_signers(keyed_accounts);
             let res = withdraw(
                 &keyed_accounts[0],
-                lamports - minimum_balance + 1,
+                wens - minimum_balance + 1,
                 &KeyedAccount::new(
                     &sdk::pubkey::new_rand(),
                     false,
@@ -2129,16 +2129,16 @@ mod tests {
                 true,
                 &vote_account_with_epoch_credits,
             )];
-            let lamports = vote_account_with_epoch_credits.borrow().wens();
+            let wens = vote_account_with_epoch_credits.borrow().wens();
             let rent_sysvar = Rent::default();
             let minimum_balance = rent_sysvar
                 .minimum_balance(vote_account_with_epoch_credits.borrow().data().len())
                 .max(1);
-            assert!(minimum_balance <= lamports);
+            assert!(minimum_balance <= wens);
             let signers: HashSet<Pubkey> = get_signers(keyed_accounts);
             let res = withdraw(
                 &keyed_accounts[0],
-                lamports - minimum_balance + 1,
+                wens - minimum_balance + 1,
                 &KeyedAccount::new(
                     &sdk::pubkey::new_rand(),
                     false,
@@ -2161,16 +2161,16 @@ mod tests {
                 true,
                 &vote_account_with_epoch_credits,
             )];
-            let lamports = vote_account_with_epoch_credits.borrow().wens();
+            let wens = vote_account_with_epoch_credits.borrow().wens();
             let rent_sysvar = Rent::default();
             let minimum_balance = rent_sysvar
                 .minimum_balance(vote_account_with_epoch_credits.borrow().data().len())
                 .max(1);
-            assert!(minimum_balance <= lamports);
+            assert!(minimum_balance <= wens);
             let signers: HashSet<Pubkey> = get_signers(keyed_accounts);
             let res = withdraw(
                 &keyed_accounts[0],
-                lamports - minimum_balance + 1,
+                wens - minimum_balance + 1,
                 &KeyedAccount::new(
                     &sdk::pubkey::new_rand(),
                     false,
@@ -2193,16 +2193,16 @@ mod tests {
                 true,
                 &vote_account_with_epoch_credits,
             )];
-            let lamports = vote_account_with_epoch_credits.borrow().wens();
+            let wens = vote_account_with_epoch_credits.borrow().wens();
             let rent_sysvar = Rent::default();
             let minimum_balance = rent_sysvar
                 .minimum_balance(vote_account_with_epoch_credits.borrow().data().len())
                 .max(1);
-            assert!(minimum_balance <= lamports);
+            assert!(minimum_balance <= wens);
             let signers: HashSet<Pubkey> = get_signers(keyed_accounts);
             let res = withdraw(
                 &keyed_accounts[0],
-                lamports - minimum_balance + 1,
+                wens - minimum_balance + 1,
                 &KeyedAccount::new(
                     &sdk::pubkey::new_rand(),
                     false,
@@ -2225,16 +2225,16 @@ mod tests {
                 true,
                 &vote_account_with_epoch_credits,
             )];
-            let lamports = vote_account_with_epoch_credits.borrow().wens();
+            let wens = vote_account_with_epoch_credits.borrow().wens();
             let rent_sysvar = Rent::default();
             let minimum_balance = rent_sysvar
                 .minimum_balance(vote_account_with_epoch_credits.borrow().data().len())
                 .max(1);
-            assert!(minimum_balance <= lamports);
+            assert!(minimum_balance <= wens);
             let signers: HashSet<Pubkey> = get_signers(keyed_accounts);
             let res = withdraw(
                 &keyed_accounts[0],
-                lamports - minimum_balance + 1,
+                wens - minimum_balance + 1,
                 &KeyedAccount::new(
                     &sdk::pubkey::new_rand(),
                     false,
@@ -2257,16 +2257,16 @@ mod tests {
                 true,
                 &vote_account_with_epoch_credits,
             )];
-            let lamports = vote_account_with_epoch_credits.borrow().wens();
+            let wens = vote_account_with_epoch_credits.borrow().wens();
             let rent_sysvar = Rent::default();
             let minimum_balance = rent_sysvar
                 .minimum_balance(vote_account_with_epoch_credits.borrow().data().len())
                 .max(1);
-            assert!(minimum_balance <= lamports);
+            assert!(minimum_balance <= wens);
             let signers: HashSet<Pubkey> = get_signers(keyed_accounts);
             let res = withdraw(
                 &keyed_accounts[0],
-                lamports - minimum_balance + 1,
+                wens - minimum_balance + 1,
                 &KeyedAccount::new(
                     &sdk::pubkey::new_rand(),
                     false,
@@ -2284,17 +2284,17 @@ mod tests {
             let to_account = RefCell::new(AccountSharedData::default());
             let (vote_pubkey, vote_account) = create_test_account();
             let keyed_accounts = &[KeyedAccount::new(&vote_pubkey, true, &vote_account)];
-            let lamports = vote_account.borrow().wens();
+            let wens = vote_account.borrow().wens();
             let rent_sysvar = Rent::default();
             let minimum_balance = rent_sysvar
                 .minimum_balance(vote_account.borrow().data().len())
                 .max(1);
-            assert!(minimum_balance <= lamports);
-            let withdraw_lamports = lamports - minimum_balance;
+            assert!(minimum_balance <= wens);
+            let withdraw_wens = wens - minimum_balance;
             let signers: HashSet<Pubkey> = get_signers(keyed_accounts);
             let res = withdraw(
                 &keyed_accounts[0],
-                withdraw_lamports,
+                withdraw_wens,
                 &KeyedAccount::new(&sdk::pubkey::new_rand(), false, &to_account),
                 &signers,
                 Some(&rent_sysvar),
@@ -2303,9 +2303,9 @@ mod tests {
             assert_eq!(res, Ok(()));
             assert_eq!(
                 vote_account.borrow().wens(),
-                lamports - withdraw_lamports
+                wens - withdraw_wens
             );
-            assert_eq!(to_account.borrow().wens(), withdraw_lamports);
+            assert_eq!(to_account.borrow().wens(), withdraw_wens);
         }
 
         // full withdraw, before/after 7txXZZD6 feature activation
@@ -2317,12 +2317,12 @@ mod tests {
                     let to_account = RefCell::new(AccountSharedData::default());
                     let (vote_pubkey, vote_account) =
                         create_test_account_with_epoch_credits(credits);
-                    let lamports = vote_account.borrow().wens();
+                    let wens = vote_account.borrow().wens();
                     let keyed_accounts = &[KeyedAccount::new(&vote_pubkey, true, &vote_account)];
                     let signers: HashSet<Pubkey> = get_signers(keyed_accounts);
                     let res = withdraw(
                         &keyed_accounts[0],
-                        lamports,
+                        wens,
                         &KeyedAccount::new(&sdk::pubkey::new_rand(), false, &to_account),
                         &signers,
                         rent_sysvar,
@@ -2330,7 +2330,7 @@ mod tests {
                     );
                     assert_eq!(res, Ok(()));
                     assert_eq!(vote_account.borrow().wens(), 0);
-                    assert_eq!(to_account.borrow().wens(), lamports);
+                    assert_eq!(to_account.borrow().wens(), wens);
                     let post_state: VoteStateVersions = vote_account.borrow().state().unwrap();
                     // State has been deinitialized since balance is zero
                     assert!(post_state.is_uninitialized());
@@ -2347,12 +2347,12 @@ mod tests {
                 // let (vote_pubkey, vote_account) = create_test_account();
                 let (vote_pubkey, vote_account) =
                     create_test_account_with_epoch_credits(&credits_through_epoch_1);
-                let lamports = vote_account.borrow().wens();
+                let wens = vote_account.borrow().wens();
                 let keyed_accounts = &[KeyedAccount::new(&vote_pubkey, true, &vote_account)];
                 let signers: HashSet<Pubkey> = get_signers(keyed_accounts);
                 let res = withdraw(
                     &keyed_accounts[0],
-                    lamports,
+                    wens,
                     &KeyedAccount::new(&sdk::pubkey::new_rand(), false, &to_account),
                     &signers,
                     rent_sysvar,
@@ -2360,7 +2360,7 @@ mod tests {
                 );
                 assert_eq!(res, Ok(()));
                 assert_eq!(vote_account.borrow().wens(), 0);
-                assert_eq!(to_account.borrow().wens(), lamports);
+                assert_eq!(to_account.borrow().wens(), wens);
                 let post_state: VoteStateVersions = vote_account.borrow().state().unwrap();
                 // State has been deinitialized since balance is zero
                 assert!(post_state.is_uninitialized());
@@ -2376,19 +2376,19 @@ mod tests {
                 // let (vote_pubkey, vote_account) = create_test_account();
                 let (vote_pubkey, vote_account) =
                     create_test_account_with_epoch_credits(&credits_through_epoch_2);
-                let lamports = vote_account.borrow().wens();
+                let wens = vote_account.borrow().wens();
                 let keyed_accounts = &[KeyedAccount::new(&vote_pubkey, true, &vote_account)];
                 let signers: HashSet<Pubkey> = get_signers(keyed_accounts);
                 let res = withdraw(
                     &keyed_accounts[0],
-                    lamports,
+                    wens,
                     &KeyedAccount::new(&sdk::pubkey::new_rand(), false, &to_account),
                     &signers,
                     rent_sysvar,
                     Some(clock_epoch_3),
                 );
                 assert_eq!(res, Err(InstructionError::ActiveVoteAccountClose));
-                assert_eq!(vote_account.borrow().wens(), lamports);
+                assert_eq!(vote_account.borrow().wens(), wens);
                 assert_eq!(to_account.borrow().wens(), 0);
                 let post_state: VoteStateVersions = vote_account.borrow().state().unwrap();
                 // State is still initialized
@@ -2421,7 +2421,7 @@ mod tests {
         let withdrawer_keyed_account = keyed_account_at_index(keyed_accounts, 1).unwrap();
         let res = withdraw(
             vote_keyed_account,
-            lamports,
+            wens,
             withdrawer_keyed_account,
             &signers,
             None,
@@ -2429,7 +2429,7 @@ mod tests {
         );
         assert_eq!(res, Ok(()));
         assert_eq!(vote_account.borrow().wens(), 0);
-        assert_eq!(withdrawer_account.borrow().wens(), lamports);
+        assert_eq!(withdrawer_account.borrow().wens(), wens);
         let post_state: VoteStateVersions = vote_account.borrow().state().unwrap();
         // State has been deinitialized since balance is zero
         assert!(post_state.is_uninitialized());

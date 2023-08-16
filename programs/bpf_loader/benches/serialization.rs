@@ -37,7 +37,7 @@ fn create_inputs() -> (
     ];
     let accounts = vec![
         RefCell::new(AccountSharedData::from(Account {
-            lamports: 1,
+            wens: 1,
             data: vec![1u8, 2, 3, 4, 5],
             owner: bpf_loader::id(),
             executable: false,
@@ -45,28 +45,28 @@ fn create_inputs() -> (
         })),
         // dup
         RefCell::new(AccountSharedData::from(Account {
-            lamports: 1,
+            wens: 1,
             data: vec![1u8; 100000],
             owner: bpf_loader::id(),
             executable: false,
             rent_epoch: 100,
         })),
         RefCell::new(AccountSharedData::from(Account {
-            lamports: 2,
+            wens: 2,
             data: vec![11u8; 100000],
             owner: bpf_loader::id(),
             executable: true,
             rent_epoch: 200,
         })),
         RefCell::new(AccountSharedData::from(Account {
-            lamports: 3,
+            wens: 3,
             data: vec![],
             owner: bpf_loader::id(),
             executable: false,
             rent_epoch: 3100,
         })),
         RefCell::new(AccountSharedData::from(Account {
-            lamports: 4,
+            wens: 4,
             data: vec![1u8; 100000],
             owner: bpf_loader::id(),
             executable: false,
@@ -74,21 +74,21 @@ fn create_inputs() -> (
         })),
         // dup
         RefCell::new(AccountSharedData::from(Account {
-            lamports: 4,
+            wens: 4,
             data: vec![1u8; 1000000],
             owner: bpf_loader::id(),
             executable: false,
             rent_epoch: 100,
         })),
         RefCell::new(AccountSharedData::from(Account {
-            lamports: 5,
+            wens: 5,
             data: vec![11u8; 10000],
             owner: bpf_loader::id(),
             executable: true,
             rent_epoch: 200,
         })),
         RefCell::new(AccountSharedData::from(Account {
-            lamports: 6,
+            wens: 6,
             data: vec![],
             owner: bpf_loader::id(),
             executable: false,

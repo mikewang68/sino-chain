@@ -62,17 +62,17 @@ impl PreAccount {
         if program_id != pre.owner() // line coverage used to get branch coverage
          && pre.wens() > post.wens()
         {
-            return Err(InstructionError::ExternalAccountLamportSpend);
+            return Err(InstructionError::ExternalAccountWenSpend);
         }
 
         // The balance of read-only and executable accounts may not change
-        let lamports_changed = pre.wens() != post.wens();
-        if lamports_changed {
+        let wens_changed = pre.wens() != post.wens();
+        if wens_changed {
             if !is_writable {
-                return Err(InstructionError::ReadonlyLamportChange);
+                return Err(InstructionError::ReadonlyWenChange);
             }
             if pre.executable() {
-                return Err(InstructionError::ExecutableLamportChange);
+                return Err(InstructionError::ExecutableWenChange);
             }
         }
 
@@ -142,7 +142,7 @@ impl PreAccount {
             timings.total_account_count = timings.total_account_count.saturating_add(1);
             timings.total_data_size = timings.total_data_size.saturating_add(post.data().len());
             if owner_changed
-                || lamports_changed
+                || wens_changed
                 || data_len_changed
                 || executable_changed
                 || rent_epoch_changed
@@ -174,7 +174,7 @@ impl PreAccount {
         Ref::map(self.account.borrow(), |account| account.data())
     }
 
-    pub fn lamports(&self) -> u64 {
+    pub fn wens(&self) -> u64 {
         self.account.borrow().wens()
     }
 
@@ -238,14 +238,14 @@ mod tests {
                     &sdk::pubkey::new_rand(),
                     &AccountSharedData::from(Account {
                         owner: *owner,
-                        lamports: std::u64::MAX,
+                        wens: std::u64::MAX,
                         data: vec![],
                         ..Account::default()
                     }),
                 ),
                 post: AccountSharedData::from(Account {
                     owner: *owner,
-                    lamports: std::u64::MAX,
+                    wens: std::u64::MAX,
                     ..Account::default()
                 }),
             }
@@ -259,7 +259,7 @@ mod tests {
             self.post.set_executable(post);
             self
         }
-        pub fn lamports(mut self, pre: u64, post: u64) -> Self {
+        pub fn wens(mut self, pre: u64, post: u64) -> Self {
             self.pre.account.borrow_mut().set_wens(pre);
             self.post.set_wens(post);
             self
@@ -418,33 +418,33 @@ mod tests {
         assert_eq!(
             Change::new(&owner, &owner)
                 .executable(true, true)
-                .lamports(1, 2)
+                .wens(1, 2)
                 .verify(),
-            Err(InstructionError::ExecutableLamportChange),
-            "owner should not be able to add lamports once marked executable"
+            Err(InstructionError::ExecutableWenChange),
+            "owner should not be able to add wens once marked executable"
         );
         assert_eq!(
             Change::new(&owner, &owner)
                 .executable(true, true)
-                .lamports(1, 2)
+                .wens(1, 2)
                 .verify(),
-            Err(InstructionError::ExecutableLamportChange),
-            "owner should not be able to add lamports once marked executable"
+            Err(InstructionError::ExecutableWenChange),
+            "owner should not be able to add wens once marked executable"
         );
         assert_eq!(
             Change::new(&owner, &owner)
                 .executable(true, true)
-                .lamports(2, 1)
+                .wens(2, 1)
                 .verify(),
-            Err(InstructionError::ExecutableLamportChange),
-            "owner should not be able to subtract lamports once marked executable"
+            Err(InstructionError::ExecutableWenChange),
+            "owner should not be able to subtract wens once marked executable"
         );
         let data = vec![1; 100];
-        let min_lamports = Rent::default().minimum_balance(data.len());
+        let min_wens = Rent::default().minimum_balance(data.len());
         assert_eq!(
             Change::new(&owner, &owner)
                 .executable(false, true)
-                .lamports(0, min_lamports)
+                .wens(0, min_wens)
                 .data(data.clone(), data.clone())
                 .verify(),
             Ok(()),
@@ -452,7 +452,7 @@ mod tests {
         assert_eq!(
             Change::new(&owner, &owner)
                 .executable(false, true)
-                .lamports(0, min_lamports - 1)
+                .wens(0, min_wens - 1)
                 .data(data.clone(), data)
                 .verify(),
             Err(InstructionError::ExecutableAccountNotRentExempt),
@@ -528,7 +528,7 @@ mod tests {
     }
 
     #[test]
-    fn test_verify_account_changes_deduct_lamports_and_reassign_account() {
+    fn test_verify_account_changes_deduct_wens_and_reassign_account() {
         let alice_program_id = sdk::pubkey::new_rand();
         let bob_program_id = sdk::pubkey::new_rand();
 
@@ -536,37 +536,37 @@ mod tests {
         assert_eq!(
             Change::new(&alice_program_id, &alice_program_id)
             .owner(&bob_program_id)
-            .lamports(42, 1)
+            .wens(42, 1)
             .data(vec![42], vec![0])
             .verify(),
         Ok(()),
-        "alice should be able to deduct lamports and give the account to bob if the data is zeroed",
+        "alice should be able to deduct wens and give the account to bob if the data is zeroed",
     );
     }
 
     #[test]
-    fn test_verify_account_changes_lamports() {
+    fn test_verify_account_changes_wens() {
         let alice_program_id = sdk::pubkey::new_rand();
 
         assert_eq!(
             Change::new(&alice_program_id, &system_program::id())
-                .lamports(42, 0)
+                .wens(42, 0)
                 .read_only()
                 .verify(),
-            Err(InstructionError::ExternalAccountLamportSpend),
+            Err(InstructionError::ExternalAccountWenSpend),
             "debit should fail, even if system program"
         );
         assert_eq!(
             Change::new(&alice_program_id, &alice_program_id)
-                .lamports(42, 0)
+                .wens(42, 0)
                 .read_only()
                 .verify(),
-            Err(InstructionError::ReadonlyLamportChange),
+            Err(InstructionError::ReadonlyWenChange),
             "debit should fail, even if owning program"
         );
         assert_eq!(
             Change::new(&alice_program_id, &system_program::id())
-                .lamports(42, 0)
+                .wens(42, 0)
                 .owner(&system_program::id())
                 .verify(),
             Err(InstructionError::ModifiedProgramId),
@@ -574,7 +574,7 @@ mod tests {
         );
         assert_eq!(
             Change::new(&system_program::id(), &system_program::id())
-                .lamports(42, 0)
+                .wens(42, 0)
                 .owner(&alice_program_id)
                 .verify(),
             Ok(()),

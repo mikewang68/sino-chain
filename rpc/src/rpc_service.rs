@@ -35,7 +35,7 @@ use {
     },
     sdk::{
         exit::Exit, genesis_config::DEFAULT_GENESIS_DOWNLOAD_PATH, hash::Hash,
-        native_token::lamports_to_sol, pubkey::Pubkey,
+        native_token::wens_to_sor, pubkey::Pubkey,
     },
     sino_send_transaction_service::send_transaction_service::{self, SendTransactionService},
     std::{
@@ -298,16 +298,16 @@ fn process_rest(bank_forks: &Arc<RwLock<BankForks>>, path: &str) -> Option<Strin
             let non_circulating_supply =
                 runtime::non_circulating_supply::calculate_non_circulating_supply(&bank)
                     .expect("Scan should not error on root banks")
-                    .lamports;
+                    .wens;
             Some(format!(
                 "{}",
-                lamports_to_sol(total_supply - non_circulating_supply)
+                wens_to_sor(total_supply - non_circulating_supply)
             ))
         }
         "/v0/total-supply" => {
             let bank = bank_forks.read().unwrap().root_bank();
             let total_supply = bank.capitalization();
-            Some(format!("{}", lamports_to_sol(total_supply)))
+            Some(format!("{}", wens_to_sor(total_supply)))
         }
         _ => None,
     }

@@ -350,12 +350,12 @@ impl ThinClient {
 
 //     fn transfer_and_confirm(
 //         &self,
-//         lamports: u64,
+//         wens: u64,
 //         keypair: &Keypair,
 //         pubkey: &Pubkey,
 //     ) -> TransportResult<Signature> {
 //         let transfer_instruction =
-//             system_instruction::transfer(&keypair.pubkey(), pubkey, lamports);
+//             system_instruction::transfer(&keypair.pubkey(), pubkey, wens);
 //         self.send_and_confirm_instruction(keypair, transfer_instruction)
 //     }
 
@@ -647,13 +647,13 @@ impl ThinClient {
 //     }
 //     fn async_transfer(
 //         &self,
-//         lamports: u64,
+//         wens: u64,
 //         keypair: &Keypair,
 //         pubkey: &Pubkey,
 //         recent_blockhash: Hash,
 //     ) -> TransportResult<Signature> {
 //         let transfer_instruction =
-//             system_instruction::transfer(&keypair.pubkey(), pubkey, lamports);
+//             system_instruction::transfer(&keypair.pubkey(), pubkey, wens);
 //         self.async_send_instruction(keypair, transfer_instruction, recent_blockhash)
 //     }
 // }

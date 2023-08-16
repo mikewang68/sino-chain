@@ -88,7 +88,7 @@ enum RewardType {
 
 message Reward {
     string pubkey = 1;
-    int64 lamports = 2;
+    int64 wens = 2;
     uint64 post_balance = 3;
     RewardType reward_type = 4;
     string commission = 5;

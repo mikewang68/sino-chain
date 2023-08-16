@@ -18,7 +18,7 @@ message ReplicaAccountsRequest {
 
 message ReplicaAccountMeta {
     bytes Pubkey = 1;
-    uint64 lamports = 2;
+    uint64 wens = 2;
     bytes owner = 3;
     bool executable = 4;
     uint64 rent_epoch = 5;

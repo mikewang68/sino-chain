@@ -36,9 +36,9 @@ pub const MAX_BASE58_BYTES: usize = 128;
 #[derive(Serialize, Deserialize, Clone, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct UiAccount {
-    pub lamports: u64,
+    pub wens: u64,
     #[serde(default)]
-    pub lamports_str: StringAmount,
+    pub wens_str: StringAmount,
     pub data: UiAccountData,
     pub owner: String,
     pub executable: bool,
@@ -120,12 +120,12 @@ impl UiAccount {
             }
         };
 
-        let lamports = account.wens();
-        let lamports_str = lamports.to_string();
+        let wens = account.wens();
+        let wens_str = wens.to_string();
 
         UiAccount {
-            lamports,
-            lamports_str,
+            wens,
+            wens_str,
             data,
             owner: account.owner().to_string(),
             executable: account.executable(),
@@ -152,10 +152,10 @@ impl UiAccount {
                 UiAccountEncoding::Binary | UiAccountEncoding::JsonParsed => None,
             },
         }?;
-        let lamports = self.lamports_str.parse().unwrap_or(self.lamports);
+        let wens = self.wens_str.parse().unwrap_or(self.wens);
 
         Some(T::create(
-            lamports,
+            wens,
             data,
             Pubkey::from_str(&self.owner).ok()?,
             self.executable,
@@ -167,13 +167,13 @@ impl UiAccount {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 #[serde(rename_all = "camelCase")]
 pub struct UiFeeCalculator {
-    pub lamports_per_signature: StringAmount,
+    pub wens_per_signature: StringAmount,
 }
 
 impl From<FeeCalculator> for UiFeeCalculator {
     fn from(fee_calculator: FeeCalculator) -> Self {
         Self {
-            lamports_per_signature: fee_calculator.wens_per_signature.to_string(),
+            wens_per_signature: fee_calculator.wens_per_signature.to_string(),
         }
     }
 }
@@ -181,7 +181,7 @@ impl From<FeeCalculator> for UiFeeCalculator {
 impl Default for UiFeeCalculator {
     fn default() -> Self {
         Self {
-            lamports_per_signature: "0".to_string(),
+            wens_per_signature: "0".to_string(),
         }
     }
 }

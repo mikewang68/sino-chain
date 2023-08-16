@@ -122,14 +122,14 @@ impl Processor {
 
         let table_account_data_len = LOOKUP_TABLE_META_SIZE;
         let rent = invoke_context.get_sysvar_cache().get_rent()?;
-        let required_lamports = rent
+        let required_wens = rent
             .minimum_balance(table_account_data_len)
             .max(1)
-            .saturating_sub(lookup_table_account.lamports()?);
+            .saturating_sub(lookup_table_account.wens()?);
 
-        if required_lamports > 0 {
+        if required_wens > 0 {
             invoke_context.native_invoke(
-                system_instruction::transfer(&payer_key, &table_key, required_lamports),
+                system_instruction::transfer(&payer_key, &table_key, required_wens),
                 &[payer_key],
             )?;
         }
@@ -308,15 +308,15 @@ impl Processor {
         }
 
         let rent = invoke_context.get_sysvar_cache().get_rent()?;
-        let required_lamports = rent
+        let required_wens = rent
             .minimum_balance(new_table_data_len)
             .max(1)
-            .saturating_sub(lookup_table_account.lamports()?);
+            .saturating_sub(lookup_table_account.wens()?);
 
         let table_key = *lookup_table_account.unsigned_key();
-        if required_lamports > 0 {
+        if required_wens > 0 {
             invoke_context.native_invoke(
-                system_instruction::transfer(&payer_key, &table_key, required_lamports),
+                system_instruction::transfer(&payer_key, &table_key, required_wens),
                 &[payer_key],
             )?;
         }
@@ -397,7 +397,7 @@ impl Processor {
         if recipient_account.unsigned_key() == lookup_table_account.unsigned_key() {
             ic_msg!(
                 invoke_context,
-                "Lookup table cannot be the recipient of reclaimed lamports"
+                "Lookup table cannot be the recipient of reclaimed wens"
             );
             return Err(InstructionError::InvalidArgument);
         }
@@ -436,10 +436,10 @@ impl Processor {
 
         drop(lookup_table_account_ref);
 
-        let withdrawn_lamports = lookup_table_account.lamports()?;
+        let withdrawn_wens = lookup_table_account.wens()?;
         recipient_account
             .try_account_ref_mut()?
-            .checked_add_lamports(withdrawn_lamports)?;
+            .checked_add_wens(withdrawn_wens)?;
 
         let mut lookup_table_account = lookup_table_account.try_account_ref_mut()?;
         lookup_table_account.set_data(Vec::new());

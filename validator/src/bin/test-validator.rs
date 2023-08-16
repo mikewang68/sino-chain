@@ -16,7 +16,7 @@ use {
         account::AccountSharedData,
         clock::Slot,
         epoch_schedule::{EpochSchedule, MINIMUM_SLOTS_PER_EPOCH},
-        native_token::sol_to_lamports,
+        native_token::sor_to_wens,
         pubkey::Pubkey,
         rent::Rent,
         rpc_port,
@@ -46,7 +46,7 @@ use {
  */
 const DEFAULT_MAX_LEDGER_SHREDS: u64 = 10_000;
 
-const DEFAULT_FAUCET_SOL: f64 = 1_000_000.;
+const DEFAULT_FAUCET_SOR: f64 = 1_000_000.;
 
 #[derive(PartialEq)]
 enum Output {
@@ -59,7 +59,7 @@ fn main() {
     let default_rpc_port = rpc_port::DEFAULT_RPC_PORT.to_string();
     let default_faucet_port = FAUCET_PORT.to_string();
     let default_limit_ledger_size = DEFAULT_MAX_LEDGER_SHREDS.to_string();
-    let default_faucet_sol = DEFAULT_FAUCET_SOL.to_string();
+    let default_faucet_sor = DEFAULT_FAUCET_SOR.to_string();
 
     let matches = App::new("solana-test-validator")
         .about("Test Validator")
@@ -300,13 +300,13 @@ fn main() {
                 .help("Keep this amount of shreds in root slots."),
         )
         .arg(
-            Arg::with_name("faucet_sol")
-                .long("faucet-sol")
+            Arg::with_name("faucet_sor")
+                .long("faucet-sor")
                 .takes_value(true)
-                .value_name("SOL")
-                .default_value(default_faucet_sol.as_str())
+                .value_name("SOR")
+                .default_value(default_faucet_sor.as_str())
                 .help(
-                    "Give the faucet address this much SOL in genesis. \
+                    "Give the faucet address this much SOR in genesis. \
                      If the ledger already exists then this parameter is silently ignored",
                 ),
         )
@@ -523,7 +523,7 @@ fn main() {
         None
     };
 
-    let faucet_lamports = sol_to_lamports(value_of(&matches, "faucet_sol").unwrap());
+    let faucet_wens = sor_to_wens(value_of(&matches, "faucet_sor").unwrap());
     let faucet_keypair_file = ledger_path.join("faucet-keypair.json");
     if !faucet_keypair_file.exists() {
         write_keypair_file(&Keypair::new(), faucet_keypair_file.to_str().unwrap()).unwrap_or_else(
@@ -568,7 +568,7 @@ fn main() {
             ("mint_address", "--mint"),
             ("ticks_per_slot", "--ticks-per-slot"),
             ("slots_per_epoch", "--slots-per-epoch"),
-            ("faucet_sol", "--faucet-sol"),
+            ("faucet_sor", "--faucet-sor"),
             ("deactivate_feature", "--deactivate-feature"),
         ] {
             if matches.is_present(name) {
@@ -578,7 +578,7 @@ fn main() {
     } else if random_mint {
         println_name_value(
             "\nNotice!",
-            "No wallet available. `solana airdrop` localnet SOL after creating one\n",
+            "No wallet available. `solana airdrop` localnet SOR after creating one\n",
         );
     }
 
@@ -624,7 +624,7 @@ fn main() {
         .tower_storage(tower_storage)
         .add_account(
             faucet_pubkey,
-            AccountSharedData::new(faucet_lamports, 0, &system_program::id()),
+            AccountSharedData::new(faucet_wens, 0, &system_program::id()),
         )
         .rpc_config(JsonRpcConfig {
             enable_rpc_transaction_history: true,

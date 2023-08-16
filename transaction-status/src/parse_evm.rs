@@ -37,7 +37,7 @@ pub fn parse_evm(
             let info = json!({
                 "fromNativeAccount": account_keys[instruction.accounts[1] as usize].to_string(),
                 "toEvmAccount": format!("{:?}", evm_address),
-                "lamports": wens,
+                "wens": wens,
             });
             Ok(ParsedInstructionEnum {
                 instruction_type: "swapNativeToEvm".to_string(),

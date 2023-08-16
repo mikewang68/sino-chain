@@ -2,7 +2,7 @@
 
 use {
     crate::{
-        rpc_pubsub::{RpcSolPubSubImpl, RpcSolPubSubInternal},
+        rpc_pubsub::{RpcSorPubSubImpl, RpcSorPubSubInternal},
         rpc_subscription_tracker::{
             SubscriptionControl, SubscriptionId, SubscriptionParams, SubscriptionToken,
         },
@@ -237,10 +237,10 @@ impl TestBroadcastReceiver {
 #[cfg(test)]
 pub fn test_connection(
     subscriptions: &Arc<RpcSubscriptions>,
-) -> (RpcSolPubSubImpl, TestBroadcastReceiver) {
+) -> (RpcSorPubSubImpl, TestBroadcastReceiver) {
     let current_subscriptions = Arc::new(DashMap::new());
 
-    let rpc_impl = RpcSolPubSubImpl::new(
+    let rpc_impl = RpcSorPubSubImpl::new(
         PubSubConfig {
             enable_block_subscription: true,
             enable_vote_subscription: true,
@@ -292,7 +292,7 @@ async fn handle_connection(
     let current_subscriptions = Arc::new(DashMap::new());
 
     let mut json_rpc_handler = IoHandler::new();
-    let rpc_impl = RpcSolPubSubImpl::new(
+    let rpc_impl = RpcSorPubSubImpl::new(
         config,
         subscription_control,
         Arc::clone(&current_subscriptions),

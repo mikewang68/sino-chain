@@ -107,7 +107,7 @@ pub trait IsCached {
 }
 
 pub trait IndexValue:
-    'static + IsCached + Clone + Debug + PartialEq + ZeroLamport + Copy + Default + Sync + Send
+    'static + IsCached + Clone + Debug + PartialEq + ZeroWen + Copy + Default + Sync + Send
 {
 }
 
@@ -317,13 +317,13 @@ pub enum PreAllocatedAccountMapEntry<T: IndexValue> {
     Raw((Slot, T)),
 }
 
-impl<T: IndexValue> ZeroLamport for PreAllocatedAccountMapEntry<T> {
-    fn is_zero_lamport(&self) -> bool {
+impl<T: IndexValue> ZeroWen for PreAllocatedAccountMapEntry<T> {
+    fn is_zero_wen(&self) -> bool {
         match self {
             PreAllocatedAccountMapEntry::Entry(entry) => {
-                entry.slot_list.read().unwrap()[0].1.is_zero_lamport()
+                entry.slot_list.read().unwrap()[0].1.is_zero_wen()
             }
-            PreAllocatedAccountMapEntry::Raw(raw) => raw.1.is_zero_lamport(),
+            PreAllocatedAccountMapEntry::Raw(raw) => raw.1.is_zero_wen(),
         }
     }
 }
@@ -812,8 +812,8 @@ impl<'a, T: IndexValue> Iterator for AccountsIndexIterator<'a, T> {
     }
 }
 
-pub trait ZeroLamport {
-    fn is_zero_lamport(&self) -> bool;
+pub trait ZeroWen {
+    fn is_zero_wen(&self) -> bool;
 }
 
 type MapType<T> = AccountMap<T>;
@@ -1670,15 +1670,15 @@ impl<T: IndexValue> AccountsIndex<T> {
             self.program_id_index.insert(account_owner, pubkey);
         }
         // Note because of the below check below on the account data length, when an
-        // account hits zero lamports and is reset to AccountSharedData::Default, then we skip
+        // account hits zero wens and is reset to AccountSharedData::Default, then we skip
         // the below updates to the secondary indexes.
         //
         // Skipping means not updating secondary index to mark the account as missing.
         // This doesn't introduce false positives during a scan because the caller to scan
-        // provides the ancestors to check. So even if a zero-lamport account is not yet
+        // provides the ancestors to check. So even if a zero-wen account is not yet
         // removed from the secondary index, the scan function will:
         // 1) consult the primary index via `get(&pubkey, Some(ancestors), max_root)`
-        // and find the zero-lamport version
+        // and find the zero-wen version
         // 2) When the fetch from storage occurs, it will return AccountSharedData::Default
         // (as persisted tombstone for snapshots). This will then ultimately be
         // filtered out by post-scan filters, like in `get_filtered_spl_token_accounts_by_owner()`.
@@ -1796,8 +1796,8 @@ impl<T: IndexValue> AccountsIndex<T> {
                 let pubkey_bin = self.bin_calculator.bin_from_pubkey(&pubkey);
                 let binned_index = (pubkey_bin + random_offset) % bins;
                 // this value is equivalent to what update() below would have created if we inserted a new item
-                let is_zero_lamport = account_info.is_zero_lamport();
-                let result = if is_zero_lamport { Some(pubkey) } else { None };
+                let is_zero_wen = account_info.is_zero_wen();
+                let result = if is_zero_wen { Some(pubkey) } else { None };
 
                 let info = PreAllocatedAccountMapEntry::new(
                     slot,
@@ -1817,10 +1817,10 @@ impl<T: IndexValue> AccountsIndex<T> {
             let w_account_maps = self.account_maps[pubkey_bin].write().unwrap();
             let mut insert_time = Measure::start("insert_into_primary_index");
             items.into_iter().for_each(|(pubkey, new_item)| {
-                if let InsertNewEntryResults::ExistedNewEntryNonZeroLamports =
+                if let InsertNewEntryResults::ExistedNewEntryNonZeroWens =
                     w_account_maps.insert_new_entry_if_missing_with_lock(pubkey, new_item)
                 {
-                    // zero lamports were already added to dirty_pubkeys above
+                    // zero wens were already added to dirty_pubkeys above
                     dirty_pubkeys.push(pubkey);
                 }
             });
@@ -2974,8 +2974,8 @@ pub mod tests {
         }
     }
 
-    impl ZeroLamport for AccountInfoTest {
-        fn is_zero_lamport(&self) -> bool {
+    impl ZeroWen for AccountInfoTest {
+        fn is_zero_wen(&self) -> bool {
             true
         }
     }
@@ -3013,7 +3013,7 @@ pub mod tests {
         );
         assert_eq!(num, 1);
 
-        // not zero lamports
+        // not zero wens
         let index = AccountsIndex::<AccountInfoTest>::default_for_tests();
         let account_info: AccountInfoTest = 0 as AccountInfoTest;
         let items = vec![(*pubkey, account_info)];
@@ -4344,14 +4344,14 @@ pub mod tests {
             false
         }
     }
-    impl ZeroLamport for bool {
-        fn is_zero_lamport(&self) -> bool {
+    impl ZeroWen for bool {
+        fn is_zero_wen(&self) -> bool {
             false
         }
     }
 
-    impl ZeroLamport for u64 {
-        fn is_zero_lamport(&self) -> bool {
+    impl ZeroWen for u64 {
+        fn is_zero_wen(&self) -> bool {
             false
         }
     }

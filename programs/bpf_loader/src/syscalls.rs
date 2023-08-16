@@ -25,7 +25,7 @@ use {
             disable_fees_sysvar, do_support_realloc, fixed_memcpy_nonoverlapping_check,
             prevent_calling_precompiles_as_programs,
             return_data_syscall_enabled, secp256k1_recover_syscall_enabled,
-            sol_log_data_syscall_enabled, update_syscall_base_costs,
+            sor_log_data_syscall_enabled, update_syscall_base_costs,
         },
         hash::{Hasher, HASH_BYTES},
         instruction::{
@@ -126,46 +126,46 @@ pub fn register_syscalls(
     let mut syscall_registry = SyscallRegistry::default();
 
     syscall_registry.register_syscall_by_name(b"abort", SyscallAbort::call)?;
-    syscall_registry.register_syscall_by_name(b"sol_panic_", SyscallPanic::call)?;
-    syscall_registry.register_syscall_by_name(b"sol_log_", SyscallLog::call)?;
-    syscall_registry.register_syscall_by_name(b"sol_log_64_", SyscallLogU64::call)?;
+    syscall_registry.register_syscall_by_name(b"sor_panic_", SyscallPanic::call)?;
+    syscall_registry.register_syscall_by_name(b"sor_log_", SyscallLog::call)?;
+    syscall_registry.register_syscall_by_name(b"sor_log_64_", SyscallLogU64::call)?;
 
     syscall_registry
-        .register_syscall_by_name(b"sol_log_compute_units_", SyscallLogBpfComputeUnits::call)?;
+        .register_syscall_by_name(b"sor_log_compute_units_", SyscallLogBpfComputeUnits::call)?;
 
-    syscall_registry.register_syscall_by_name(b"sol_log_pubkey", SyscallLogPubkey::call)?;
+    syscall_registry.register_syscall_by_name(b"sor_log_pubkey", SyscallLogPubkey::call)?;
 
     syscall_registry.register_syscall_by_name(
-        b"sol_create_program_address",
+        b"sor_create_program_address",
         SyscallCreateProgramAddress::call,
     )?;
     syscall_registry.register_syscall_by_name(
-        b"sol_try_find_program_address",
+        b"sor_try_find_program_address",
         SyscallTryFindProgramAddress::call,
     )?;
 
-    syscall_registry.register_syscall_by_name(b"sol_sha256", SyscallSha256::call)?;
-    syscall_registry.register_syscall_by_name(b"sol_keccak256", SyscallKeccak256::call)?;
+    syscall_registry.register_syscall_by_name(b"sor_sha256", SyscallSha256::call)?;
+    syscall_registry.register_syscall_by_name(b"sor_keccak256", SyscallKeccak256::call)?;
 
     if invoke_context
         .feature_set
         .is_active(&secp256k1_recover_syscall_enabled::id())
     {
         syscall_registry
-            .register_syscall_by_name(b"sol_secp256k1_recover", SyscallSecp256k1Recover::call)?;
+            .register_syscall_by_name(b"sor_secp256k1_recover", SyscallSecp256k1Recover::call)?;
     }
 
     if invoke_context
         .feature_set
         .is_active(&blake3_syscall_enabled::id())
     {
-        syscall_registry.register_syscall_by_name(b"sol_blake3", SyscallBlake3::call)?;
+        syscall_registry.register_syscall_by_name(b"sor_blake3", SyscallBlake3::call)?;
     }
 
     syscall_registry
-        .register_syscall_by_name(b"sol_get_clock_sysvar", SyscallGetClockSysvar::call)?;
+        .register_syscall_by_name(b"sor_get_clock_sysvar", SyscallGetClockSysvar::call)?;
     syscall_registry.register_syscall_by_name(
-        b"sol_get_epoch_schedule_sysvar",
+        b"sor_get_epoch_schedule_sysvar",
         SyscallGetEpochScheduleSysvar::call,
     )?;
     if !invoke_context
@@ -173,24 +173,24 @@ pub fn register_syscalls(
         .is_active(&disable_fees_sysvar::id())
     {
         syscall_registry
-            .register_syscall_by_name(b"sol_get_fees_sysvar", SyscallGetFeesSysvar::call)?;
+            .register_syscall_by_name(b"sor_get_fees_sysvar", SyscallGetFeesSysvar::call)?;
     }
     syscall_registry
-        .register_syscall_by_name(b"sol_get_rent_sysvar", SyscallGetRentSysvar::call)?;
+        .register_syscall_by_name(b"sor_get_rent_sysvar", SyscallGetRentSysvar::call)?;
 
-    syscall_registry.register_syscall_by_name(b"sol_memcpy_", SyscallMemcpy::call)?;
-    syscall_registry.register_syscall_by_name(b"sol_memmove_", SyscallMemmove::call)?;
-    syscall_registry.register_syscall_by_name(b"sol_memcmp_", SyscallMemcmp::call)?;
-    syscall_registry.register_syscall_by_name(b"sol_memset_", SyscallMemset::call)?;
+    syscall_registry.register_syscall_by_name(b"sor_memcpy_", SyscallMemcpy::call)?;
+    syscall_registry.register_syscall_by_name(b"sor_memmove_", SyscallMemmove::call)?;
+    syscall_registry.register_syscall_by_name(b"sor_memcmp_", SyscallMemcmp::call)?;
+    syscall_registry.register_syscall_by_name(b"sor_memset_", SyscallMemset::call)?;
 
     // Cross-program invocation syscalls
     syscall_registry
-        .register_syscall_by_name(b"sol_invoke_signed_c", SyscallInvokeSignedC::call)?;
+        .register_syscall_by_name(b"sor_invoke_signed_c", SyscallInvokeSignedC::call)?;
     syscall_registry
-        .register_syscall_by_name(b"sol_invoke_signed_rust", SyscallInvokeSignedRust::call)?;
+        .register_syscall_by_name(b"sor_invoke_signed_rust", SyscallInvokeSignedRust::call)?;
 
     // Memory allocator
-    syscall_registry.register_syscall_by_name(b"sol_alloc_free_", SyscallAllocFree::call)?;
+    syscall_registry.register_syscall_by_name(b"sor_alloc_free_", SyscallAllocFree::call)?;
 
     // Return data
     if invoke_context
@@ -198,17 +198,17 @@ pub fn register_syscalls(
         .is_active(&return_data_syscall_enabled::id())
     {
         syscall_registry
-            .register_syscall_by_name(b"sol_set_return_data", SyscallSetReturnData::call)?;
+            .register_syscall_by_name(b"sor_set_return_data", SyscallSetReturnData::call)?;
         syscall_registry
-            .register_syscall_by_name(b"sol_get_return_data", SyscallGetReturnData::call)?;
+            .register_syscall_by_name(b"sor_get_return_data", SyscallGetReturnData::call)?;
     }
 
     // Log data
     if invoke_context
         .feature_set
-        .is_active(&sol_log_data_syscall_enabled::id())
+        .is_active(&sor_log_data_syscall_enabled::id())
     {
-        syscall_registry.register_syscall_by_name(b"sol_log_data", SyscallLogData::call)?;
+        syscall_registry.register_syscall_by_name(b"sor_log_data", SyscallLogData::call)?;
     }
 
     if invoke_context
@@ -216,7 +216,7 @@ pub fn register_syscalls(
         .is_active(&add_get_processed_sibling_instruction_syscall::id())
     {
         syscall_registry.register_syscall_by_name(
-            b"sol_get_processed_sibling_instruction",
+            b"sor_get_processed_sibling_instruction",
             SyscallGetProcessedSiblingInstruction::call,
         )?;
     }
@@ -226,7 +226,7 @@ pub fn register_syscalls(
         .is_active(&add_get_processed_sibling_instruction_syscall::id())
     {
         syscall_registry
-            .register_syscall_by_name(b"sol_get_stack_height", SyscallGetStackHeight::call)?;
+            .register_syscall_by_name(b"sor_get_stack_height", SyscallGetStackHeight::call)?;
     }
 
     Ok(syscall_registry)
@@ -263,9 +263,9 @@ pub fn bind_syscall_context_objects<'a, 'b>(
     let is_return_data_syscall_active = invoke_context
         .feature_set
         .is_active(&return_data_syscall_enabled::id());
-    let is_sol_log_data_syscall_active = invoke_context
+    let is_sor_log_data_syscall_active = invoke_context
         .feature_set
-        .is_active(&sol_log_data_syscall_enabled::id());
+        .is_active(&sor_log_data_syscall_enabled::id());
     let add_get_processed_sibling_instruction_syscall = invoke_context
         .feature_set
         .is_active(&add_get_processed_sibling_instruction_syscall::id());
@@ -419,10 +419,10 @@ pub fn bind_syscall_context_objects<'a, 'b>(
         }),
     );
 
-    // sol_log_data
+    // sor_log_data
     bind_feature_gated_syscall_context_object!(
         vm,
-        is_sol_log_data_syscall_active,
+        is_sor_log_data_syscall_active,
         Box::new(SyscallLogData {
             invoke_context: invoke_context.clone(),
         }),
@@ -597,7 +597,7 @@ impl SyscallObject<BpfError> for SyscallAbort {
     }
 }
 
-/// Panic syscall function, called when the BPF program calls 'sol_panic_()`
+/// Panic syscall function, called when the BPF program calls 'sor_panic_()`
 /// Causes the BPF program to be halted immediately
 /// Log a user's info message
 pub struct SyscallPanic<'a, 'b> {
@@ -814,7 +814,7 @@ impl<'a, 'b> SyscallObject<BpfError> for SyscallLogPubkey<'a, 'b> {
 }
 
 /// Dynamic memory allocation syscall called when the BPF program calls
-/// `sol_alloc_free_()`.  The allocator is expected to allocate/free
+/// `sor_alloc_free_()`.  The allocator is expected to allocate/free
 /// from/to a given chunk of memory and enforce size restrictions.  The
 /// memory chunk is given to the allocator during allocator creation and
 /// information about that memory (start address and size) is passed
@@ -1808,7 +1808,7 @@ impl<'a, 'b> SyscallObject<BpfError> for SyscallBlake3<'a, 'b> {
 // Cross-program invocation syscalls
 
 struct CallerAccount<'a> {
-    lamports: &'a mut u64,
+    wens: &'a mut u64,
     owner: &'a mut Pubkey,
     original_data_len: usize,
     data: &'a mut [u8],
@@ -1926,11 +1926,11 @@ impl<'a, 'b> SyscallInvokeSigned<'a, 'b> for SyscallInvokeSignedRust<'a, 'b> {
         let translate = |account_info: &AccountInfo, invoke_context: &InvokeContext| {
             // Translate the account from user space
 
-            let lamports = {
-                // Double translate lamports out of RefCell
+            let wens = {
+                // Double translate wens out of RefCell
                 let ptr = translate_type::<u64>(
                     memory_mapping,
-                    account_info.lamports.as_ptr() as u64,
+                    account_info.wens.as_ptr() as u64,
                     loader_id,
                 )?;
                 translate_type_mut::<u64>(memory_mapping, *ptr, loader_id)?
@@ -1981,7 +1981,7 @@ impl<'a, 'b> SyscallInvokeSigned<'a, 'b> for SyscallInvokeSignedRust<'a, 'b> {
             };
 
             Ok(CallerAccount {
-                lamports,
+                wens,
                 owner,
                 original_data_len: 0, // set later
                 data,
@@ -2079,9 +2079,9 @@ impl<'a, 'b> SyscallObject<BpfError> for SyscallInvokeSignedRust<'a, 'b> {
     }
 }
 
-/// Rust representation of C's SolInstruction
+/// Rust representation of C's SorInstruction
 #[derive(Debug)]
-struct SolInstruction {
+struct SorInstruction {
     program_id_addr: u64,
     accounts_addr: u64,
     accounts_len: usize,
@@ -2089,19 +2089,19 @@ struct SolInstruction {
     data_len: usize,
 }
 
-/// Rust representation of C's SolAccountMeta
+/// Rust representation of C's SorAccountMeta
 #[derive(Debug)]
-struct SolAccountMeta {
+struct SorAccountMeta {
     pubkey_addr: u64,
     is_writable: bool,
     is_signer: bool,
 }
 
-/// Rust representation of C's SolAccountInfo
+/// Rust representation of C's SorAccountInfo
 #[derive(Debug)]
-struct SolAccountInfo {
+struct SorAccountInfo {
     key_addr: u64,
-    lamports_addr: u64,
+    wens_addr: u64,
     data_len: u64,
     data_addr: u64,
     owner_addr: u64,
@@ -2113,16 +2113,16 @@ struct SolAccountInfo {
     executable: bool,
 }
 
-/// Rust representation of C's SolSignerSeed
+/// Rust representation of C's SorSignerSeed
 #[derive(Debug)]
-struct SolSignerSeedC {
+struct SorSignerSeedC {
     addr: u64,
     len: u64,
 }
 
-/// Rust representation of C's SolSignerSeeds
+/// Rust representation of C's SorSignerSeeds
 #[derive(Debug)]
-struct SolSignerSeedsC {
+struct SorSignerSeedsC {
     #[allow(dead_code)]
     addr: u64,
     #[allow(dead_code)]
@@ -2148,11 +2148,11 @@ impl<'a, 'b> SyscallInvokeSigned<'a, 'b> for SyscallInvokeSignedC<'a, 'b> {
         memory_mapping: &MemoryMapping,
         invoke_context: &mut InvokeContext,
     ) -> Result<Instruction, EbpfError<BpfError>> {
-        let ix_c = translate_type::<SolInstruction>(memory_mapping, addr, loader_id)?;
+        let ix_c = translate_type::<SorInstruction>(memory_mapping, addr, loader_id)?;
 
         check_instruction_size(ix_c.accounts_len, ix_c.data_len, invoke_context)?;
         let program_id = translate_type::<Pubkey>(memory_mapping, ix_c.program_id_addr, loader_id)?;
-        let meta_cs = translate_slice::<SolAccountMeta>(
+        let meta_cs = translate_slice::<SorAccountMeta>(
             memory_mapping,
             ix_c.accounts_addr,
             ix_c.accounts_len as u64,
@@ -2194,7 +2194,7 @@ impl<'a, 'b> SyscallInvokeSigned<'a, 'b> for SyscallInvokeSignedC<'a, 'b> {
         memory_mapping: &MemoryMapping,
         invoke_context: &mut InvokeContext,
     ) -> Result<TranslatedAccounts<'c>, EbpfError<BpfError>> {
-        let account_infos = translate_slice::<SolAccountInfo>(
+        let account_infos = translate_slice::<SorAccountInfo>(
             memory_mapping,
             account_infos_addr,
             account_infos_len,
@@ -2208,11 +2208,11 @@ impl<'a, 'b> SyscallInvokeSigned<'a, 'b> for SyscallInvokeSignedC<'a, 'b> {
             })
             .collect::<Result<Vec<_>, EbpfError<BpfError>>>()?;
 
-        let translate = |account_info: &SolAccountInfo, invoke_context: &InvokeContext| {
+        let translate = |account_info: &SorAccountInfo, invoke_context: &InvokeContext| {
             // Translate the account from user space
 
-            let lamports =
-                translate_type_mut::<u64>(memory_mapping, account_info.lamports_addr, loader_id)?;
+            let wens =
+                translate_type_mut::<u64>(memory_mapping, account_info.wens_addr, loader_id)?;
             let owner =
                 translate_type_mut::<Pubkey>(memory_mapping, account_info.owner_addr, loader_id)?;
             let vm_data_addr = account_info.data_addr;
@@ -2248,7 +2248,7 @@ impl<'a, 'b> SyscallInvokeSigned<'a, 'b> for SyscallInvokeSignedC<'a, 'b> {
             )?;
 
             Ok(CallerAccount {
-                lamports,
+                wens,
                 owner,
                 original_data_len: 0, // set later
                 data,
@@ -2279,7 +2279,7 @@ impl<'a, 'b> SyscallInvokeSigned<'a, 'b> for SyscallInvokeSignedC<'a, 'b> {
         memory_mapping: &MemoryMapping,
     ) -> Result<Vec<Pubkey>, EbpfError<BpfError>> {
         if signers_seeds_len > 0 {
-            let signers_seeds = translate_slice::<SolSignerSeedC>(
+            let signers_seeds = translate_slice::<SorSignerSeedC>(
                 memory_mapping,
                 signers_seeds_addr,
                 signers_seeds_len,
@@ -2291,7 +2291,7 @@ impl<'a, 'b> SyscallInvokeSigned<'a, 'b> for SyscallInvokeSignedC<'a, 'b> {
             Ok(signers_seeds
                 .iter()
                 .map(|signer_seeds| {
-                    let seeds = translate_slice::<SolSignerSeedC>(
+                    let seeds = translate_slice::<SorSignerSeedC>(
                         memory_mapping,
                         signer_seeds.addr,
                         signer_seeds.len,
@@ -2375,7 +2375,7 @@ where
                     let mut account = account.borrow_mut();
                     account.copy_into_owner_from_slice(caller_account.owner.as_ref());
                     account.set_data_from_slice(caller_account.data);
-                    account.set_wens(*caller_account.lamports);
+                    account.set_wens(*caller_account.wens);
                     account.set_executable(caller_account.executable);
                     account.set_rent_epoch(caller_account.rent_epoch);
                 }
@@ -2554,7 +2554,7 @@ fn call<'a, 'b: 'a>(
     for (callee_account, caller_account) in accounts.iter_mut() {
         if let Some(caller_account) = caller_account {
             let callee_account = callee_account.borrow();
-            *caller_account.lamports = callee_account.wens();
+            *caller_account.wens = callee_account.wens();
             *caller_account.owner = *callee_account.owner();
             let new_len = callee_account.data().len();
             if caller_account.data.len() != new_len {
@@ -3274,7 +3274,7 @@ mod tests {
 
     #[test]
     #[should_panic(expected = "UserError(SyscallError(Panic(\"Gaggablaghblagh!\", 42, 84)))")]
-    fn test_syscall_sol_panic() {
+    fn test_syscall_sor_panic() {
         let program_id = Pubkey::new_unique();
         let program_account = AccountSharedData::new_ref(0, 0, &bpf_loader::id());
         let accounts = [(program_id, program_account)];
@@ -3351,7 +3351,7 @@ mod tests {
     }
 
     #[test]
-    fn test_syscall_sol_log() {
+    fn test_syscall_sor_log() {
         let program_id = Pubkey::new_unique();
         let program_account = AccountSharedData::new_ref(0, 0, &bpf_loader::id());
         let accounts = [(program_id, program_account)];
@@ -3363,7 +3363,7 @@ mod tests {
         invoke_context
             .push(&message, &message.instructions()[0], &[0], &[])
             .unwrap();
-        let mut syscall_sol_log = SyscallLog {
+        let mut syscall_sor_log = SyscallLog {
             invoke_context: Rc::new(RefCell::new(&mut invoke_context)),
         };
 
@@ -3385,14 +3385,14 @@ mod tests {
         )
         .unwrap();
 
-        syscall_sol_log
+        syscall_sor_log
             .invoke_context
             .borrow_mut()
             .get_compute_meter()
             .borrow_mut()
             .mock_set_remaining(400 - 1);
         let mut result: Result<u64, EbpfError<BpfError>> = Ok(0);
-        syscall_sol_log.call(
+        syscall_sor_log.call(
             0x100000001, // AccessViolation
             string.len() as u64,
             0,
@@ -3403,7 +3403,7 @@ mod tests {
         );
         assert_access_violation!(result, 0x100000001, string.len() as u64);
         let mut result: Result<u64, EbpfError<BpfError>> = Ok(0);
-        syscall_sol_log.call(
+        syscall_sor_log.call(
             0x100000000,
             string.len() as u64 * 2, // AccessViolation
             0,
@@ -3415,7 +3415,7 @@ mod tests {
         assert_access_violation!(result, 0x100000000, string.len() as u64 * 2);
 
         let mut result: Result<u64, EbpfError<BpfError>> = Ok(0);
-        syscall_sol_log.call(
+        syscall_sor_log.call(
             0x100000000,
             string.len() as u64,
             0,
@@ -3426,7 +3426,7 @@ mod tests {
         );
         result.unwrap();
         let mut result: Result<u64, EbpfError<BpfError>> = Ok(0);
-        syscall_sol_log.call(
+        syscall_sor_log.call(
             0x100000000,
             string.len() as u64,
             0,
@@ -3443,7 +3443,7 @@ mod tests {
         );
 
         assert_eq!(
-            syscall_sol_log
+            syscall_sor_log
                 .invoke_context
                 .borrow()
                 .get_log_collector()
@@ -3455,7 +3455,7 @@ mod tests {
     }
 
     #[test]
-    fn test_syscall_sol_log_u64() {
+    fn test_syscall_sor_log_u64() {
         let program_id = Pubkey::new_unique();
         let program_account = AccountSharedData::new_ref(0, 0, &bpf_loader::id());
         let accounts = [(program_id, program_account)];
@@ -3468,11 +3468,11 @@ mod tests {
             .push(&message, &message.instructions()[0], &[0], &[])
             .unwrap();
         let cost = invoke_context.get_compute_budget().log_64_units;
-        let mut syscall_sol_log_u64 = SyscallLogU64 {
+        let mut syscall_sor_log_u64 = SyscallLogU64 {
             invoke_context: Rc::new(RefCell::new(&mut invoke_context)),
         };
 
-        syscall_sol_log_u64
+        syscall_sor_log_u64
             .invoke_context
             .borrow_mut()
             .get_compute_meter()
@@ -3481,11 +3481,11 @@ mod tests {
         let config = Config::default();
         let memory_mapping = MemoryMapping::new::<UserError>(vec![], &config).unwrap();
         let mut result: Result<u64, EbpfError<BpfError>> = Ok(0);
-        syscall_sol_log_u64.call(1, 2, 3, 4, 5, &memory_mapping, &mut result);
+        syscall_sor_log_u64.call(1, 2, 3, 4, 5, &memory_mapping, &mut result);
         result.unwrap();
 
         assert_eq!(
-            syscall_sol_log_u64
+            syscall_sor_log_u64
                 .invoke_context
                 .borrow()
                 .get_log_collector()
@@ -3497,7 +3497,7 @@ mod tests {
     }
 
     #[test]
-    fn test_syscall_sol_pubkey() {
+    fn test_syscall_sor_pubkey() {
         let program_id = Pubkey::new_unique();
         let program_account = AccountSharedData::new_ref(0, 0, &bpf_loader::id());
         let accounts = [(program_id, program_account)];
@@ -3510,7 +3510,7 @@ mod tests {
             .push(&message, &message.instructions()[0], &[0], &[])
             .unwrap();
         let cost = invoke_context.get_compute_budget().log_pubkey_units;
-        let mut syscall_sol_pubkey = SyscallLogPubkey {
+        let mut syscall_sor_pubkey = SyscallLogPubkey {
             invoke_context: Rc::new(RefCell::new(&mut invoke_context)),
         };
 
@@ -3533,7 +3533,7 @@ mod tests {
         .unwrap();
 
         let mut result: Result<u64, EbpfError<BpfError>> = Ok(0);
-        syscall_sol_pubkey.call(
+        syscall_sor_pubkey.call(
             0x100000001, // AccessViolation
             32,
             0,
@@ -3544,14 +3544,14 @@ mod tests {
         );
         assert_access_violation!(result, 0x100000001, 32);
 
-        syscall_sol_pubkey
+        syscall_sor_pubkey
             .invoke_context
             .borrow_mut()
             .get_compute_meter()
             .borrow_mut()
             .mock_set_remaining(1);
         let mut result: Result<u64, EbpfError<BpfError>> = Ok(0);
-        syscall_sol_pubkey.call(100, 32, 0, 0, 0, &memory_mapping, &mut result);
+        syscall_sor_pubkey.call(100, 32, 0, 0, 0, &memory_mapping, &mut result);
         assert_eq!(
             Err(EbpfError::UserError(BpfError::SyscallError(
                 SyscallError::InstructionError(InstructionError::ComputationalBudgetExceeded)
@@ -3559,18 +3559,18 @@ mod tests {
             result
         );
 
-        syscall_sol_pubkey
+        syscall_sor_pubkey
             .invoke_context
             .borrow_mut()
             .get_compute_meter()
             .borrow_mut()
             .mock_set_remaining(cost);
         let mut result: Result<u64, EbpfError<BpfError>> = Ok(0);
-        syscall_sol_pubkey.call(0x100000000, 0, 0, 0, 0, &memory_mapping, &mut result);
+        syscall_sor_pubkey.call(0x100000000, 0, 0, 0, 0, &memory_mapping, &mut result);
         result.unwrap();
 
         assert_eq!(
-            syscall_sol_pubkey
+            syscall_sor_pubkey
                 .invoke_context
                 .borrow()
                 .get_log_collector()
@@ -3582,7 +3582,7 @@ mod tests {
     }
 
     #[test]
-    fn test_syscall_sol_alloc_free() {
+    fn test_syscall_sor_alloc_free() {
         let config = Config::default();
         // large alloc
         {
@@ -4017,7 +4017,7 @@ mod tests {
             .unwrap();
 
             let src_rent = Rent {
-                lamports_per_byte_year: 1,
+                wens_per_byte_year: 1,
                 exemption_threshold: 2.0,
                 burn_percent: 3,
             };
@@ -4155,7 +4155,7 @@ mod tests {
 
     #[test]
     fn test_create_program_address() {
-        // These tests duplicate the direct tests in solana_program::pubkey
+        // These tests duplicate the direct tests in sino_program::pubkey
 
         let program_id = Pubkey::new_unique();
         let program_account = AccountSharedData::new_ref(0, 0, &bpf_loader::id());

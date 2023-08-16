@@ -9,6 +9,6 @@ pub use sino_program::log::*;
 )]
 macro_rules! info {
     ($msg:expr) => {
-        $crate::log::sol_log($msg)
+        $crate::log::sor_log($msg)
     };
 }

@@ -84,8 +84,8 @@ pub enum UpgradeableLoaderInstruction {
     /// A program can be updated as long as the program's authority has not been
     /// set to `None`.
     ///
-    /// The Buffer account must contain sufficient lamports to fund the
-    /// ProgramData account to be rent-exempt, any additional lamports left over
+    /// The Buffer account must contain sufficient wens to fund the
+    /// ProgramData account to be rent-exempt, any additional wens left over
     /// will be transferred to the spill account, leaving the Buffer account
     /// balance at zero.
     ///
@@ -113,13 +113,13 @@ pub enum UpgradeableLoaderInstruction {
     ///      not be upgradeable.
     SetAuthority,
 
-    /// Closes an account owned by the upgradeable loader of all lamports and
-    /// withdraws all the lamports
+    /// Closes an account owned by the upgradeable loader of all wens and
+    /// withdraws all the wens
     ///
     /// # Account references
     ///   0. `[writable]` The account to close, if closing a program must be the
     ///      ProgramData account.
-    ///   1. `[writable]` The account to deposit the closed account's lamports.
+    ///   1. `[writable]` The account to deposit the closed account's wens.
     ///   2. `[signer]` The account's authority, Optional, required for
     ///      initialized accounts.
     ///   3. `[writable]` The associated Program account if the account to close

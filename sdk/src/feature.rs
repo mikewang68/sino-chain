@@ -15,9 +15,9 @@ pub fn to_account(feature: &Feature, account: &mut AccountSharedData) -> Option<
     bincode::serialize_into(account.data_as_mut_slice(), feature).ok()
 }
 
-pub fn create_account(feature: &Feature, lamports: u64) -> AccountSharedData {
+pub fn create_account(feature: &Feature, wens: u64) -> AccountSharedData {
     let data_len = Feature::size_of().max(bincode::serialized_size(feature).unwrap() as usize);
-    let mut account = AccountSharedData::new(lamports, data_len, &id());
+    let mut account = AccountSharedData::new(wens, data_len, &id());
     to_account(feature, &mut account).unwrap();
     account
 }

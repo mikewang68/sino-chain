@@ -14,7 +14,7 @@ use {
         pubkey::Pubkey,
     },
     //-----------------------------------------------------------
-    spl_token::{solana_program::program_pack::Pack, state::Mint},
+    spl_token::{sino_program::program_pack::Pack, state::Mint},
     std::{collections::HashMap, sync::Arc},
 };
 

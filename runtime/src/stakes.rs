@@ -85,7 +85,7 @@ impl StakesCache {
                 let stake = if account.wens() != 0 {
                     delegation.stake(stakes.epoch, Some(&stakes.stake_history))
                 } else {
-                    // when account is removed (lamports == 0), this special `else` clause ensures
+                    // when account is removed (wens == 0), this special `else` clause ensures
                     // resetting cached stake value below, even if the account happens to be
                     // still staked for some (odd) reason
                     0
@@ -268,13 +268,13 @@ impl Stakes {
             .sum()
     }
 
-    /// Sum the lamports of the vote accounts and the delegated stake
+    /// Sum the wens of the vote accounts and the delegated stake
     pub fn vote_balance_and_staked(&self) -> u64 {
         let get_stake = |(_, stake_delegation): (_, &Delegation)| stake_delegation.stake;
-        let get_lamports = |(_, (_, vote_account)): (_, &(_, VoteAccount))| vote_account.lamports();
+        let get_wens = |(_, (_, vote_account)): (_, &(_, VoteAccount))| vote_account.wens();
 
         self.stake_delegations.iter().map(get_stake).sum::<u64>()
-            + self.vote_accounts.iter().map(get_lamports).sum::<u64>()
+            + self.vote_accounts.iter().map(get_wens).sum::<u64>()
     }
 
     pub fn remove_vote_account(&mut self, vote_pubkey: &Pubkey) {
@@ -316,7 +316,7 @@ impl Stakes {
         new_delegation: Option<(u64, Delegation)>,
         remove_delegation: bool,
     ) {
-        //  old_stake is stake lamports and voter_pubkey from the pre-store() version
+        //  old_stake is stake wens and voter_pubkey from the pre-store() version
         let old_stake = self.stake_delegations.get(stake_pubkey).map(|delegation| {
             (
                 delegation.voter_pubkey,
@@ -337,7 +337,7 @@ impl Stakes {
         }
 
         if remove_delegation {
-            // when account is removed (lamports == 0), remove it from Stakes as well
+            // when account is removed (wens == 0), remove it from Stakes as well
             // so that given `pubkey` can be used for any owner in the future, while not
             // affecting Stakes.
             self.stake_delegations.remove(stake_pubkey);
@@ -751,7 +751,7 @@ pub mod tests {
             pub fn vote_balance_and_warmed_staked(&self) -> u64 {
                 self.vote_accounts
                     .iter()
-                    .map(|(_pubkey, (staked, account))| staked + account.lamports())
+                    .map(|(_pubkey, (staked, account))| staked + account.wens())
                     .sum()
             }
         }
@@ -771,7 +771,7 @@ pub mod tests {
         let thread_pool = ThreadPoolBuilder::new().num_threads(1).build().unwrap();
         for (epoch, expected_warmed_stake) in ((genesis_epoch + 1)..=3).zip(&[2, 3, 4]) {
             stakes_cache.activate_epoch(epoch, &thread_pool);
-            // vote_balance_and_staked() always remain to return same lamports
+            // vote_balance_and_staked() always remain to return same wens
             // while vote_balance_and_warmed_staked() gradually increases
             let stakes = stakes_cache.stakes();
             assert_eq!(stakes.vote_balance_and_staked(), 11);

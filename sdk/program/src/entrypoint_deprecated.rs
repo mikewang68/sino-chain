@@ -83,7 +83,7 @@ pub unsafe fn deserialize<'a>(input: *mut u8) -> (&'a Pubkey, Vec<AccountInfo<'a
             offset += size_of::<Pubkey>();
 
             #[allow(clippy::cast_ptr_alignment)]
-            let lamports = Rc::new(RefCell::new(&mut *(input.add(offset) as *mut u64)));
+            let wens = Rc::new(RefCell::new(&mut *(input.add(offset) as *mut u64)));
             offset += size_of::<u64>();
 
             #[allow(clippy::cast_ptr_alignment)]
@@ -110,7 +110,7 @@ pub unsafe fn deserialize<'a>(input: *mut u8) -> (&'a Pubkey, Vec<AccountInfo<'a
                 key,
                 is_signer,
                 is_writable,
-                lamports,
+                wens,
                 data,
                 owner,
                 executable,

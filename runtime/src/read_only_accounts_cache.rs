@@ -176,9 +176,9 @@ mod tests {
             ..Account::default()
         });
         let mut account2 = account1.clone();
-        account2.checked_add_lamports(1).unwrap(); // so they compare differently
+        account2.checked_add_wens(1).unwrap(); // so they compare differently
         let mut account3 = account1.clone();
-        account3.checked_add_lamports(4).unwrap(); // so they compare differently
+        account3.checked_add_wens(4).unwrap(); // so they compare differently
         cache.store(key1, slot, account1.clone());
         assert_eq!(100 + per_account_size, cache.data_size());
         assert!(accounts_equal(&cache.load(key1, slot).unwrap(), &account1));
@@ -248,7 +248,7 @@ mod tests {
                 let mut data = vec![0u8; DATA_SIZE];
                 rng.fill(&mut data[..]);
                 let account = AccountSharedData::from(Account {
-                    lamports: rng.gen(),
+                    wens: rng.gen(),
                     data,
                     executable: rng.gen(),
                     rent_epoch: rng.gen(),

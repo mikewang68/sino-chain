@@ -52,7 +52,7 @@ impl BlockhashQueue {
         self.last_hash.expect("no hash has been set")
     }
 
-    pub fn get_lamports_per_signature(&self, hash: &Hash) -> Option<u64> {
+    pub fn get_wens_per_signature(&self, hash: &Hash) -> Option<u64> {
         self.ages
             .get(hash)
             .map(|hash_age| hash_age.fee_calculator.wens_per_signature)
@@ -78,11 +78,11 @@ impl BlockhashQueue {
         self.ages.get(hash).is_some()
     }
 
-    pub fn genesis_hash(&mut self, hash: &Hash, lamports_per_signature: u64) {
+    pub fn genesis_hash(&mut self, hash: &Hash, wens_per_signature: u64) {
         self.ages.insert(
             *hash,
             HashAge {
-                fee_calculator: FeeCalculator::new(lamports_per_signature),
+                fee_calculator: FeeCalculator::new(wens_per_signature),
                 hash_height: 0,
                 timestamp: timestamp(),
             },
@@ -95,7 +95,7 @@ impl BlockhashQueue {
         hash_height - age.hash_height <= max_age as u64
     }
 
-    pub fn register_hash(&mut self, hash: &Hash, lamports_per_signature: u64) {
+    pub fn register_hash(&mut self, hash: &Hash, wens_per_signature: u64) {
         self.hash_height += 1;
         let hash_height = self.hash_height;
 
@@ -109,7 +109,7 @@ impl BlockhashQueue {
         self.ages.insert(
             *hash,
             HashAge {
-                fee_calculator: FeeCalculator::new(lamports_per_signature),
+                fee_calculator: FeeCalculator::new(wens_per_signature),
                 hash_height,
                 timestamp: timestamp(),
             },
@@ -292,7 +292,7 @@ mod tests {
         let recent_blockhashes = blockhash_queue.get_recent_blockhashes();
         // Verify that the returned hashes are most recent
         #[allow(deprecated)]
-        for IterItem(_slot, hash, _lamports_per_signature) in recent_blockhashes {
+        for IterItem(_slot, hash, _wens_per_signature) in recent_blockhashes {
             assert_eq!(
                 Some(true),
                 blockhash_queue.check_hash_age(hash, MAX_RECENT_BLOCKHASHES)

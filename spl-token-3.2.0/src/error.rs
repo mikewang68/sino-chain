@@ -8,8 +8,8 @@ use thiserror::Error;
 #[derive(Clone, Debug, Eq, Error, FromPrimitive, PartialEq)]
 pub enum TokenError {
     // 0
-    /// Lamport balance below rent-exempt threshold.
-    #[error("Lamport balance below rent-exempt threshold")]
+    /// Wen balance below rent-exempt threshold.
+    #[error("Wen balance below rent-exempt threshold")]
     NotRentExempt,
     /// Insufficient funds for the operation requested.
     #[error("Insufficient funds")]

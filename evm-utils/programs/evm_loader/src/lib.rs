@@ -243,7 +243,7 @@ pub fn transfer_native_to_evm_ixs(
 /// Create an account that represent evm locked wens count.
 pub fn create_state_account(wens: u64) -> sdk::account::AccountSharedData {
     sdk::account::Account {
-        lamports: wens + 1,
+        wens: wens + 1,
         owner: crate::ID,
         data: b"Evm state".to_vec(),
         executable: false,

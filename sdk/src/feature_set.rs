@@ -181,7 +181,7 @@ pub mod reduce_required_deploy_balance {
     sdk::declare_id!("5MpaxB8P2qcQ2XUVop3nkEzTXK3usY9NkjvWzDezJP2t");
 }
 
-pub mod sol_log_data_syscall_enabled {
+pub mod sor_log_data_syscall_enabled {
     sdk::declare_id!("7ZJWhQSS55aX3McX2KVenrBpG88cxuTrPhH41sjZhPT3");
 }
 
@@ -471,7 +471,7 @@ lazy_static! {
             (set_upgrade_authority_via_cpi_enabled::id(), "set upgrade authority instruction via cpi calls for upgradable programs"),
             (keccak256_syscall_enabled::id(), "keccak256 syscall"),
             (stake_program_v4::id(), "solana_stake_program v4"),
-            (system_transfer_zero_check::id(), "perform all checks for transfers of 0 lamports"),
+            (system_transfer_zero_check::id(), "perform all checks for transfers of 0 wens"),
             (full_inflation::mainnet::certusone::enable::id(), "full inflation enabled by Certus One"),
             (secp256k1_recover_syscall_enabled::id(), "secp256k1_recover syscall"),
             (blake3_syscall_enabled::id(), "blake3 syscall"),
@@ -493,9 +493,9 @@ lazy_static! {
             (stake_program_advance_activating_credits_observed::id(), "Enable advancing credits observed for activation epoch #19309"),
             (demote_program_write_locks::id(), "demote program write locks to readonly, except when upgradeable loader present #19593 #20265"),
             (ed25519_program_enabled::id(), "enable builtin ed25519 signature verify program"),
-            (return_data_syscall_enabled::id(), "enable sol_{set,get}_return_data syscall"),
+            (return_data_syscall_enabled::id(), "enable sor_{set,get}_return_data syscall"),
             (reduce_required_deploy_balance::id(), "reduce required payer balance for program deploys"),
-            (sol_log_data_syscall_enabled::id(), "enable sol_log_data syscall"),
+            (sor_log_data_syscall_enabled::id(), "enable sor_log_data syscall"),
             (stakes_remove_delegation_if_inactive::id(), "remove delegations from stakes cache when inactive"),
             (do_support_realloc::id(), "support account data reallocation"),
             (prevent_calling_precompiles_as_programs::id(), "prevent calling precompiles as programs"),

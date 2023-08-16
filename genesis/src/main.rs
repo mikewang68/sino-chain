@@ -29,7 +29,7 @@ use {
             ClusterType, GenesisConfig
         },
         inflation::Inflation,
-        native_token::sol_to_lamports,
+        native_token::sor_to_wens,
         poh_config::PohConfig,
         pubkey::Pubkey,
         rent::Rent,
@@ -63,7 +63,7 @@ fn pubkey_from_str(key_str: &str) -> Result<Pubkey, Box<dyn error::Error>> {
     })
 }
 pub fn load_genesis_accounts(file: &str, genesis_config: &mut GenesisConfig) -> io::Result<u64> {
-    let mut lamports = 0;
+    let mut wens = 0;
     let accounts_file = File::open(file)?;
 
     let genesis_accounts: HashMap<String, Base64Account> =
@@ -97,23 +97,23 @@ pub fn load_genesis_accounts(file: &str, genesis_config: &mut GenesisConfig) -> 
             );
         }
         account.set_executable(account_details.executable);
-        lamports += account.wens();
+        wens += account.wens();
         genesis_config.add_account(pubkey, account);
     }
 
-    Ok(lamports)
+    Ok(wens)
 }
 #[allow(clippy::cognitive_complexity)]
 fn main() -> Result<(), Box<dyn error::Error>> {
     let default_faucet_pubkey = cli_config::Config::default().keypair_path;
     let fee_rate_governor = FeeRateGovernor::default();
     let (
-        default_target_lamports_per_signature,
+        default_target_wens_per_signature,
         default_target_signatures_per_slot,
         default_fee_burn_percentage,
     ) = {
         (
-            &fee_rate_governor.target_lamports_per_signature.to_string(),
+            &fee_rate_governor.target_wens_per_signature.to_string(),
             &fee_rate_governor.target_signatures_per_slot.to_string(),
             &fee_rate_governor.burn_percent.to_string(),
         )
@@ -121,23 +121,23 @@ fn main() -> Result<(), Box<dyn error::Error>> {
 
     let rent = Rent::default();
     let (
-        default_lamports_per_byte_year,
+        default_wens_per_byte_year,
         default_rent_exemption_threshold,
         default_rent_burn_percentage,
     ) = {
         (
-            &rent.lamports_per_byte_year.to_string(),
+            &rent.wens_per_byte_year.to_string(),
             &rent.exemption_threshold.to_string(),
             &rent.burn_percent.to_string(),
         )
     };
 
     // vote account 投票账户
-    let default_bootstrap_validator_lamports = &sol_to_lamports(500.0)
+    let default_bootstrap_validator_wens = &sor_to_wens(500.0)
         .max(VoteState::get_rent_exempt_reserve(&rent))
         .to_string();
     // stake account 质押账户
-    let default_bootstrap_validator_stake_lamports = &sol_to_lamports(0.5)
+    let default_bootstrap_validator_stake_wens = &sor_to_wens(0.5)
         .max(StakeState::get_rent_exempt_reserve(&rent)).to_string();
 
     let default_target_tick_duration =
@@ -179,12 +179,12 @@ fn main() -> Result<(), Box<dyn error::Error>> {
                 .help("Use directory as persistent ledger location"),//使用目录作为持久化账本位置
         )
         .arg(
-            Arg::with_name("faucet_lamports")
+            Arg::with_name("faucet_wens")
                 .short("t")
-                .long("faucet-lamports")
-                .value_name("LAMPORTS")
+                .long("faucet-wens")
+                .value_name("WENS")
                 .takes_value(true)
-                .help("Number of lamports to assign to the faucet"),
+                .help("Number of wens to assign to the faucet"),
         )
         .arg(
             Arg::with_name("faucet_pubkey")//参数的名称为"faucet_pubkey"。
@@ -193,7 +193,7 @@ fn main() -> Result<(), Box<dyn error::Error>> {
                 .value_name("PUBKEY")//值的名称为"PUBKEY",且要求一个值
                 .takes_value(true)
                 .validator(is_pubkey_or_keypair)//使用is_pubkey_or_keypair验证器验证输入的值。
-                .requires("faucet_lamports")//参数需要同时指定"faucet_lamports"参数，使用requires方法指定这个依赖关系。//该参数依赖于faucet_lamports
+                .requires("faucet_wens")//参数需要同时指定"faucet_wens"参数，使用requires方法指定这个依赖关系。//该参数依赖于faucet_wens
                 .default_value(&default_faucet_pubkey)//使用default_value方法为该参数指定一个默认值default_faucet_pubkey。
                 .help("Path to file containing the faucet's pubkey"),
         )
@@ -209,40 +209,40 @@ fn main() -> Result<(), Box<dyn error::Error>> {
                 ),
         )
         .arg(
-            Arg::with_name("bootstrap_validator_lamports")
-                .long("bootstrap-validator-lamports")
-                .value_name("LAMPORTS")
+            Arg::with_name("bootstrap_validator_wens")
+                .long("bootstrap-validator-wens")
+                .value_name("WENS")
                 .takes_value(true)
-                .default_value(default_bootstrap_validator_lamports)
-                .help("Number of lamports to assign to the bootstrap validator"),
+                .default_value(default_bootstrap_validator_wens)
+                .help("Number of wens to assign to the bootstrap validator"),
         )
         .arg(
-            Arg::with_name("bootstrap_validator_stake_lamports")
-                .long("bootstrap-validator-stake-lamports")
-                .value_name("LAMPORTS")
+            Arg::with_name("bootstrap_validator_stake_wens")
+                .long("bootstrap-validator-stake-wens")
+                .value_name("WENS")
                 .takes_value(true)
-                .default_value(default_bootstrap_validator_stake_lamports)
-                .help("Number of lamports to assign to the bootstrap validator's stake account"),
+                .default_value(default_bootstrap_validator_stake_wens)
+                .help("Number of wens to assign to the bootstrap validator's stake account"),
         )
         .arg(
-            Arg::with_name("target_lamports_per_signature")
-                .long("target-lamports-per-signature")
-                .value_name("LAMPORTS")
+            Arg::with_name("target_wens_per_signature")
+                .long("target-wens-per-signature")
+                .value_name("WENS")
                 .takes_value(true)
-                .default_value(default_target_lamports_per_signature)
+                .default_value(default_target_wens_per_signature)
                 .help(
-                    "The cost in lamports that the cluster will charge for signature \
+                    "The cost in wens that the cluster will charge for signature \
                      verification when the cluster is operating at target-signatures-per-slot",
                 ),
         )
         .arg(
-            Arg::with_name("lamports_per_byte_year")
-                .long("lamports-per-byte-year")
-                .value_name("LAMPORTS")
+            Arg::with_name("wens_per_byte_year")
+                .long("wens-per-byte-year")
+                .value_name("WENS")
                 .takes_value(true)
-                .default_value(default_lamports_per_byte_year)
+                .default_value(default_wens_per_byte_year)
                 .help(
-                    "The cost in lamports that the cluster will charge per byte per year \
+                    "The cost in wens that the cluster will charge per byte per year \
                      for accounts with data",
                 ), 
         )
@@ -293,7 +293,7 @@ fn main() -> Result<(), Box<dyn error::Error>> {
                 .help(
                     "Used to estimate the desired processing capacity of the cluster. \
                     When the latest slot processes fewer/greater signatures than this \
-                    value, the lamports-per-signature fee will decrease/increase for \
+                    value, the wens-per-signature fee will decrease/increase for \
                     the next slot. A value of 0 disables signature-based fee adjustments",
                 ),
         )
@@ -417,24 +417,24 @@ fn main() -> Result<(), Box<dyn error::Error>> {
     let ledger_path = PathBuf::from(matches.value_of("ledger_path").unwrap());
 
     let rent = Rent {
-        lamports_per_byte_year: value_t_or_exit!(matches, "lamports_per_byte_year", u64),
+        wens_per_byte_year: value_t_or_exit!(matches, "wens_per_byte_year", u64),
         exemption_threshold: value_t_or_exit!(matches, "rent_exemption_threshold", f64),
         burn_percent: value_t_or_exit!(matches, "rent_burn_percentage", u8),
     };
 
     fn rent_exempt_check(matches: &ArgMatches<'_>, name: &str, exempt: u64) -> io::Result<u64> {
-        let lamports = value_t_or_exit!(matches, name, u64);
+        let wens = value_t_or_exit!(matches, name, u64);
 
-        if lamports < exempt {
+        if wens < exempt {
             Err(io::Error::new(
                 io::ErrorKind::Other,
                 format!(
                     "error: insufficient {}: {} for rent exemption, requires {}",
-                    name, lamports, exempt
+                    name, wens, exempt
                 ),
             ))
         } else {
-            Ok(lamports)
+            Ok(wens)
         }
     }
 
@@ -452,26 +452,26 @@ fn main() -> Result<(), Box<dyn error::Error>> {
         }
     }
 
-    let bootstrap_validator_lamports =
-        value_t_or_exit!(matches, "bootstrap_validator_lamports", u64);
+    let bootstrap_validator_wens =
+        value_t_or_exit!(matches, "bootstrap_validator_wens", u64);
 
-    let bootstrap_validator_stake_lamports =
-        value_t_or_exit!(matches, "bootstrap_validator_stake_lamports", u64);
+    let bootstrap_validator_stake_wens =
+        value_t_or_exit!(matches, "bootstrap_validator_stake_wens", u64);
     rent_exempt_check(
         &matches,
-        "bootstrap_validator_stake_lamports",
-        bootstrap_validator_stake_lamports,
+        "bootstrap_validator_stake_wens",
+        bootstrap_validator_stake_wens,
     )?;
 
     let bootstrap_stake_authorized_pubkey =
         pubkey_of(&matches, "bootstrap_stake_authorized_pubkey");
-    let faucet_lamports = value_t!(matches, "faucet_lamports", u64).unwrap_or(0);
+    let faucet_wens = value_t!(matches, "faucet_wens", u64).unwrap_or(0);
     let faucet_pubkey = pubkey_of(&matches, "faucet_pubkey");
 
     let ticks_per_slot = value_t_or_exit!(matches, "ticks_per_slot", u64);
 
     let mut fee_rate_governor = FeeRateGovernor::new(
-        value_t_or_exit!(matches, "target_lamports_per_signature", u64),
+        value_t_or_exit!(matches, "target_wens_per_signature", u64),
         value_t_or_exit!(matches, "target_signatures_per_slot", u64),
     );
     fee_rate_governor.burn_percent = value_t_or_exit!(matches, "fee_burn_percentage", u8);
@@ -610,7 +610,7 @@ fn main() -> Result<(), Box<dyn error::Error>> {
 
         genesis_config.add_account(
             *identity_pubkey,
-            AccountSharedData::new(bootstrap_validator_lamports, 0, &system_program::id()),
+            AccountSharedData::new(bootstrap_validator_wens, 0, &system_program::id()),
         );
 
         let vote_account = vote_state::create_account_with_authorized(
@@ -630,7 +630,7 @@ fn main() -> Result<(), Box<dyn error::Error>> {
                 vote_pubkey,
                 &vote_account,
                 &rent,
-                bootstrap_validator_stake_lamports,
+                bootstrap_validator_stake_wens,
             ),
         );
 
@@ -646,7 +646,7 @@ fn main() -> Result<(), Box<dyn error::Error>> {
     if let Some(faucet_pubkey) = faucet_pubkey {
         genesis_config.add_account(
             faucet_pubkey,
-            AccountSharedData::new(faucet_lamports, 0, &system_program::id()),
+            AccountSharedData::new(faucet_wens, 0, &system_program::id()),
         );
     }
 
@@ -676,12 +676,12 @@ fn main() -> Result<(), Box<dyn error::Error>> {
         value_t_or_exit!(matches, "max_genesis_archive_unpacked_size", u64);
 
     // -------------------- evm 状态余额 ----------------------
-    // evm两种客户端转储文件中读取的账户余额添加到evm state余额，并将Gwei转lamport
+    // evm两种客户端转储文件中读取的账户余额添加到evm state余额，并将Gwei转wen
     let mut evm_state_balance = U256::zero();
 
     match evm_state_json {
         EvmStateJson::OpenEthereum(path) => {
-            info!("Calculating evm state lamports");
+            info!("Calculating evm state wens");
             let dump_extractor = OpenEthereumAccountExtractor::open_dump(path)
                 .unwrap_or_else(|_| {
                     panic!(
@@ -695,7 +695,7 @@ fn main() -> Result<(), Box<dyn error::Error>> {
             }
         },
         EvmStateJson::Geth(path) => {
-            info!("Calculating evm state lamports");
+            info!("Calculating evm state wens");
             let dump_extractor = GethAccountExtractor::open_dump(path)
                 .unwrap_or_else(|_| {
                     panic!(
@@ -713,31 +713,31 @@ fn main() -> Result<(), Box<dyn error::Error>> {
         },
     }
 
-    let (mut evm_state_lamports, change) =
+    let (mut evm_state_wens, change) =
         evm_loader_program::scope::evm::gweis_to_wens(evm_state_balance);
     if change != U256::zero() {
-        evm_state_lamports += 1;
+        evm_state_wens += 1;
     }
 
     // 将state账户添加到genesis config中
     genesis_config.add_account(
         sdk::evm_state::ID,
-        evm_loader_program::create_state_account(evm_state_lamports),
+        evm_loader_program::create_state_account(evm_state_wens),
     );
 
-    let issued_lamports = genesis_config
+    let issued_wens = genesis_config
         .accounts
         .values()
-        .map(|account| account.lamports)
+        .map(|account| account.wens)
         .sum::<u64>();
 
     info!(
-        "Total issued lamports = {}, for faucet/bridge = {}, for evm = {}",
-        issued_lamports, faucet_lamports, evm_state_lamports
+        "Total issued wens = {}, for faucet/bridge = {}, for evm = {}",
+        issued_wens, faucet_wens, evm_state_wens
     );
 
     // TODO: add_genesis_accounts for evm.
-    // add_genesis_accounts(&mut genesis_config, issued_lamports - faucet_lamports);
+    // add_genesis_accounts(&mut genesis_config, issued_wens - faucet_wens);
     // -------------------- bpf 合约中账户添加到genesis config中---------------------
     if let Some(values) = matches.values_of("bpf_program") {
         let values: Vec<&str> = values.collect::<Vec<_>>();
@@ -764,7 +764,7 @@ fn main() -> Result<(), Box<dyn error::Error>> {
                     genesis_config.add_account(
                         address,
                         AccountSharedData::from(Account {
-                            lamports: genesis_config.rent.minimum_balance(program_data.len()),
+                            wens: genesis_config.rent.minimum_balance(program_data.len()),
                             data: program_data,
                             executable: true,
                             owner: loader,

@@ -132,7 +132,7 @@ pub struct Unlock {
 }
 
 impl Unlock {
-    /// the number of lamports unlocked at this event
+    /// the number of wens unlocked at this event
     #[allow(clippy::float_cmp)]
     pub fn amount(&self, total: u64) -> u64 {
         if self.fraction == 1.0 {
@@ -151,16 +151,16 @@ mod tests {
     #[allow(clippy::float_cmp)]
     fn test_make_lockups() {
         // this number just a random val
-        let total_lamports: u64 = 1_725_987_234_408_923;
+        let total_wens: u64 = 1_725_987_234_408_923;
 
         // expected config
         const EPOCHS_PER_MONTH: Epoch = 2;
 
         assert_eq!(
             Unlocks::from_epochs(0.20, 6 * EPOCHS_PER_MONTH, 24, EPOCHS_PER_MONTH)
-                .map(|unlock| unlock.amount(total_lamports))
+                .map(|unlock| unlock.amount(total_wens))
                 .sum::<u64>(),
-            total_lamports
+            total_wens
         );
 
         // one tick/sec
@@ -187,10 +187,10 @@ mod tests {
                 } else if unlock.prev_fraction == 0.2 {
                     assert_eq!(unlock.epoch, 15); // subsequent unlocks are separated by 2 weeks
                 }
-                unlock.amount(total_lamports)
+                unlock.amount(total_wens)
             })
             .sum::<u64>(),
-            total_lamports
+            total_wens
         );
         assert_eq!(
             Unlocks::new(
@@ -208,10 +208,10 @@ mod tests {
                 } else if unlock.prev_fraction == 0.2 {
                     assert_eq!(unlock.epoch, 26 + 15); // subsequent unlocks are separated by 2 weeks
                 }
-                unlock.amount(total_lamports)
+                unlock.amount(total_wens)
             })
             .sum::<u64>(),
-            total_lamports
+            total_wens
         );
     }
 }

@@ -129,7 +129,7 @@ impl AccountsHashVerifier {
         let mut measure_hash = Measure::start("hash");
         if let Some(expected_hash) = accounts_package.hash_for_testing {
             let sorted_storages = SortedStorages::new(&accounts_package.snapshot_storages);
-            let (hash, lamports) = AccountsDb::calculate_accounts_hash_without_index(
+            let (hash, wens) = AccountsDb::calculate_accounts_hash_without_index(
                 ledger_path,
                 &sorted_storages,
                 thread_pool,
@@ -141,7 +141,7 @@ impl AccountsHashVerifier {
             )
             .unwrap();
 
-            assert_eq!(accounts_package.expected_capitalization, lamports);
+            assert_eq!(accounts_package.expected_capitalization, wens);
             assert_eq!(expected_hash, hash);
         };
         measure_hash.stop();

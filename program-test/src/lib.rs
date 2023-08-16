@@ -31,7 +31,7 @@ use {
         hash::Hash,
         instruction::{Instruction, InstructionError},
         message::{Message, SanitizedMessage},
-        native_token::sol_to_lamports,
+        native_token::sor_to_wens,
         poh_config::PohConfig,
         program_error::{ProgramError, ACCOUNT_BORROW_FAILED, UNSUPPORTED_SYSVAR},
         pubkey::Pubkey,
@@ -122,14 +122,14 @@ pub fn builtin_process_instruction(
         })
         .collect();
 
-    // Create shared references to each account's lamports/data/owner
+    // Create shared references to each account's wens/data/owner
     let account_refs: HashMap<_, _> = accounts
         .iter_mut()
         .map(|(key, account)| {
             (
                 *key,
                 (
-                    Rc::new(RefCell::new(&mut account.lamports)),
+                    Rc::new(RefCell::new(&mut account.wens)),
                     Rc::new(RefCell::new(&mut account.data[..])),
                     &account.owner,
                 ),
@@ -142,12 +142,12 @@ pub fn builtin_process_instruction(
         .iter()
         .map(|keyed_account| {
             let key = keyed_account.unsigned_key();
-            let (lamports, data, owner) = &account_refs[key];
+            let (wens, data, owner) = &account_refs[key];
             AccountInfo {
                 key,
                 is_signer: keyed_account.signer_key().is_some(),
                 is_writable: keyed_account.is_writable(),
-                lamports: lamports.clone(),
+                wens: wens.clone(),
                 data: data.clone(),
                 owner,
                 executable: keyed_account.executable().unwrap(),
@@ -168,8 +168,8 @@ pub fn builtin_process_instruction(
     for keyed_account in keyed_accounts {
         let mut account = keyed_account.account.borrow_mut();
         let key = keyed_account.unsigned_key();
-        let (lamports, data, _owner) = &account_refs[key];
-        account.set_wens(**lamports.borrow());
+        let (wens, data, _owner) = &account_refs[key];
+        account.set_wens(**wens.borrow());
         account.set_data(data.borrow().to_vec());
     }
 
@@ -184,7 +184,7 @@ macro_rules! processor {
         Some(
             |first_instruction_account: usize,
              input: &[u8],
-             invoke_context: &mut solana_program_test::InvokeContext| {
+             invoke_context: &mut sino_program_test::InvokeContext| {
                 $crate::builtin_process_instruction(
                     $process_instruction,
                     first_instruction_account,
@@ -223,12 +223,12 @@ fn get_sysvar<T: Default + Sysvar + Sized + serde::de::DeserializeOwned + Clone>
 
 struct SyscallStubs {}
 impl sdk::program_stubs::SyscallStubs for SyscallStubs {
-    fn sol_log(&self, message: &str) {
+    fn sor_log(&self, message: &str) {
         let invoke_context = get_invoke_context();
         ic_msg!(invoke_context, "Program log: {}", message);
     }
 
-    fn sol_invoke_signed(
+    fn sor_invoke_signed(
         &self,
         instruction: &Instruction,
         account_infos: &[AccountInfo],
@@ -277,7 +277,7 @@ impl sdk::program_stubs::SyscallStubs for SyscallStubs {
                 let mut account = account.borrow_mut();
                 account.copy_into_owner_from_slice(account_info.owner.as_ref());
                 account.set_data_from_slice(&account_info.try_borrow_data().unwrap());
-                account.set_wens(account_info.lamports());
+                account.set_wens(account_info.wens());
                 account.set_executable(account_info.executable);
                 account.set_rent_epoch(account_info.rent_epoch);
             }
@@ -335,7 +335,7 @@ impl sdk::program_stubs::SyscallStubs for SyscallStubs {
         // Copy writeable account modifications back into the caller's AccountInfos
         for (account, account_info) in accounts.iter() {
             if let Some(account_info) = account_info {
-                **account_info.try_borrow_mut_lamports().unwrap() = account.borrow().wens();
+                **account_info.try_borrow_mut_wens().unwrap() = account.borrow().wens();
                 let mut data = account_info.try_borrow_mut_data()?;
                 let account_borrow = account.borrow();
                 let new_data = account_borrow.data();
@@ -363,14 +363,14 @@ impl sdk::program_stubs::SyscallStubs for SyscallStubs {
         Ok(())
     }
 
-    fn sol_get_clock_sysvar(&self, var_addr: *mut u8) -> u64 {
+    fn sor_get_clock_sysvar(&self, var_addr: *mut u8) -> u64 {
         get_sysvar(
             get_invoke_context().get_sysvar_cache().get_clock(),
             var_addr,
         )
     }
 
-    fn sol_get_epoch_schedule_sysvar(&self, var_addr: *mut u8) -> u64 {
+    fn sor_get_epoch_schedule_sysvar(&self, var_addr: *mut u8) -> u64 {
         get_sysvar(
             get_invoke_context().get_sysvar_cache().get_epoch_schedule(),
             var_addr,
@@ -378,20 +378,20 @@ impl sdk::program_stubs::SyscallStubs for SyscallStubs {
     }
 
     #[allow(deprecated)]
-    fn sol_get_fees_sysvar(&self, var_addr: *mut u8) -> u64 {
+    fn sor_get_fees_sysvar(&self, var_addr: *mut u8) -> u64 {
         get_sysvar(get_invoke_context().get_sysvar_cache().get_fees(), var_addr)
     }
 
-    fn sol_get_rent_sysvar(&self, var_addr: *mut u8) -> u64 {
+    fn sor_get_rent_sysvar(&self, var_addr: *mut u8) -> u64 {
         get_sysvar(get_invoke_context().get_sysvar_cache().get_rent(), var_addr)
     }
 
-    fn sol_get_return_data(&self) -> Option<(Pubkey, Vec<u8>)> {
+    fn sor_get_return_data(&self) -> Option<(Pubkey, Vec<u8>)> {
         let (program_id, data) = &get_invoke_context().return_data;
         Some((*program_id, data.to_vec()))
     }
 
-    fn sol_set_return_data(&self, data: &[u8]) {
+    fn sor_set_return_data(&self, data: &[u8]) {
         let invoke_context = get_invoke_context();
         let caller = *invoke_context.get_caller().unwrap();
         invoke_context.return_data = (caller, data.to_vec());
@@ -437,13 +437,13 @@ fn setup_fees(bank: Bank) -> Bank {
     // `bank.commit_transactions()` so that the fee in the child bank will be
     // initialized with a non-zero fee.
     assert_eq!(bank.signature_count(), 0);
-    let (last_blockhash, lamports_per_signature) = bank.last_blockhash_and_lamports_per_signature();
+    let (last_blockhash, wens_per_signature) = bank.last_blockhash_and_wens_per_signature();
     bank.commit_transactions(
         &[],     // transactions
         &mut [], // loaded accounts
         vec![],  // transaction execution results
         last_blockhash,
-        lamports_per_signature,
+        wens_per_signature,
         CommitTransactionCounts {
             committed_transactions_count: 0,
             committed_with_failure_result_count: 0,
@@ -467,8 +467,8 @@ fn setup_fees(bank: Bank) -> Bank {
     }
 
     // Make sure a fee is now required
-    let lamports_per_signature = bank.get_lamports_per_signature();
-    assert_ne!(lamports_per_signature, 0);
+    let wens_per_signature = bank.get_wens_per_signature();
+    assert_ne!(wens_per_signature, 0);
 
     bank
 }
@@ -500,7 +500,7 @@ impl Default for ProgramTest {
             "solana_rbpf::vm=debug,\
              solana_runtime::message_processor=debug,\
              solana_runtime::system_instruction_processor=trace,\
-             solana_program_test=info",
+             sino_program_test=info",
         );
         let prefer_bpf = std::env::var("BPF_OUT_DIR").is_ok();
 
@@ -565,14 +565,14 @@ impl ProgramTest {
     pub fn add_account_with_file_data(
         &mut self,
         address: Pubkey,
-        lamports: u64,
+        wens: u64,
         owner: Pubkey,
         filename: &str,
     ) {
         self.add_account(
             address,
             Account {
-                lamports,
+                wens,
                 data: read_file(find_file(filename).unwrap_or_else(|| {
                     panic!("Unable to locate {}", filename);
                 })),
@@ -588,14 +588,14 @@ impl ProgramTest {
     pub fn add_account_with_base64_data(
         &mut self,
         address: Pubkey,
-        lamports: u64,
+        wens: u64,
         owner: Pubkey,
         data_base64: &str,
     ) {
         self.add_account(
             address,
             Account {
-                lamports,
+                wens,
                 data: base64::decode(data_base64)
                     .unwrap_or_else(|err| panic!("Failed to base64 decode: {}", err)),
                 owner,
@@ -645,7 +645,7 @@ impl ProgramTest {
             this.add_account(
                 program_id,
                 Account {
-                    lamports: Rent::default().minimum_balance(data.len()).min(1),
+                    wens: Rent::default().minimum_balance(data.len()).min(1),
                     data,
                     owner: sdk::bpf_loader::id(),
                     executable: true,
@@ -767,19 +767,19 @@ impl ProgramTest {
         let rent = Rent::default();
         let fee_rate_governor = FeeRateGovernor::default();
         let bootstrap_validator_pubkey = Pubkey::new_unique();
-        let bootstrap_validator_stake_lamports =
-            rent.minimum_balance(VoteState::size_of()) + sol_to_lamports(1_000_000.0);
+        let bootstrap_validator_stake_wens =
+            rent.minimum_balance(VoteState::size_of()) + sor_to_wens(1_000_000.0);
 
         let mint_keypair = Keypair::new();
         let voting_keypair = Keypair::new();
 
         let mut genesis_config = create_genesis_config_with_leader_ex(
-            sol_to_lamports(1_000_000.0),
+            sor_to_wens(1_000_000.0),
             &mint_keypair.pubkey(),
             &bootstrap_validator_pubkey,
             &voting_keypair.pubkey(),
             &Pubkey::new_unique(),
-            bootstrap_validator_stake_lamports,
+            bootstrap_validator_stake_wens,
             42,
             fee_rate_governor,
             rent,
@@ -908,7 +908,7 @@ impl ProgramTest {
     // Start the test client
     //
     // Returns a `BanksClient` interface into the test environment as well as a payer `Keypair`
-    // with SOL for sending transactions
+    // with SOR for sending transactions
 //     pub async fn start_with_context(self) -> ProgramTestContext {
 //         let (bank_forks, block_commitment_cache, last_blockhash, gci) = self.setup_bank();
 //         let target_tick_duration = gci.genesis_config.poh_config.target_tick_duration;

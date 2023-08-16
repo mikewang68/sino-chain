@@ -57,8 +57,8 @@ pub struct StoredMeta {
 /// So the data layout must be stable and consistent across the entire cluster!
 #[derive(Serialize, Deserialize, Clone, Debug, Default, Eq, PartialEq)]
 pub struct AccountMeta {
-    /// lamports in the account
-    pub lamports: u64,
+    /// wens in the account
+    pub wens: u64,
     /// the program that owns this account. If executable, the program that loads this account.
     pub owner: Pubkey,
     /// this account's data contains a loaded program (and is now read-only)
@@ -70,7 +70,7 @@ pub struct AccountMeta {
 impl<'a, T: ReadableAccount> From<&'a T> for AccountMeta {
     fn from(account: &'a T) -> Self {
         Self {
-            lamports: account.wens(),
+            wens: account.wens(),
             owner: *account.owner(),
             executable: account.executable(),
             rent_epoch: account.rent_epoch(),
@@ -104,7 +104,7 @@ impl<'a> StoredAccountMeta<'a> {
     /// Return a new Account by copying all the data referenced by the `StoredAccountMeta`.
     pub fn clone_account(&self) -> AccountSharedData {
         AccountSharedData::from(Account {
-            lamports: self.account_meta.lamports,
+            wens: self.account_meta.wens,
             owner: self.account_meta.owner,
             executable: self.account_meta.executable,
             rent_epoch: self.account_meta.rent_epoch,
@@ -113,7 +113,7 @@ impl<'a> StoredAccountMeta<'a> {
     }
 
     fn sanitize(&self) -> bool {
-        self.sanitize_executable() && self.sanitize_lamports()
+        self.sanitize_executable() && self.sanitize_wens()
     }
 
     fn sanitize_executable(&self) -> bool {
@@ -121,9 +121,9 @@ impl<'a> StoredAccountMeta<'a> {
         self.ref_executable_byte() & !1 == 0
     }
 
-    fn sanitize_lamports(&self) -> bool {
-        // Sanitize 0 lamports to ensure to be same as AccountSharedData::default()
-        self.account_meta.lamports != 0 || self.clone_account() == AccountSharedData::default()
+    fn sanitize_wens(&self) -> bool {
+        // Sanitize 0 wens to ensure to be same as AccountSharedData::default()
+        self.account_meta.wens != 0 || self.clone_account() == AccountSharedData::default()
     }
 
     fn ref_executable_byte(&self) -> &u8 {
@@ -640,13 +640,13 @@ pub mod tests {
     #[test]
     fn test_account_meta_non_default() {
         let def1 = AccountMeta {
-            lamports: 1,
+            wens: 1,
             owner: Pubkey::new_unique(),
             executable: true,
             rent_epoch: 3,
         };
         let def2_account = Account {
-            lamports: def1.lamports,
+            wens: def1.wens,
             owner: def1.owner,
             executable: def1.executable,
             rent_epoch: def1.rent_epoch,
@@ -785,7 +785,7 @@ pub mod tests {
     }
 
     #[test]
-    fn test_new_from_file_crafted_zero_lamport_account() {
+    fn test_new_from_file_crafted_zero_wen_account() {
         let file = get_append_vec_path("test_append");
         let path = &file.path;
         let mut av = AppendVec::new(path, true, 1024 * 1024);

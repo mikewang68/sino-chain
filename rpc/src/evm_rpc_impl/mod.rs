@@ -241,7 +241,7 @@
 
 //     fn gas_price(&self, _meta: Self::Metadata) -> Result<Hex<Gas>, Error> {
 //         Ok(Hex(
-//             solana_evm_loader_program::scope::evm::lamports_to_gwei(GAS_PRICE),
+//             solana_evm_loader_program::scope::evm::wens_to_gwei(GAS_PRICE),
 //         ))
 //     }
 // }
@@ -813,9 +813,9 @@
 //                     .collect();
 
 //                 // Shortcut for swap tokens to native, will add solana account to transaction.
-//                 if address == *ETH_TO_VLX_ADDR {
+//                 if address == *ETH_TO_SOR_ADDR {
 //                     debug!("Found transferToNative transaction");
-//                     match ETH_TO_VLX_CODE.parse_abi(&input) {
+//                     match ETH_TO_SOR_CODE.parse_abi(&input) {
 //                         Ok(pk) => {
 //                             info!("Adding account to meta = {}", pk);
 
@@ -841,7 +841,7 @@
 //             let mut is_native_tx = false;
 //             if Some(Hex(U256::from(0x1))) == tx.s {
 //                 // check if it native swap, then predeposit, amount, to pass transaction
-//                 if caller == *ETH_TO_VLX_ADDR {
+//                 if caller == *ETH_TO_SOR_ADDR {
 //                     let amount = value + gas_limit * gas_price;
 //                     executor.deposit(caller, amount)
 //                 }
@@ -1149,7 +1149,7 @@
 //     let evm_state_balance = bank
 //         .get_account(&solana_sdk::evm_state::id())
 //         .unwrap_or_default()
-//         .lamports();
+//         .wens();
 
 //     let (user_accounts, action) = if let Some(address) = tx.to {
 //         let address = address.0;
@@ -1167,9 +1167,9 @@
 //             .collect();
 
 //         // Shortcut for swap tokens to native, will add solana account to transaction.
-//         if address == *ETH_TO_VLX_ADDR {
+//         if address == *ETH_TO_SOR_ADDR {
 //             debug!("Found transferToNative transaction");
-//             match ETH_TO_VLX_CODE.parse_abi(&input) {
+//             match ETH_TO_SOR_CODE.parse_abi(&input) {
 //                 Ok(pk) => {
 //                     info!("Adding account to meta = {}", pk);
 
@@ -1190,7 +1190,7 @@
 //     // system transfers always set s = 0x1
 //     if Some(Hex(U256::from(0x1))) == tx.s {
 //         // check if it native swap, then predeposit, amount, to pass transaction
-//         if caller == *ETH_TO_VLX_ADDR {
+//         if caller == *ETH_TO_SOR_ADDR {
 //             let amount = value + gas_limit * gas_price;
 //             executor.deposit(caller, amount)
 //         }

@@ -100,7 +100,7 @@ pub enum StakeInstruction {
     ///   2. `[SIGNER]` Stake authority
     Split(u64),
 
-    /// Withdraw unstaked lamports from the stake account
+    /// Withdraw unstaked wens from the stake account
     ///
     /// # Account references
     ///   0. `[WRITE]` Stake account from which to withdraw
@@ -111,7 +111,7 @@ pub enum StakeInstruction {
     ///   5. Optional: `[SIGNER]` Lockup authority, if before lockup expiration
     ///
     /// The u64 is the portion of the stake account balance to be withdrawn,
-    ///    must be `<= StakeAccount.lamports - staked_lamports`.
+    ///    must be `<= StakeAccount.wens - staked_wens`.
     Withdraw(u64),
 
     /// Deactivates the stake in the account
@@ -283,7 +283,7 @@ pub fn create_account_with_seed(
     seed: &str,
     authorized: &Authorized,
     lockup: &Lockup,
-    lamports: u64,
+    wens: u64,
 ) -> Vec<Instruction> {
     vec![
         system_instruction::create_account_with_seed(
@@ -291,7 +291,7 @@ pub fn create_account_with_seed(
             stake_pubkey,
             base,
             seed,
-            lamports,
+            wens,
             std::mem::size_of::<StakeState>() as u64,
             &id(),
         ),
@@ -304,13 +304,13 @@ pub fn create_account(
     stake_pubkey: &Pubkey,
     authorized: &Authorized,
     lockup: &Lockup,
-    lamports: u64,
+    wens: u64,
 ) -> Vec<Instruction> {
     vec![
         system_instruction::create_account(
             from_pubkey,
             stake_pubkey,
-            lamports,
+            wens,
             std::mem::size_of::<StakeState>() as u64,
             &id(),
         ),
@@ -324,7 +324,7 @@ pub fn create_account_with_seed_checked(
     base: &Pubkey,
     seed: &str,
     authorized: &Authorized,
-    lamports: u64,
+    wens: u64,
 ) -> Vec<Instruction> {
     vec![
         system_instruction::create_account_with_seed(
@@ -332,7 +332,7 @@ pub fn create_account_with_seed_checked(
             stake_pubkey,
             base,
             seed,
-            lamports,
+            wens,
             std::mem::size_of::<StakeState>() as u64,
             &id(),
         ),
@@ -344,13 +344,13 @@ pub fn create_account_checked(
     from_pubkey: &Pubkey,
     stake_pubkey: &Pubkey,
     authorized: &Authorized,
-    lamports: u64,
+    wens: u64,
 ) -> Vec<Instruction> {
     vec![
         system_instruction::create_account(
             from_pubkey,
             stake_pubkey,
-            lamports,
+            wens,
             std::mem::size_of::<StakeState>() as u64,
             &id(),
         ),
@@ -361,7 +361,7 @@ pub fn create_account_checked(
 fn _split(
     stake_pubkey: &Pubkey,
     authorized_pubkey: &Pubkey,
-    lamports: u64,
+    wens: u64,
     split_stake_pubkey: &Pubkey,
 ) -> Instruction {
     let account_metas = vec![
@@ -370,13 +370,13 @@ fn _split(
         AccountMeta::new_readonly(*authorized_pubkey, true),
     ];
 
-    Instruction::new_with_bincode(id(), &StakeInstruction::Split(lamports), account_metas)
+    Instruction::new_with_bincode(id(), &StakeInstruction::Split(wens), account_metas)
 }
 
 pub fn split(
     stake_pubkey: &Pubkey,
     authorized_pubkey: &Pubkey,
-    lamports: u64,
+    wens: u64,
     split_stake_pubkey: &Pubkey,
 ) -> Vec<Instruction> {
     vec![
@@ -385,7 +385,7 @@ pub fn split(
         _split(
             stake_pubkey,
             authorized_pubkey,
-            lamports,
+            wens,
             split_stake_pubkey,
         ),
     ]
@@ -394,7 +394,7 @@ pub fn split(
 pub fn split_with_seed(
     stake_pubkey: &Pubkey,
     authorized_pubkey: &Pubkey,
-    lamports: u64,
+    wens: u64,
     split_stake_pubkey: &Pubkey, // derived using create_with_seed()
     base: &Pubkey,               // base
     seed: &str,                  // seed
@@ -410,7 +410,7 @@ pub fn split_with_seed(
         _split(
             stake_pubkey,
             authorized_pubkey,
-            lamports,
+            wens,
             split_stake_pubkey,
         ),
     ]
@@ -442,9 +442,9 @@ pub fn create_account_and_delegate_stake(
     vote_pubkey: &Pubkey,
     authorized: &Authorized,
     lockup: &Lockup,
-    lamports: u64,
+    wens: u64,
 ) -> Vec<Instruction> {
-    let mut instructions = create_account(from_pubkey, stake_pubkey, authorized, lockup, lamports);
+    let mut instructions = create_account(from_pubkey, stake_pubkey, authorized, lockup, wens);
     instructions.push(delegate_stake(
         stake_pubkey,
         &authorized.staker,
@@ -461,7 +461,7 @@ pub fn create_account_with_seed_and_delegate_stake(
     vote_pubkey: &Pubkey,
     authorized: &Authorized,
     lockup: &Lockup,
-    lamports: u64,
+    wens: u64,
 ) -> Vec<Instruction> {
     let mut instructions = create_account_with_seed(
         from_pubkey,
@@ -470,7 +470,7 @@ pub fn create_account_with_seed_and_delegate_stake(
         seed,
         authorized,
         lockup,
-        lamports,
+        wens,
     );
     instructions.push(delegate_stake(
         stake_pubkey,
@@ -615,7 +615,7 @@ pub fn withdraw(
     stake_pubkey: &Pubkey,
     withdrawer_pubkey: &Pubkey,
     to_pubkey: &Pubkey,
-    lamports: u64,
+    wens: u64,
     custodian_pubkey: Option<&Pubkey>,
 ) -> Instruction {
     let mut account_metas = vec![
@@ -630,7 +630,7 @@ pub fn withdraw(
         account_metas.push(AccountMeta::new_readonly(*custodian_pubkey, true));
     }
 
-    Instruction::new_with_bincode(id(), &StakeInstruction::Withdraw(lamports), account_metas)
+    Instruction::new_with_bincode(id(), &StakeInstruction::Withdraw(wens), account_metas)
 }
 
 pub fn deactivate_stake(stake_pubkey: &Pubkey, authorized_pubkey: &Pubkey) -> Instruction {

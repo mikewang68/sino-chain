@@ -7,18 +7,18 @@ mod entrypoint;
 pub mod processor;
 
 // Export current sdk types for downstream users building with a different sdk version
-pub use solana_program;
-use solana_program::{
+pub use sino_program;
+use sino_program::{
     instruction::{AccountMeta, Instruction},
     pubkey::Pubkey,
 };
 
 /// Legacy symbols from Memo v1
 pub mod v1 {
-    solana_program::declare_id!("Memo1UhkJRfHyvLMcVucJwxXeuD728EqVDDwQDxFMNo");
+    sino_program::declare_id!("Memo1UhkJRfHyvLMcVucJwxXeuD728EqVDDwQDxFMNo");
 }
 
-solana_program::declare_id!("MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr");
+sino_program::declare_id!("MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr");
 
 /// Build a memo instruction, possibly signed
 ///

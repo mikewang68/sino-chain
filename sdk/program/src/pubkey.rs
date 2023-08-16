@@ -287,11 +287,11 @@ impl Pubkey {
     /// #[derive(BorshSerialize, BorshDeserialize, Debug)]
     /// pub struct InstructionData {
     ///     pub vault_bump_seed: u8,
-    ///     pub lamports: u64,
+    ///     pub wens: u64,
     /// }
     ///
     /// // The size in bytes of a vault account. The client program needs
-    /// // this information to calculate the quantity of lamports necessary
+    /// // this information to calculate the quantity of wens necessary
     /// // to pay for the account's rent.
     /// pub static VAULT_ACCOUNT_SIZE: u64 = 1024;
     ///
@@ -310,7 +310,7 @@ impl Pubkey {
     ///     let mut instruction_data = instruction_data;
     ///     let instr = InstructionData::deserialize(&mut instruction_data)?;
     ///     let vault_bump_seed = instr.vault_bump_seed;
-    ///     let lamports = instr.lamports;
+    ///     let wens = instr.wens;
     ///     let vault_size = VAULT_ACCOUNT_SIZE;
     ///
     ///     // Invoke the system program to create an account while virtually
@@ -319,7 +319,7 @@ impl Pubkey {
     ///         &system_instruction::create_account(
     ///             &payer.key,
     ///             &vault.key,
-    ///             lamports,
+    ///             wens,
     ///             vault_size,
     ///             &program_id,
     ///         ),
@@ -366,7 +366,7 @@ impl Pubkey {
     /// # #[derive(BorshSerialize, BorshDeserialize, Debug)]
     /// # struct InstructionData {
     /// #    pub vault_bump_seed: u8,
-    /// #    pub lamports: u64,
+    /// #    pub wens: u64,
     /// # }
     /// #
     /// # pub static VAULT_ACCOUNT_SIZE: u64 = 1024;
@@ -381,14 +381,14 @@ impl Pubkey {
     ///     &program_id
     /// );
     ///
-    /// // Get the amount of lamports needed to pay for the vault's rent
+    /// // Get the amount of wens needed to pay for the vault's rent
     /// let vault_account_size = usize::try_from(VAULT_ACCOUNT_SIZE)?;
-    /// let lamports = rpc_client.get_minimum_balance_for_rent_exemption(vault_account_size)?;
+    /// let wens = rpc_client.get_minimum_balance_for_rent_exemption(vault_account_size)?;
     ///
     /// // The on-chain program's instruction data, imported from that program's crate.
     /// let instr_data = InstructionData {
     ///     vault_bump_seed,
-    ///     lamports,
+    ///     wens,
     /// };
     ///
     /// // The accounts required by both our on-chain program and the system program's
@@ -460,7 +460,7 @@ impl Pubkey {
         #[cfg(target_arch = "bpf")]
         {
             extern "C" {
-                fn sol_try_find_program_address(
+                fn sor_try_find_program_address(
                     seeds_addr: *const u8,
                     seeds_len: u64,
                     program_id_addr: *const u8,
@@ -471,7 +471,7 @@ impl Pubkey {
             let mut bytes = [0; 32];
             let mut bump_seed = std::u8::MAX;
             let result = unsafe {
-                sol_try_find_program_address(
+                sor_try_find_program_address(
                     seeds as *const _ as *const u8,
                     seeds.len() as u64,
                     program_id as *const _ as *const u8,
@@ -562,7 +562,7 @@ impl Pubkey {
         #[cfg(target_arch = "bpf")]
         {
             extern "C" {
-                fn sol_create_program_address(
+                fn sor_create_program_address(
                     seeds_addr: *const u8,
                     seeds_len: u64,
                     program_id_addr: *const u8,
@@ -571,7 +571,7 @@ impl Pubkey {
             }
             let mut bytes = [0; 32];
             let result = unsafe {
-                sol_create_program_address(
+                sor_create_program_address(
                     seeds as *const _ as *const u8,
                     seeds.len() as u64,
                     program_id as *const _ as *const u8,
@@ -598,13 +598,13 @@ impl Pubkey {
         #[cfg(target_arch = "bpf")]
         {
             extern "C" {
-                fn sol_log_pubkey(pubkey_addr: *const u8);
+                fn sor_log_pubkey(pubkey_addr: *const u8);
             }
-            unsafe { sol_log_pubkey(self.as_ref() as *const _ as *const u8) };
+            unsafe { sor_log_pubkey(self.as_ref() as *const _ as *const u8) };
         }
 
         #[cfg(not(target_arch = "bpf"))]
-        crate::program_stubs::sol_log(&self.to_string());
+        crate::program_stubs::sor_log(&self.to_string());
     }
 }
 

@@ -472,7 +472,7 @@ fn process_loader_upgradeable_instruction(
                 ic_logger_msg!(log_collector, "Program account too small");
                 return Err(InstructionError::AccountDataTooSmall);
             }
-            if program.lamports()? < rent.minimum_balance(program.data_len()?) {
+            if program.wens()? < rent.minimum_balance(program.data_len()?) {
                 ic_logger_msg!(log_collector, "Program account not rent-exempt");
                 return Err(InstructionError::ExecutableAccountNotRentExempt);
             }
@@ -534,7 +534,7 @@ fn process_loader_upgradeable_instruction(
                 // Drain the Buffer account to payer before paying for programdata account
                 payer
                     .try_account_ref_mut()?
-                    .checked_add_lamports(buffer.lamports()?)?;
+                    .checked_add_wens(buffer.wens()?)?;
                 buffer.try_account_ref_mut()?.set_wens(0);
             }
 
@@ -594,7 +594,7 @@ fn process_loader_upgradeable_instruction(
                 // Drain the Buffer account back to the payer
                 payer
                     .try_account_ref_mut()?
-                    .checked_add_lamports(buffer.lamports()?)?;
+                    .checked_add_wens(buffer.wens()?)?;
                 buffer.try_account_ref_mut()?.set_wens(0);
             }
 
@@ -677,7 +677,7 @@ fn process_loader_upgradeable_instruction(
                 ic_logger_msg!(log_collector, "ProgramData account not large enough");
                 return Err(InstructionError::AccountDataTooSmall);
             }
-            if programdata.lamports()? + buffer.lamports()? < programdata_balance_required {
+            if programdata.wens()? + buffer.wens()? < programdata_balance_required {
                 ic_logger_msg!(
                     log_collector,
                     "Buffer account balance too low to fund upgrade"
@@ -737,8 +737,8 @@ fn process_loader_upgradeable_instruction(
 
             // Fund ProgramData to rent-exemption, spill the rest
 
-            spill.try_account_ref_mut()?.checked_add_lamports(
-                (programdata.lamports()? + buffer.lamports()?)
+            spill.try_account_ref_mut()?.checked_add_wens(
+                (programdata.wens()? + buffer.wens()?)
                     .saturating_sub(programdata_balance_required),
             )?;
             buffer.try_account_ref_mut()?.set_wens(0);
@@ -824,7 +824,7 @@ fn process_loader_upgradeable_instruction(
                 UpgradeableLoaderState::Uninitialized => {
                     recipient_account
                         .try_account_ref_mut()?
-                        .checked_add_lamports(close_account.lamports()?)?;
+                        .checked_add_wens(close_account.wens()?)?;
                     close_account.try_account_ref_mut()?.set_wens(0);
 
                     ic_logger_msg!(
@@ -936,7 +936,7 @@ fn common_close_account(
 
     recipient_account
         .try_account_ref_mut()?
-        .checked_add_lamports(close_account.lamports()?)?;
+        .checked_add_wens(close_account.wens()?)?;
     close_account.try_account_ref_mut()?.set_wens(0);
     close_account.set_state(&UpgradeableLoaderState::Uninitialized)?;
     Ok(())
@@ -1180,7 +1180,7 @@ mod tests {
             genesis_config::create_genesis_config,
             instruction::{AccountMeta, Instruction, InstructionError},
             message::Message,
-            native_token::LAMPORTS_PER_VLX,
+            native_token::WENS_PER_SOR,
             pubkey::Pubkey,
             rent::Rent,
             signature::{Keypair, Signer},
@@ -1790,7 +1790,7 @@ mod tests {
         );
 
         // Test successful deploy
-        let payer_base_balance = LAMPORTS_PER_VLX;
+        let payer_base_balance = WENS_PER_SOR;
         let deploy_fees = {
             let fee_calculator = genesis_config.fee_rate_governor.create_fee_calculator();
             3 * fee_calculator.wens_per_signature
@@ -2133,7 +2133,7 @@ mod tests {
         );
 
         // Test Insufficient payer funds (need more funds to cover the
-        // difference between buffer lamports and programdata lamports)
+        // difference between buffer wens and programdata wens)
         bank.clear_signatures();
         bank.store_account(
             &mint_keypair.pubkey(),

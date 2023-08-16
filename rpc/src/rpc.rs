@@ -84,7 +84,7 @@ use {
     vote_program::vote_state::{VoteState, MAX_LOCKOUT_HISTORY},
     spl_token::{
         // ----------------------------------------------------------------
-        solana_program::program_pack::Pack,
+        sino_program::program_pack::Pack,
         state::{Account as TokenAccount, Mint},
     },
     std::{
@@ -609,7 +609,7 @@ impl JsonRpcRequestProcessor {
                     return Some(RpcInflationReward {
                         epoch,
                         effective_slot: first_confirmed_block_in_epoch,
-                        amount: reward.lamports.unsigned_abs(),
+                        amount: reward.wens.unsigned_abs(),
                         post_balance: reward.post_balance,
                         commission: reward.commission,
                     });
@@ -664,14 +664,14 @@ impl JsonRpcRequestProcessor {
     ) -> RpcResponse<RpcBlockhashFeeCalculator> {
         let bank = self.bank(commitment);
         let blockhash = bank.confirmed_last_blockhash();
-        let lamports_per_signature = bank
-            .get_lamports_per_signature_for_blockhash(&blockhash)
+        let wens_per_signature = bank
+            .get_wens_per_signature_for_blockhash(&blockhash)
             .unwrap();
         new_response(
             &bank,
             RpcBlockhashFeeCalculator {
                 blockhash: blockhash.to_string(),
-                fee_calculator: FeeCalculator::new(lamports_per_signature),
+                fee_calculator: FeeCalculator::new(wens_per_signature),
             },
         )
     }
@@ -679,8 +679,8 @@ impl JsonRpcRequestProcessor {
     fn get_fees(&self, commitment: Option<CommitmentConfig>) -> RpcResponse<RpcFees> {
         let bank = self.bank(commitment);
         let blockhash = bank.confirmed_last_blockhash();
-        let lamports_per_signature = bank
-            .get_lamports_per_signature_for_blockhash(&blockhash)
+        let wens_per_signature = bank
+            .get_wens_per_signature_for_blockhash(&blockhash)
             .unwrap();
         #[allow(deprecated)]
         let last_valid_slot = bank
@@ -693,7 +693,7 @@ impl JsonRpcRequestProcessor {
             &bank,
             RpcFees {
                 blockhash: blockhash.to_string(),
-                fee_calculator: FeeCalculator::new(lamports_per_signature),
+                fee_calculator: FeeCalculator::new(wens_per_signature),
                 last_valid_slot,
                 last_valid_block_height,
             },
@@ -706,11 +706,11 @@ impl JsonRpcRequestProcessor {
         commitment: Option<CommitmentConfig>,
     ) -> RpcResponse<Option<RpcFeeCalculator>> {
         let bank = self.bank(commitment);
-        let lamports_per_signature = bank.get_lamports_per_signature_for_blockhash(blockhash);
+        let wens_per_signature = bank.get_wens_per_signature_for_blockhash(blockhash);
         new_response(
             &bank,
-            lamports_per_signature.map(|lamports_per_signature| RpcFeeCalculator {
-                fee_calculator: FeeCalculator::new(lamports_per_signature),
+            wens_per_signature.map(|wens_per_signature| RpcFeeCalculator {
+                fee_calculator: FeeCalculator::new(wens_per_signature),
             }),
         )
     }
@@ -882,9 +882,9 @@ impl JsonRpcRequestProcessor {
                     message: e.to_string(),
                 })?
                 .into_iter()
-                .map(|(address, lamports)| RpcAccountBalance {
+                .map(|(address, wens)| RpcAccountBalance {
                     address: address.to_string(),
-                    lamports,
+                    wens,
                 })
                 .collect::<Vec<RpcAccountBalance>>();
 
@@ -918,8 +918,8 @@ impl JsonRpcRequestProcessor {
             &bank,
             RpcSupply {
                 total: total_supply,
-                circulating: total_supply - non_circulating_supply.lamports,
-                non_circulating: non_circulating_supply.lamports,
+                circulating: total_supply - non_circulating_supply.wens,
+                non_circulating: non_circulating_supply.wens,
                 non_circulating_accounts,
             },
         ))
@@ -1997,7 +1997,7 @@ impl JsonRpcRequestProcessor {
                     |account| {
                 // The program-id account index checks for Account owner on inclusion. However, due
                 // to the current AccountsDb implementation, an account may remain in storage as a
-                // zero-lamport AccountSharedData::Default() after being wiped and reinitialized in later
+                // zero-wen AccountSharedData::Default() after being wiped and reinitialized in later
                 // updates. We include the redundant filters here to avoid returning these
                 // accounts.
                         account.owner() == program_id && filter_closure(account)
@@ -2028,7 +2028,7 @@ impl JsonRpcRequestProcessor {
     ) -> RpcCustomResult<Vec<(Pubkey, AccountSharedData)>> {
         // The by-owner accounts index checks for Token Account state and Owner address on
         // inclusion. However, due to the current AccountsDb implementation, an account may remain
-        // in storage as a zero-lamport AccountSharedData::Default() after being wiped and reinitialized in
+        // in storage as a zero-wen AccountSharedData::Default() after being wiped and reinitialized in
         // later updates. We include the redundant filters here to avoid returning these accounts.
         //
         // Filter on Token Account state
@@ -2087,7 +2087,7 @@ impl JsonRpcRequestProcessor {
     ) -> RpcCustomResult<Vec<(Pubkey, AccountSharedData)>> {
         // The by-mint accounts index checks for Token Account state and Mint address on inclusion.
         // However, due to the current AccountsDb implementation, an account may remain in storage
-        // as be zero-lamport AccountSharedData::Default() after being wiped and reinitialized in later
+        // as be zero-wen AccountSharedData::Default() after being wiped and reinitialized in later
         // updates. We include the redundant filters here to avoid returning these accounts.
         //
         // Filter on Token Account state
@@ -2863,7 +2863,7 @@ pub mod rpc_minimal {
             meta: Self::Metadata,
             pubkey_str: String,
             config: Option<RpcGetBalanceConfig>,
-        ) -> Result<RpcResponse<UiLamports>>;
+        ) -> Result<RpcResponse<UiWens>>;
 
         #[rpc(meta, name = "getEpochInfo")]
         fn get_epoch_info(
@@ -2937,7 +2937,7 @@ pub mod rpc_minimal {
             meta: Self::Metadata,
             pubkey_str: String,
             config: Option<RpcGetBalanceConfig>,
-        ) -> Result<RpcResponse<UiLamports>> {
+        ) -> Result<RpcResponse<UiWens>> {
             debug!("get_balance rpc request received: {:?}", pubkey_str);
             let pubkey = verify_pubkey(&pubkey_str)?;
 
@@ -2947,8 +2947,8 @@ pub mod rpc_minimal {
             let rs = meta.get_balance(&pubkey, commitment);
             let balance = rs.value;
             let balance = match balance_format {
-                Some(RpcBalanceFormat::Plain) | None => UiLamports::Plain(balance),
-                Some(RpcBalanceFormat::String) => UiLamports::String(balance.to_string()),
+                Some(RpcBalanceFormat::Plain) | None => UiWens::Plain(balance),
+                Some(RpcBalanceFormat::String) => UiWens::String(balance.to_string()),
             };
 
             let response = RpcResponse {
@@ -3817,7 +3817,7 @@ pub mod rpc_full {
             &self,
             meta: Self::Metadata,
             pubkey_str: String,
-            lamports: u64,
+            wens: u64,
             config: Option<RpcRequestAirdropConfig>,
         ) -> Result<String>;
 
@@ -4037,14 +4037,14 @@ pub mod rpc_full {
             &self,
             meta: Self::Metadata,
             pubkey_str: String,
-            lamports: u64,
+            wens: u64,
             config: Option<RpcRequestAirdropConfig>,
         ) -> Result<String> {
             debug!("request_airdrop rpc request received");
             trace!(
-                "request_airdrop id={} lamports={} config: {:?}",
+                "request_airdrop id={} wens={} config: {:?}",
                 pubkey_str,
-                lamports,
+                wens,
                 &config
             );
 
@@ -4064,7 +4064,7 @@ pub mod rpc_full {
                 .unwrap_or(0);
 
             let transaction =
-                request_airdrop_transaction(&faucet_addr, &pubkey, lamports, blockhash).map_err(
+                request_airdrop_transaction(&faucet_addr, &pubkey, wens, blockhash).map_err(
                     |err| {
                         info!("request_airdrop_transaction failed: {:?}", err);
                         Error::internal_error()
@@ -5059,7 +5059,7 @@ pub fn create_test_transactions_and_populate_blockstore(
 //         account_decoder::parse_token::spl_token_ids()[0]
 //     }
 
-//     const TEST_MINT_LAMPORTS: u64 = 1_000_000;
+//     const TEST_MINT_WENS: u64 = 1_000_000;
 //     const TEST_SLOTS_PER_EPOCH: u64 = DELINQUENT_VALIDATOR_SLOT_DISTANCE + 1;
 
 //     struct RpcHandler {
@@ -5329,7 +5329,7 @@ pub fn create_test_transactions_and_populate_blockstore(
 //         async fn use_client(
 //             client: rpc_minimal::gen_client::Client,
 //             mint_pubkey: Pubkey,
-//         ) -> UiLamports {
+//         ) -> UiWens {
 //             client
 //                 .get_balance(mint_pubkey.to_string(), None)
 //                 .await
@@ -5345,7 +5345,7 @@ pub fn create_test_transactions_and_populate_blockstore(
 //             futures::join!(client, server)
 //         };
 //         let (response, _) = futures::executor::block_on(fut);
-//         assert_eq!(response, UiLamports::Plain(20));
+//         assert_eq!(response, UiWens::Plain(20));
 //     }
 
 //     #[test]
@@ -5509,8 +5509,8 @@ pub fn create_test_transactions_and_populate_blockstore(
 //             supply.non_circulating,
 //             bank.get_minimum_balance_for_rent_exemption(0)
 //         );
-//         assert!(supply.circulating >= TEST_MINT_LAMPORTS);
-//         assert!(supply.total >= TEST_MINT_LAMPORTS + 20);
+//         assert!(supply.circulating >= TEST_MINT_WENS);
+//         assert!(supply.total >= TEST_MINT_WENS + 20);
 //         let expected_accounts: Vec<String> = non_circulating_accounts()
 //             .iter()
 //             .map(|pubkey| pubkey.to_string())
@@ -5537,8 +5537,8 @@ pub fn create_test_transactions_and_populate_blockstore(
 //             supply.non_circulating,
 //             bank.get_minimum_balance_for_rent_exemption(0)
 //         );
-//         assert!(supply.circulating >= TEST_MINT_LAMPORTS);
-//         assert!(supply.total >= TEST_MINT_LAMPORTS + 20);
+//         assert!(supply.circulating >= TEST_MINT_WENS);
+//         assert!(supply.total >= TEST_MINT_WENS + 20);
 //         assert!(supply.non_circulating_accounts.is_empty());
 //     }
 
@@ -5567,7 +5567,7 @@ pub fn create_test_transactions_and_populate_blockstore(
 //             .expect("actual response deserialization");
 //         assert!(largest_accounts.contains(&RpcAccountBalance {
 //             address: alice.pubkey().to_string(),
-//             lamports: alice_balance,
+//             wens: alice_balance,
 //         }));
 
 //         // Get Bob balance
@@ -5581,7 +5581,7 @@ pub fn create_test_transactions_and_populate_blockstore(
 //             .expect("actual response deserialization");
 //         assert!(largest_accounts.contains(&RpcAccountBalance {
 //             address: bob_pubkey.to_string(),
-//             lamports: bob_balance,
+//             wens: bob_balance,
 //         }));
 
 //         // Test Circulating/NonCirculating Filter
@@ -5863,8 +5863,8 @@ pub fn create_test_transactions_and_populate_blockstore(
 //                 "context":{"slot":0},
 //                 "value":{
 //                     "owner": "11111111111111111111111111111111",
-//                     "lamports": bank.get_minimum_balance_for_rent_exemption(0),
-//                     "lamportsStr": bank.get_minimum_balance_for_rent_exemption(0).to_string(),
+//                     "wens": bank.get_minimum_balance_for_rent_exemption(0),
+//                     "wensStr": bank.get_minimum_balance_for_rent_exemption(0).to_string(),
 //                     "data": "",
 //                     "executable": false,
 //                     "rentEpoch": 0
@@ -5957,8 +5957,8 @@ pub fn create_test_transactions_and_populate_blockstore(
 //                 "context":{"slot":0},
 //                 "value":[{
 //                     "owner": "11111111111111111111111111111111",
-//                     "lamports": rent_exempt_amount,
-//                     "lamportsStr": rent_exempt_amount.to_string(),
+//                     "wens": rent_exempt_amount,
+//                     "wensStr": rent_exempt_amount.to_string(),
 //                     "data": ["", "base64"],
 //                     "executable": false,
 //                     "rentEpoch": 0
@@ -5966,8 +5966,8 @@ pub fn create_test_transactions_and_populate_blockstore(
 //                 null,
 //                 {
 //                     "owner": "11111111111111111111111111111111",
-//                     "lamports": rent_exempt_amount + 1,
-//                     "lamportsStr": (rent_exempt_amount + 1).to_string(),
+//                     "wens": rent_exempt_amount + 1,
+//                     "wensStr": (rent_exempt_amount + 1).to_string(),
 //                     "data": [base64::encode(&data), "base64"],
 //                     "executable": false,
 //                     "rentEpoch": 0
@@ -6079,8 +6079,8 @@ pub fn create_test_transactions_and_populate_blockstore(
 //                         "pubkey": "{}",
 //                         "account": {{
 //                             "owner": "{}",
-//                             "lamports": {},
-//                             "lamportsStr": "{}",
+//                             "wens": {},
+//                             "wensStr": "{}",
 //                             "data": "",
 //                             "executable": false,
 //                             "rentEpoch": 0
@@ -6329,8 +6329,8 @@ pub fn create_test_transactions_and_populate_blockstore(
 //                             "data": ["", "base64"],
 //                             "executable": false,
 //                             "owner": "11111111111111111111111111111111",
-//                             "lamports": rent_exempt_amount,
-//                             "lamportsStr": rent_exempt_amount.to_string(),
+//                             "wens": rent_exempt_amount,
+//                             "wensStr": rent_exempt_amount.to_string(),
 //                             "rentEpoch": 0
 //                         }
 //                     ],
@@ -6669,7 +6669,7 @@ pub fn create_test_transactions_and_populate_blockstore(
 //             "value":{
 //                 "blockhash": blockhash.to_string(),
 //                 "feeCalculator": {
-//                     "lamportsPerSignature": 0,
+//                     "wensPerSignature": 0,
 //                 }
 //             }},
 //             "id": 1
@@ -6700,7 +6700,7 @@ pub fn create_test_transactions_and_populate_blockstore(
 //             "value":{
 //                 "blockhash": blockhash.to_string(),
 //                 "feeCalculator": {
-//                     "lamportsPerSignature": 0,
+//                     "wensPerSignature": 0,
 //                 },
 //                 "lastValidSlot": MAX_RECENT_BLOCKHASHES,
 //                 "lastValidBlockHeight": MAX_RECENT_BLOCKHASHES,
@@ -6720,9 +6720,9 @@ pub fn create_test_transactions_and_populate_blockstore(
 //         let RpcHandler { io, meta, bank, .. } = start_rpc_handler_with_tx(&bob_pubkey);
 
 //         let blockhash = bank.last_blockhash();
-//         let lamports_per_signature = bank.get_lamports_per_signature();
+//         let wens_per_signature = bank.get_wens_per_signature();
 //         let fee_calculator = RpcFeeCalculator {
-//             fee_calculator: FeeCalculator::new(lamports_per_signature),
+//             fee_calculator: FeeCalculator::new(wens_per_signature),
 //         };
 
 //         let req = format!(
@@ -6779,9 +6779,9 @@ pub fn create_test_transactions_and_populate_blockstore(
 //             "value":{
 //                 "feeRateGovernor": {
 //                     "burnPercent": DEFAULT_BURN_PERCENT,
-//                     "maxLamportsPerSignature": 0,
-//                     "minLamportsPerSignature": 0,
-//                     "targetLamportsPerSignature": 0,
+//                     "maxWensPerSignature": 0,
+//                     "minWensPerSignature": 0,
+//                     "targetWensPerSignature": 0,
 //                     "targetSignaturesPerSlot": 0
 //                 }
 //             }},
@@ -7036,9 +7036,9 @@ pub fn create_test_transactions_and_populate_blockstore(
 //             mint_keypair,
 //             voting_keypair,
 //             ..
-//         } = create_genesis_config(TEST_MINT_LAMPORTS);
+//         } = create_genesis_config(TEST_MINT_WENS);
 
-//         genesis_config.rent.lamports_per_byte_year = 50;
+//         genesis_config.rent.wens_per_byte_year = 50;
 //         genesis_config.rent.exemption_threshold = 2.0;
 //         genesis_config.epoch_schedule =
 //             EpochSchedule::custom(TEST_SLOTS_PER_EPOCH, TEST_SLOTS_PER_EPOCH, false);
@@ -8049,7 +8049,7 @@ pub fn create_test_transactions_and_populate_blockstore(
 //         };
 //         TokenAccount::pack(token_account, &mut account_data).unwrap();
 //         let token_account = AccountSharedData::from(Account {
-//             lamports: 111,
+//             wens: 111,
 //             data: account_data.to_vec(),
 //             owner: spl_token_id(),
 //             ..Account::default()
@@ -8068,7 +8068,7 @@ pub fn create_test_transactions_and_populate_blockstore(
 //         };
 //         Mint::pack(mint_state, &mut mint_data).unwrap();
 //         let mint_account = AccountSharedData::from(Account {
-//             lamports: 111,
+//             wens: 111,
 //             data: mint_data.to_vec(),
 //             owner: spl_token_id(),
 //             ..Account::default()
@@ -8145,7 +8145,7 @@ pub fn create_test_transactions_and_populate_blockstore(
 //         };
 //         TokenAccount::pack(token_account, &mut account_data).unwrap();
 //         let token_account = AccountSharedData::from(Account {
-//             lamports: 111,
+//             wens: 111,
 //             data: account_data.to_vec(),
 //             owner: spl_token_id(),
 //             ..Account::default()
@@ -8364,7 +8364,7 @@ pub fn create_test_transactions_and_populate_blockstore(
 //         };
 //         Mint::pack(mint_state, &mut mint_data).unwrap();
 //         let mint_account = AccountSharedData::from(Account {
-//             lamports: 111,
+//             wens: 111,
 //             data: mint_data.to_vec(),
 //             owner: spl_token_id(),
 //             ..Account::default()
@@ -8386,7 +8386,7 @@ pub fn create_test_transactions_and_populate_blockstore(
 //         };
 //         TokenAccount::pack(token_account, &mut account_data).unwrap();
 //         let token_account = AccountSharedData::from(Account {
-//             lamports: 111,
+//             wens: 111,
 //             data: account_data.to_vec(),
 //             owner: spl_token_id(),
 //             ..Account::default()
@@ -8450,7 +8450,7 @@ pub fn create_test_transactions_and_populate_blockstore(
 //         };
 //         TokenAccount::pack(token_account, &mut account_data).unwrap();
 //         let token_account = AccountSharedData::from(Account {
-//             lamports: 111,
+//             wens: 111,
 //             data: account_data.to_vec(),
 //             owner: spl_token_id(),
 //             ..Account::default()
@@ -8469,7 +8469,7 @@ pub fn create_test_transactions_and_populate_blockstore(
 //         };
 //         Mint::pack(mint_state, &mut mint_data).unwrap();
 //         let mint_account = AccountSharedData::from(Account {
-//             lamports: 111,
+//             wens: 111,
 //             data: mint_data.to_vec(),
 //             owner: spl_token_id(),
 //             ..Account::default()

@@ -116,7 +116,7 @@ pub struct Reward {
     #[prost(string, tag = "1")]
     pub pubkey: ::prost::alloc::string::String,
     #[prost(int64, tag = "2")]
-    pub lamports: i64,
+    pub wens: i64,
     #[prost(uint64, tag = "3")]
     pub post_balance: u64,
     #[prost(enumeration = "RewardType", tag = "4")]

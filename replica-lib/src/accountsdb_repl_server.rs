@@ -104,7 +104,7 @@ impl AccountsDbReplService {
         let runtime = Arc::new(
             tokio::runtime::Builder::new_multi_thread()
                 .worker_threads(worker_threads)
-                .thread_name("sol-accountsdb-repl-wrk")
+                .thread_name("sor-accountsdb-repl-wrk")
                 .enable_all()
                 .build()
                 .expect("Runtime"),
@@ -114,7 +114,7 @@ impl AccountsDbReplService {
         let (exit_signal_sender, exit_signal_receiver) = oneshot::channel::<()>();
 
         let thread = Builder::new()
-            .name("sol-accountsdb-repl-rt".to_string())
+            .name("sor-accountsdb-repl-rt".to_string())
             .spawn(move || {
                 Self::run_accountsdb_repl_server_in_runtime(
                     config,

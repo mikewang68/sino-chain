@@ -26,7 +26,7 @@ pub mod hash;
 pub mod incinerator;
 pub mod instruction;
 pub mod keccak;
-pub mod lamports;
+pub mod wens;
 pub mod loader_instruction;
 pub mod loader_upgradeable_instruction;
 pub mod log;

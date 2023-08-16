@@ -75,7 +75,7 @@ pub enum InstructionError {
     #[error("instruction requires an initialized account")]
     UninitializedAccount,
 
-    /// Program's instruction lamport balance does not equal the balance after the instruction
+    /// Program's instruction wen balance does not equal the balance after the instruction
     #[error("sum of account balances before and after instruction do not match")]
     UnbalancedInstruction,
 
@@ -83,17 +83,17 @@ pub enum InstructionError {
     #[error("instruction illegally modified the program id of an account")]
     ModifiedProgramId,
 
-    /// Program spent the lamports of an account that doesn't belong to it
+    /// Program spent the wens of an account that doesn't belong to it
     #[error("instruction spent from the balance of an account it does not own")]
-    ExternalAccountLamportSpend,
+    ExternalAccountWenSpend,
 
     /// Program modified the data of an account that doesn't belong to it
     #[error("instruction modified data of an account it does not own")]
     ExternalAccountDataModified,
 
-    /// Read-only account's lamports modified
+    /// Read-only account's wens modified
     #[error("instruction changed the balance of a read-only account")]
-    ReadonlyLamportChange,
+    ReadonlyWenChange,
 
     /// Read-only account's data was modified
     #[error("instruction modified data of a read-only account")]
@@ -153,9 +153,9 @@ pub enum InstructionError {
     #[error("instruction changed executable accounts data")]
     ExecutableDataModified,
 
-    /// Executable account's lamports modified
+    /// Executable account's wens modified
     #[error("instruction changed the balance of a executable account")]
-    ExecutableLamportChange,
+    ExecutableWenChange,
 
     /// Executable accounts must be rent exempt
     #[error("executable accounts must be rent exempt")]
@@ -229,8 +229,8 @@ pub enum InstructionError {
     #[error("Failed to serialize or deserialize account data: {0}")]
     BorshIoError(String),
 
-    /// An account does not have enough lamports to be rent-exempt
-    #[error("An account does not have enough lamports to be rent-exempt")]
+    /// An account does not have enough wens to be rent-exempt
+    #[error("An account does not have enough wens to be rent-exempt")]
     AccountNotRentExempt,
 
     /// Invalid account owner
@@ -291,11 +291,11 @@ pub enum InstructionError {
 /// not specified as writable will cause the transaction to fail. Writing to an
 /// account that is not owned by the program will cause the transaction to fail.
 ///
-/// Any account whose lamport balance may be mutated by the program during
+/// Any account whose wen balance may be mutated by the program during
 /// execution must be specified as writable. During execution, mutating the
-/// lamports of an account that was not specified as writable will cause the
-/// transaction to fail. While _subtracting_ lamports from an account not owned
-/// by the program will cause the transaction to fail, _adding_ lamports to any
+/// wens of an account that was not specified as writable will cause the
+/// transaction to fail. While _subtracting_ wens from an account not owned
+/// by the program will cause the transaction to fail, _adding_ wens to any
 /// account is allowed, as long is it is mutable.
 ///
 /// Accounts that are not read or written by the program may still be specified
@@ -359,16 +359,16 @@ impl Instruction {
     /// #
     /// #[derive(BorshSerialize, BorshDeserialize)]
     /// pub struct MyInstruction {
-    ///     pub lamports: u64,
+    ///     pub wens: u64,
     /// }
     ///
     /// pub fn create_instruction(
     ///     program_id: &Pubkey,
     ///     from: &Pubkey,
     ///     to: &Pubkey,
-    ///     lamports: u64,
+    ///     wens: u64,
     /// ) -> Instruction {
-    ///     let instr = MyInstruction { lamports };
+    ///     let instr = MyInstruction { wens };
     ///
     ///     Instruction::new_with_borsh(
     ///         *program_id,
@@ -411,16 +411,16 @@ impl Instruction {
     /// #
     /// #[derive(Serialize, Deserialize)]
     /// pub struct MyInstruction {
-    ///     pub lamports: u64,
+    ///     pub wens: u64,
     /// }
     ///
     /// pub fn create_instruction(
     ///     program_id: &Pubkey,
     ///     from: &Pubkey,
     ///     to: &Pubkey,
-    ///     lamports: u64,
+    ///     wens: u64,
     /// ) -> Instruction {
-    ///     let instr = MyInstruction { lamports };
+    ///     let instr = MyInstruction { wens };
     ///
     ///     Instruction::new_with_bincode(
     ///         *program_id,
@@ -465,16 +465,16 @@ impl Instruction {
     /// #
     /// #[derive(BorshSerialize, BorshDeserialize)]
     /// pub struct MyInstruction {
-    ///     pub lamports: u64,
+    ///     pub wens: u64,
     /// }
     ///
     /// pub fn create_instruction(
     ///     program_id: &Pubkey,
     ///     from: &Pubkey,
     ///     to: &Pubkey,
-    ///     lamports: u64,
+    ///     wens: u64,
     /// ) -> Result<Instruction> {
-    ///     let instr = MyInstruction { lamports };
+    ///     let instr = MyInstruction { wens };
     ///
     ///     let mut instr_in_bytes: Vec<u8> = Vec::new();
     ///     instr.serialize(&mut instr_in_bytes)?;
@@ -520,7 +520,7 @@ pub fn checked_add(a: u64, b: u64) -> Result<u64, InstructionError> {
 /// When constructing an [`Instruction`], a list of all accounts that may be
 /// read or written during the execution of that instruction must be supplied.
 /// Any account that may be mutated by the program during execution, either its
-/// data or metadata such as held lamports, must be writable.
+/// data or metadata such as held wens, must be writable.
 ///
 /// Note that because the Solana runtime schedules parallel transaction
 /// execution around which accounts are writable, care should be taken that only
@@ -733,7 +733,7 @@ mod test {
 }
 
 /// Use to query and convey information about the sibling instruction components
-/// when calling the `sol_get_processed_sibling_instruction` syscall.
+/// when calling the `sor_get_processed_sibling_instruction` syscall.
 #[repr(C)]
 #[derive(Default, Debug, Clone, Copy)]
 pub struct ProcessedSiblingInstruction {
@@ -759,7 +759,7 @@ pub fn get_processed_sibling_instruction(index: usize) -> Option<Instruction> {
     #[cfg(target_arch = "bpf")]
     {
         extern "C" {
-            fn sol_get_processed_sibling_instruction(
+            fn sor_get_processed_sibling_instruction(
                 index: u64,
                 meta: *mut ProcessedSiblingInstruction,
                 program_id: *mut Pubkey,
@@ -772,7 +772,7 @@ pub fn get_processed_sibling_instruction(index: usize) -> Option<Instruction> {
         let mut program_id = Pubkey::default();
 
         if 1 == unsafe {
-            sol_get_processed_sibling_instruction(
+            sor_get_processed_sibling_instruction(
                 index as u64,
                 &mut meta,
                 &mut program_id,
@@ -786,7 +786,7 @@ pub fn get_processed_sibling_instruction(index: usize) -> Option<Instruction> {
             accounts.resize_with(meta.accounts_len, AccountMeta::default);
 
             let _ = unsafe {
-                sol_get_processed_sibling_instruction(
+                sor_get_processed_sibling_instruction(
                     index as u64,
                     &mut meta,
                     &mut program_id,
@@ -802,7 +802,7 @@ pub fn get_processed_sibling_instruction(index: usize) -> Option<Instruction> {
     }
 
     #[cfg(not(target_arch = "bpf"))]
-    crate::program_stubs::sol_get_processed_sibling_instruction(index)
+    crate::program_stubs::sor_get_processed_sibling_instruction(index)
 }
 
 // Stack height when processing transaction-level instructions
@@ -815,15 +815,15 @@ pub fn get_stack_height() -> usize {
     #[cfg(target_arch = "bpf")]
     {
         extern "C" {
-            fn sol_get_stack_height() -> u64;
+            fn sor_get_stack_height() -> u64;
         }
 
-        unsafe { sol_get_stack_height() as usize }
+        unsafe { sor_get_stack_height() as usize }
     }
 
     #[cfg(not(target_arch = "bpf"))]
     {
-        crate::program_stubs::sol_get_stack_height() as usize
+        crate::program_stubs::sor_get_stack_height() as usize
     }
 }
 

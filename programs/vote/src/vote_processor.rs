@@ -109,7 +109,7 @@ pub fn process_instruction(
                 Err(InstructionError::InvalidInstructionData)
             }
         }
-        VoteInstruction::Withdraw(lamports) => {
+        VoteInstruction::Withdraw(wens) => {
             let to = keyed_account_at_index(keyed_accounts, first_instruction_account + 1)?;
             let rent_sysvar = if invoke_context
                 .feature_set
@@ -131,7 +131,7 @@ pub fn process_instruction(
 
             vote_state::withdraw(
                 me,
-                lamports,
+                wens,
                 to,
                 &signers,
                 rent_sysvar.as_deref(),
@@ -170,7 +170,7 @@ fn verify_rent_exemption(
     keyed_account: &KeyedAccount,
     rent: &Rent,
 ) -> Result<(), InstructionError> {
-    if !rent.is_exempt(keyed_account.lamports()?, keyed_account.data_len()?) {
+    if !rent.is_exempt(keyed_account.wens()?, keyed_account.data_len()?) {
         Err(InstructionError::InsufficientFunds)
     } else {
         Ok(())

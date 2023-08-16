@@ -46,11 +46,11 @@ pub trait SyncClient {
         instruction: Instruction,
     ) -> Result<Signature>;
 
-    /// Transfer lamports from `keypair` to `pubkey`, retrying until the
+    /// Transfer wens from `keypair` to `pubkey`, retrying until the
     /// transfer completes or produces and error.
     fn transfer_and_confirm(
         &self,
-        lamports: u64,
+        wens: u64,
         keypair: &Keypair,
         pubkey: &Pubkey,
     ) -> Result<Signature>;
@@ -199,10 +199,10 @@ pub trait AsyncClient {
         recent_blockhash: Hash,
     ) -> Result<Signature>;
 
-    /// Attempt to transfer lamports from `keypair` to `pubkey`, but don't wait to confirm.
+    /// Attempt to transfer wens from `keypair` to `pubkey`, but don't wait to confirm.
     fn async_transfer(
         &self,
-        lamports: u64,
+        wens: u64,
         keypair: &Keypair,
         pubkey: &Pubkey,
         recent_blockhash: Hash,

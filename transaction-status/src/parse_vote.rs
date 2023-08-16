@@ -70,7 +70,7 @@ pub fn parse_vote(
                 }),
             })
         }
-        VoteInstruction::Withdraw(lamports) => {
+        VoteInstruction::Withdraw(wens) => {
             check_num_vote_accounts(&instruction.accounts, 3)?;
             Ok(ParsedInstructionEnum {
                 instruction_type: "withdraw".to_string(),
@@ -78,7 +78,7 @@ pub fn parse_vote(
                     "voteAccount": account_keys[instruction.accounts[0] as usize].to_string(),
                     "destination": account_keys[instruction.accounts[1] as usize].to_string(),
                     "withdrawAuthority": account_keys[instruction.accounts[2] as usize].to_string(),
-                    "lamports": lamports,
+                    "wens": wens,
                 }),
             })
         }
@@ -162,7 +162,7 @@ mod test {
             keys.push(sdk::pubkey::new_rand());
         }
 
-        let lamports = 55;
+        let wens = 55;
         let hash = Hash::new_from_array([1; 32]);
         let vote = Vote {
             slots: vec![1, 2, 4],
@@ -184,7 +184,7 @@ mod test {
             &sdk::pubkey::new_rand(),
             &keys[1],
             &vote_init,
-            lamports,
+            wens,
         );
         let message = Message::new(&instructions, None);
         assert_eq!(
@@ -243,7 +243,7 @@ mod test {
         );
         assert!(parse_vote(&message.instructions[0], &keys[0..3]).is_err());
 
-        let instruction = vote_instruction::withdraw(&keys[1], &keys[0], lamports, &keys[2]);
+        let instruction = vote_instruction::withdraw(&keys[1], &keys[0], wens, &keys[2]);
         let message = Message::new(&[instruction], None);
         assert_eq!(
             parse_vote(&message.instructions[0], &keys[0..3]).unwrap(),
@@ -253,7 +253,7 @@ mod test {
                     "voteAccount": keys[1].to_string(),
                     "destination": keys[2].to_string(),
                     "withdrawAuthority": keys[0].to_string(),
-                    "lamports": lamports,
+                    "wens": wens,
                 }),
             }
         );

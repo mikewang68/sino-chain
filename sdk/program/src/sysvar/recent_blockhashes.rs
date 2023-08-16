@@ -32,10 +32,10 @@ pub struct Entry {
     pub fee_calculator: FeeCalculator,
 }
 impl Entry {
-    pub fn new(blockhash: &Hash, lamports_per_signature: u64) -> Self {
+    pub fn new(blockhash: &Hash, wens_per_signature: u64) -> Self {
         Self {
             blockhash: *blockhash,
-            fee_calculator: FeeCalculator::new(lamports_per_signature),
+            fee_calculator: FeeCalculator::new(wens_per_signature),
         }
     }
 }
@@ -157,7 +157,7 @@ pub fn create_test_recent_blockhashes(start: usize) -> RecentBlockhashes {
         .collect();
     blocks
         .iter()
-        .map(|(i, hash, lamports_per_signature)| IterItem(*i, hash, *lamports_per_signature))
+        .map(|(i, hash, wens_per_signature)| IterItem(*i, hash, *wens_per_signature))
         .collect()
 }
 

@@ -10,7 +10,7 @@ use {
 #[derive(Serialize, Deserialize, PartialEq, Copy, Debug, AbiExample)]
 pub struct Rent {
     /// Rental rate
-    pub lamports_per_byte_year: u64,
+    pub wens_per_byte_year: u64,
 
     /// exemption threshold, in years
     pub exemption_threshold: f64,
@@ -19,12 +19,12 @@ pub struct Rent {
     pub burn_percent: u8,
 }
 
-/// default rental rate in lamports/byte-year, based on:
-///  10^9 lamports per SOL
-///  $1 per SOL
+/// default rental rate in wens/byte-year, based on:
+///  10^9 wens per SOR
+///  $1 per SOR
 ///  $0.01 per megabyte day
 ///  $3.65 per megabyte year
-pub const DEFAULT_LAMPORTS_PER_BYTE_YEAR: u64 = 1_000_000_000 / 100 * 365 / (1024 * 1024);
+pub const DEFAULT_WENS_PER_BYTE_YEAR: u64 = 1_000_000_000 / 100 * 365 / (1024 * 1024);
 
 /// default amount of time (in years) the balance has to include rent for
 pub const DEFAULT_EXEMPTION_THRESHOLD: f64 = 2.0;
@@ -38,7 +38,7 @@ pub const ACCOUNT_STORAGE_OVERHEAD: u64 = 128;
 impl Default for Rent {
     fn default() -> Self {
         Self {
-            lamports_per_byte_year: DEFAULT_LAMPORTS_PER_BYTE_YEAR,
+            wens_per_byte_year: DEFAULT_WENS_PER_BYTE_YEAR,
             exemption_threshold: DEFAULT_EXEMPTION_THRESHOLD,
             burn_percent: DEFAULT_BURN_PERCENT,
         }
@@ -50,7 +50,7 @@ impl Clone for Rent {
         clone_zeroed(|cloned: &mut MaybeUninit<Self>| {
             let ptr = cloned.as_mut_ptr();
             unsafe {
-                copy_field!(ptr, self, lamports_per_byte_year);
+                copy_field!(ptr, self, wens_per_byte_year);
                 copy_field!(ptr, self, exemption_threshold);
                 copy_field!(ptr, self, burn_percent);
             }
@@ -71,7 +71,7 @@ impl Rent {
     /// eg. when making rent variable -- the stake program will need to be refactored
     pub fn minimum_balance(&self, data_len: usize) -> u64 {
         let bytes = data_len as u64;
-        (((ACCOUNT_STORAGE_OVERHEAD + bytes) * self.lamports_per_byte_year) as f64
+        (((ACCOUNT_STORAGE_OVERHEAD + bytes) * self.wens_per_byte_year) as f64
             * self.exemption_threshold) as u64
     }
 
@@ -86,14 +86,14 @@ impl Rent {
             RentDue::Exempt
         } else {
             let actual_data_len = data_len as u64 + ACCOUNT_STORAGE_OVERHEAD;
-            let lamports_per_year = self.lamports_per_byte_year * actual_data_len;
-            RentDue::Paying((lamports_per_year as f64 * years_elapsed) as u64)
+            let wens_per_year = self.wens_per_byte_year * actual_data_len;
+            RentDue::Paying((wens_per_year as f64 * years_elapsed) as u64)
         }
     }
 
     pub fn free() -> Self {
         Self {
-            lamports_per_byte_year: 0,
+            wens_per_byte_year: 0,
             ..Rent::default()
         }
     }
@@ -101,9 +101,9 @@ impl Rent {
     pub fn with_slots_per_epoch(slots_per_epoch: u64) -> Self {
         let ratio = slots_per_epoch as f64 / DEFAULT_SLOTS_PER_EPOCH as f64;
         let exemption_threshold = DEFAULT_EXEMPTION_THRESHOLD * ratio;
-        let lamports_per_byte_year = (DEFAULT_LAMPORTS_PER_BYTE_YEAR as f64 / ratio) as u64;
+        let wens_per_byte_year = (DEFAULT_WENS_PER_BYTE_YEAR as f64 / ratio) as u64;
         Self {
-            lamports_per_byte_year,
+            wens_per_byte_year,
             exemption_threshold,
             ..Self::default()
         }
@@ -120,8 +120,8 @@ pub enum RentDue {
 }
 
 impl RentDue {
-    /// Return the lamports due for rent
-    pub fn lamports(&self) -> u64 {
+    /// Return the wens due for rent
+    pub fn wens(&self) -> u64 {
         match self {
             RentDue::Exempt => 0,
             RentDue::Paying(x) => *x,
@@ -148,13 +148,13 @@ mod tests {
         assert_eq!(
             default_rent.due(0, 2, 1.2),
             RentDue::Paying(
-                (((2 + ACCOUNT_STORAGE_OVERHEAD) * DEFAULT_LAMPORTS_PER_BYTE_YEAR) as f64 * 1.2)
+                (((2 + ACCOUNT_STORAGE_OVERHEAD) * DEFAULT_WENS_PER_BYTE_YEAR) as f64 * 1.2)
                     as u64
             ),
         );
         assert_eq!(
             default_rent.due(
-                (((2 + ACCOUNT_STORAGE_OVERHEAD) * DEFAULT_LAMPORTS_PER_BYTE_YEAR) as f64
+                (((2 + ACCOUNT_STORAGE_OVERHEAD) * DEFAULT_WENS_PER_BYTE_YEAR) as f64
                     * DEFAULT_EXEMPTION_THRESHOLD) as u64,
                 2,
                 1.2
@@ -163,7 +163,7 @@ mod tests {
         );
 
         let custom_rent = Rent {
-            lamports_per_byte_year: 5,
+            wens_per_byte_year: 5,
             exemption_threshold: 2.5,
             ..Rent::default()
         };
@@ -171,14 +171,14 @@ mod tests {
         assert_eq!(
             custom_rent.due(0, 2, 1.2),
             RentDue::Paying(
-                (((2 + ACCOUNT_STORAGE_OVERHEAD) * custom_rent.lamports_per_byte_year) as f64 * 1.2)
+                (((2 + ACCOUNT_STORAGE_OVERHEAD) * custom_rent.wens_per_byte_year) as f64 * 1.2)
                     as u64,
             )
         );
 
         assert_eq!(
             custom_rent.due(
-                (((2 + ACCOUNT_STORAGE_OVERHEAD) * custom_rent.lamports_per_byte_year) as f64
+                (((2 + ACCOUNT_STORAGE_OVERHEAD) * custom_rent.wens_per_byte_year) as f64
                     * custom_rent.exemption_threshold) as u64,
                 2,
                 1.2
@@ -188,11 +188,11 @@ mod tests {
     }
 
     #[test]
-    fn test_rent_due_lamports() {
-        assert_eq!(RentDue::Exempt.lamports(), 0);
+    fn test_rent_due_wens() {
+        assert_eq!(RentDue::Exempt.wens(), 0);
 
         let amount = 123;
-        assert_eq!(RentDue::Paying(amount).lamports(), amount);
+        assert_eq!(RentDue::Paying(amount).wens(), amount);
     }
 
     #[test]
@@ -204,7 +204,7 @@ mod tests {
     #[test]
     fn test_clone() {
         let rent = Rent {
-            lamports_per_byte_year: 1,
+            wens_per_byte_year: 1,
             exemption_threshold: 2.2,
             burn_percent: 3,
         };

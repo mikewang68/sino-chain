@@ -89,7 +89,7 @@ impl AccountsDbReplClientService {
         let runtime = Arc::new(
             tokio::runtime::Builder::new_multi_thread()
                 .worker_threads(config.worker_threads)
-                .thread_name("sol-accountsdb-repl-wrk")
+                .thread_name("sor-accountsdb-repl-wrk")
                 .enable_all()
                 .build()
                 .expect("Runtime"),

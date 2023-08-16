@@ -69,7 +69,7 @@ impl MessageProcessor {
         timings: &mut ExecuteTimings,
         sysvar_cache: &SysvarCache,
         blockhash: Hash,
-        lamports_per_signature: u64,
+        wens_per_signature: u64,
         current_accounts_data_len: u64,
         accumulated_consumed_units: &mut u64,
         evm_executor: Option<Rc<RefCell<evm_state::Executor>>>,
@@ -84,7 +84,7 @@ impl MessageProcessor {
             executors,
             feature_set,
             blockhash,
-            lamports_per_signature,
+            wens_per_signature,
             current_accounts_data_len,
             evm_executor,
         );
@@ -196,7 +196,7 @@ mod tests {
         #[derive(Serialize, Deserialize)]
         enum MockSystemInstruction {
             Correct,
-            AttemptCredit { lamports: u64 },
+            AttemptCredit { wens: u64 },
             AttemptDataChange { data: u8 },
         }
 
@@ -209,15 +209,15 @@ mod tests {
             if let Ok(instruction) = bincode::deserialize(data) {
                 match instruction {
                     MockSystemInstruction::Correct => Ok(()),
-                    MockSystemInstruction::AttemptCredit { lamports } => {
+                    MockSystemInstruction::AttemptCredit { wens } => {
                         keyed_account_at_index(keyed_accounts, first_instruction_account)?
                             .account
                             .borrow_mut()
-                            .checked_sub_lamports(lamports)?;
+                            .checked_sub_wens(wens)?;
                         keyed_account_at_index(keyed_accounts, first_instruction_account + 1)?
                             .account
                             .borrow_mut()
-                            .checked_add_lamports(lamports)?;
+                            .checked_add_wens(wens)?;
                         Ok(())
                     }
                     // Change data in a read-only account
@@ -298,7 +298,7 @@ mod tests {
         let message = SanitizedMessage::Legacy(Message::new(
             &[Instruction::new_with_bincode(
                 mock_system_program_id,
-                &MockSystemInstruction::AttemptCredit { lamports: 50 },
+                &MockSystemInstruction::AttemptCredit { wens: 50 },
                 account_metas.clone(),
             )],
             Some(&accounts[0].0),
@@ -327,7 +327,7 @@ mod tests {
             result,
             Err(TransactionError::InstructionError(
                 0,
-                InstructionError::ReadonlyLamportChange
+                InstructionError::ReadonlyWenChange
             ))
         );
 
@@ -374,7 +374,7 @@ mod tests {
         enum MockSystemInstruction {
             BorrowFail,
             MultiBorrowMut,
-            DoWork { lamports: u64, data: u8 },
+            DoWork { wens: u64, data: u8 },
         }
 
         fn mock_system_process_instruction(
@@ -398,13 +398,13 @@ mod tests {
                         Ok(())
                     }
                     MockSystemInstruction::MultiBorrowMut => {
-                        let from_lamports = {
+                        let from_wens = {
                             let from_account =
                                 keyed_account_at_index(keyed_accounts, first_instruction_account)?
                                     .try_account_ref_mut()?;
                             from_account.wens()
                         };
-                        let dup_lamports = {
+                        let dup_wens = {
                             let dup_account = keyed_account_at_index(
                                 keyed_accounts,
                                 first_instruction_account + 2,
@@ -412,12 +412,12 @@ mod tests {
                             .try_account_ref_mut()?;
                             dup_account.wens()
                         };
-                        if from_lamports != dup_lamports {
+                        if from_wens != dup_wens {
                             return Err(InstructionError::InvalidArgument);
                         }
                         Ok(())
                     }
-                    MockSystemInstruction::DoWork { lamports, data } => {
+                    MockSystemInstruction::DoWork { wens, data } => {
                         {
                             let mut to_account = keyed_account_at_index(
                                 keyed_accounts,
@@ -429,16 +429,16 @@ mod tests {
                                 first_instruction_account + 2,
                             )?
                             .try_account_ref_mut()?;
-                            dup_account.checked_sub_lamports(lamports)?;
-                            to_account.checked_add_lamports(lamports)?;
+                            dup_account.checked_sub_wens(wens)?;
+                            to_account.checked_add_wens(wens)?;
                             dup_account.set_data(vec![data]);
                         }
                         keyed_account_at_index(keyed_accounts, first_instruction_account)?
                             .try_account_ref_mut()?
-                            .checked_sub_lamports(lamports)?;
+                            .checked_sub_wens(wens)?;
                         keyed_account_at_index(keyed_accounts, first_instruction_account + 1)?
                             .try_account_ref_mut()?
-                            .checked_add_lamports(lamports)?;
+                            .checked_add_wens(wens)?;
                         Ok(())
                     }
                 }
@@ -550,7 +550,7 @@ mod tests {
             &[Instruction::new_with_bincode(
                 mock_program_id,
                 &MockSystemInstruction::DoWork {
-                    lamports: 10,
+                    wens: 10,
                     data: 42,
                 },
                 account_metas,

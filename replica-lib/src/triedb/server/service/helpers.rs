@@ -88,7 +88,7 @@ pub(super) fn dispatch_sources(
     bigtable_blockstore: Option<CachedRootsLedgerStorage>,
     solana_blockstore: Option<Arc<Blockstore>>,
 ) -> DispatchResult {
-    let mut sol_blockstore_selected = false;
+    let mut sor_blockstore_selected = false;
     let range: Box<dyn ReadRange> = match config.range_source {
         RangeSource::JSON { file } => {
             let file = file.ok_or(DispatchSourcesError::EmptyJsonFileArg)?;
@@ -107,7 +107,7 @@ pub(super) fn dispatch_sources(
                 .clone()
                 .ok_or(DispatchSourcesError::SolanaBlockstoreNonInit)?;
             spin_off_sync_up_thread(solana_blockstore.clone());
-            sol_blockstore_selected = true;
+            sor_blockstore_selected = true;
             Box::new(solana_blockstore)
         }
     };
@@ -121,7 +121,7 @@ pub(super) fn dispatch_sources(
         HeightIndexSource::SolanaBlockstore => {
             let solana_blockstore =
                 solana_blockstore.ok_or(DispatchSourcesError::SolanaBlockstoreNonInit)?;
-            if !sol_blockstore_selected {
+            if !sor_blockstore_selected {
                 spin_off_sync_up_thread(solana_blockstore.clone());
             }
             Box::new(solana_blockstore)

@@ -313,7 +313,7 @@ pub struct RpcVoteAccountInfo {
     /// The validator identity, as base-58 encoded string
     pub node_pubkey: String,
 
-    /// The current stake, in lamports, delegated to this vote account
+    /// The current stake, in wens, delegated to this vote account
     pub activated_stake: u64,
     #[serde(default)]
     pub activated_stake_str: String,
@@ -362,7 +362,7 @@ pub struct RpcStorageTurn {
 #[serde(rename_all = "camelCase")]
 pub struct RpcAccountBalance {
     pub address: String,
-    pub lamports: u64,
+    pub wens: u64,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]
@@ -424,8 +424,8 @@ pub struct RpcPerfSample {
 pub struct RpcInflationReward {
     pub epoch: Epoch,
     pub effective_slot: Slot,
-    pub amount: u64,       // lamports
-    pub post_balance: u64, // lamports
+    pub amount: u64,       // wens
+    pub post_balance: u64, // wens
     pub commission: Option<u8>, // Vote account commission when the reward was credited
 }
 
@@ -470,7 +470,7 @@ pub struct RpcSnapshotSlotInfo {
 }
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(untagged)]
-pub enum UiLamports {
+pub enum UiWens {
     Plain(u64),
     String(String),
 }

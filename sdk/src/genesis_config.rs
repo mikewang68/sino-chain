@@ -10,7 +10,7 @@ use {
         fee_calculator::FeeRateGovernor,
         hash::{hash, Hash},
         inflation::Inflation,
-        native_token::lamports_to_sol,
+        native_token::wens_to_sor,
         poh_config::PohConfig,
         pubkey::Pubkey,
         rent::Rent,
@@ -115,13 +115,13 @@ pub static EVM_TESTNET_CHAIN_ID: u64 = 111;
 pub static EVM_DEVELOP_CHAIN_ID: u64 = 0xdead;
 
 // useful for basic tests
-pub fn create_genesis_config(lamports: u64) -> (GenesisConfig, Keypair) {
+pub fn create_genesis_config(wens: u64) -> (GenesisConfig, Keypair) {
     let faucet_keypair = Keypair::new();
     (
         GenesisConfig::new(
             &[(
                 faucet_keypair.pubkey(),
-                AccountSharedData::new(lamports, 0, &system_program::id()),
+                AccountSharedData::new(wens, 0, &system_program::id()),
             )],
             &[],
         ),
@@ -387,7 +387,7 @@ impl fmt::Display for GenesisConfig {
              {:?}\n\
              {:?}\n\
              {:?}\n\
-             Capitalization: {} VLX in {} accounts\n\
+             Capitalization: {} SOR in {} accounts\n\
              Native instruction processors: {:#?}\n\
              Rewards pool: {:#?}\n\
              EVM chain id: {}\n\
@@ -409,12 +409,12 @@ impl fmt::Display for GenesisConfig {
             self.inflation,
             self.rent,
             self.fee_rate_governor,
-            lamports_to_sol(
+            wens_to_sor(
                 self.accounts
                     .iter()
                     .map(|(pubkey, account)| {
-                        assert!(account.lamports > 0, "{:?}", (pubkey, account));
-                        account.lamports
+                        assert!(account.wens > 0, "{:?}", (pubkey, account));
+                        account.wens
                     })
                     .sum::<u64>()
             ),
@@ -845,7 +845,7 @@ pub mod evm_genesis {
                     .accounts
                     .iter()
                     .any(|(pubkey, account)| *pubkey == faucet_keypair.pubkey()
-                        && account.lamports == 10_000));
+                        && account.wens == 10_000));
 
                 let path = &make_tmp_path("genesis_config");
                 let evm_state_path = &make_tmp_path("evm_state_path");
@@ -888,7 +888,7 @@ pub mod evm_genesis {
                     .accounts
                     .iter()
                     .any(|(pubkey, account)| *pubkey == faucet_keypair.pubkey()
-                        && account.lamports == 10_000));
+                        && account.wens == 10_000));
 
                 let path = &make_tmp_path("genesis_config");
                 config.write(path).expect("write");

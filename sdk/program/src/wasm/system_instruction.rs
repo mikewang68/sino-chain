@@ -11,11 +11,11 @@ impl SystemInstruction {
     pub fn createAccount(
         from_pubkey: &Pubkey,
         to_pubkey: &Pubkey,
-        lamports: u64,
+        wens: u64,
         space: u64,
         owner: &Pubkey,
     ) -> Instruction {
-        create_account(from_pubkey, to_pubkey, lamports, space, owner)
+        create_account(from_pubkey, to_pubkey, wens, space, owner)
     }
 
     pub fn createAccountWithSeed(
@@ -23,11 +23,11 @@ impl SystemInstruction {
         to_pubkey: &Pubkey,
         base: &Pubkey,
         seed: &str,
-        lamports: u64,
+        wens: u64,
         space: u64,
         owner: &Pubkey,
     ) -> Instruction {
-        create_account_with_seed(from_pubkey, to_pubkey, base, seed, lamports, space, owner)
+        create_account_with_seed(from_pubkey, to_pubkey, base, seed, wens, space, owner)
     }
 
     pub fn assign(pubkey: &Pubkey, owner: &Pubkey) -> Instruction {
@@ -43,8 +43,8 @@ impl SystemInstruction {
         assign_with_seed(pubkey, base, seed, owner)
     }
 
-    pub fn transfer(from_pubkey: &Pubkey, to_pubkey: &Pubkey, lamports: u64) -> Instruction {
-        transfer(from_pubkey, to_pubkey, lamports)
+    pub fn transfer(from_pubkey: &Pubkey, to_pubkey: &Pubkey, wens: u64) -> Instruction {
+        transfer(from_pubkey, to_pubkey, wens)
     }
 
     pub fn transferWithSeed(
@@ -53,7 +53,7 @@ impl SystemInstruction {
         from_seed: String,
         from_owner: &Pubkey,
         to_pubkey: &Pubkey,
-        lamports: u64,
+        wens: u64,
     ) -> Instruction {
         transfer_with_seed(
             from_pubkey,
@@ -61,7 +61,7 @@ impl SystemInstruction {
             from_seed,
             from_owner,
             to_pubkey,
-            lamports,
+            wens,
         )
     }
 
@@ -83,9 +83,9 @@ impl SystemInstruction {
         from_pubkey: &Pubkey,
         nonce_pubkey: &Pubkey,
         authority: &Pubkey,
-        lamports: u64,
+        wens: u64,
     ) -> js_sys::Array {
-        let instructions = create_nonce_account(from_pubkey, nonce_pubkey, authority, lamports);
+        let instructions = create_nonce_account(from_pubkey, nonce_pubkey, authority, wens);
         instructions.into_iter().map(JsValue::from).collect()
     }
 
@@ -97,9 +97,9 @@ impl SystemInstruction {
         nonce_pubkey: &Pubkey,
         authorized_pubkey: &Pubkey,
         to_pubkey: &Pubkey,
-        lamports: u64,
+        wens: u64,
     ) -> Instruction {
-        withdraw_nonce_account(nonce_pubkey, authorized_pubkey, to_pubkey, lamports)
+        withdraw_nonce_account(nonce_pubkey, authorized_pubkey, to_pubkey, wens)
     }
 
     pub fn authorizeNonceAccount(

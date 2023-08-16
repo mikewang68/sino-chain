@@ -15,14 +15,14 @@ pub fn create_account(
     from_keypair: &Keypair,
     to_keypair: &Keypair,
     recent_blockhash: Hash,
-    lamports: u64,
+    wens: u64,
     space: u64,
     program_id: &Pubkey,
 ) -> Transaction {
     let from_pubkey = from_keypair.pubkey();
     let to_pubkey = to_keypair.pubkey();
     let instruction =
-        system_instruction::create_account(&from_pubkey, &to_pubkey, lamports, space, program_id);
+        system_instruction::create_account(&from_pubkey, &to_pubkey, wens, space, program_id);
     let message = Message::new(&[instruction], Some(&from_pubkey));
     Transaction::new(&[from_keypair, to_keypair], message, recent_blockhash)
 }
@@ -53,11 +53,11 @@ pub fn assign(from_keypair: &Keypair, recent_blockhash: Hash, program_id: &Pubke
 pub fn transfer(
     from_keypair: &Keypair,
     to: &Pubkey,
-    lamports: u64,
+    wens: u64,
     recent_blockhash: Hash,
 ) -> Transaction {
     let from_pubkey = from_keypair.pubkey();
-    let instruction = system_instruction::transfer(&from_pubkey, to, lamports);
+    let instruction = system_instruction::transfer(&from_pubkey, to, wens);
     let message = Message::new(&[instruction], Some(&from_pubkey));
     Transaction::new(&[from_keypair], message, recent_blockhash)
 }
@@ -66,13 +66,13 @@ pub fn transfer(
 pub fn nonced_transfer(
     from_keypair: &Keypair,
     to: &Pubkey,
-    lamports: u64,
+    wens: u64,
     nonce_account: &Pubkey,
     nonce_authority: &Keypair,
     nonce_hash: Hash,
 ) -> Transaction {
     let from_pubkey = from_keypair.pubkey();
-    let instruction = system_instruction::transfer(&from_pubkey, to, lamports);
+    let instruction = system_instruction::transfer(&from_pubkey, to, wens);
     let message = Message::new_with_nonce(
         vec![instruction],
         Some(&from_pubkey),

@@ -12,7 +12,7 @@ no-entrypoint = []
 test-bpf = []
 
 [dependencies]
-solana-program = "=1.9.29"
+sino-program = { path = "../sdk/program", version = "=1.9.29" }
 
 [dev-dependencies]
 solana-program-test = "=1.9.29"

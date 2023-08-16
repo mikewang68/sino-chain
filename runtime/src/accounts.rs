@@ -412,7 +412,7 @@ impl Accounts {
                 let payer_pre_rent_state =
                     RentState::from_account(payer_account, &rent_collector.rent);
                 payer_account
-                    .checked_sub_lamports(fee)
+                    .checked_sub_wens(fee)
                     .map_err(|_| TransactionError::InsufficientFundsForFee)?;
 
                 let payer_post_rent_state =
@@ -545,16 +545,16 @@ impl Accounts {
             .zip(lock_results)
             .map(|etx| match etx {
                 (tx, (Ok(()), nonce)) => {
-                    let lamports_per_signature = nonce
+                    let wens_per_signature = nonce
                         .as_ref()
-                        .map(|nonce| nonce.lamports_per_signature())
+                        .map(|nonce| nonce.wens_per_signature())
                         .unwrap_or_else(|| {
-                            hash_queue.get_lamports_per_signature(tx.message().recent_blockhash())
+                            hash_queue.get_wens_per_signature(tx.message().recent_blockhash())
                         });
-                    let fee = if let Some(lamports_per_signature) = lamports_per_signature {
+                    let fee = if let Some(wens_per_signature) = wens_per_signature {
                         Bank::calculate_fee(
                             tx.message(),
-                            lamports_per_signature,
+                            wens_per_signature,
                             fee_structure,
                             feature_set.is_active(&tx_wide_compute_cap::id()),
                         )
@@ -597,7 +597,7 @@ impl Accounts {
             .collect()
     }
 
-    fn filter_zero_lamport_account(
+    fn filter_zero_wen_account(
         account: AccountSharedData,
         slot: Slot,
     ) -> Option<(AccountSharedData, Slot)> {
@@ -616,7 +616,7 @@ impl Accounts {
         load_hint: LoadHint,
     ) -> Option<(AccountSharedData, Slot)> {
         let (account, slot) = self.accounts_db.load(ancestors, pubkey, load_hint)?;
-        Self::filter_zero_lamport_account(account, slot)
+        Self::filter_zero_wen_account(account, slot)
     }
 
     pub fn load_with_fixed_root(
@@ -777,17 +777,17 @@ impl Accounts {
 
     /// Only called from startup or test code.
     #[must_use]
-    pub fn verify_bank_hash_and_lamports(
+    pub fn verify_bank_hash_and_wens(
         &self,
         slot: Slot,
         ancestors: &Ancestors,
-        total_lamports: u64,
+        total_wens: u64,
         test_hash_calculation: bool,
     ) -> bool {
-        if let Err(err) = self.accounts_db.verify_bank_hash_and_lamports(
+        if let Err(err) = self.accounts_db.verify_bank_hash_and_wens(
             slot,
             ancestors,
-            total_lamports,
+            total_wens,
             test_hash_calculation,
         ) {
             warn!("verify_bank_hash failed: {:?}", err);
@@ -797,10 +797,10 @@ impl Accounts {
         }
     }
 
-    fn is_loadable(lamports: u64) -> bool {
-        // Don't ever load zero lamport accounts into runtime because
-        // the existence of zero-lamport accounts are never deterministic!!
-        lamports > 0
+    fn is_loadable(wens: u64) -> bool {
+        // Don't ever load zero wen accounts into runtime because
+        // the existence of zero-wen accounts are never deterministic!!
+        wens > 0
     }
 
     fn load_while_filtering<F: Fn(&AccountSharedData) -> bool>(
@@ -1118,7 +1118,7 @@ impl Accounts {
         loaded: &'a mut [TransactionLoadResult],
         rent_collector: &RentCollector,
         durable_nonce: &(DurableNonce, /*separate_domains:*/ bool),
-        lamports_per_signature: u64,
+        wens_per_signature: u64,
         rent_for_sysvars: bool,
         leave_nonce_on_success: bool,
     ) {
@@ -1128,7 +1128,7 @@ impl Accounts {
             loaded,
             rent_collector,
             durable_nonce,
-            lamports_per_signature,
+            wens_per_signature,
             rent_for_sysvars,
             leave_nonce_on_success,
         );
@@ -1155,7 +1155,7 @@ impl Accounts {
         load_results: &'a mut [TransactionLoadResult],
         rent_collector: &RentCollector,
         durable_nonce: &(DurableNonce, /*separate_domains:*/ bool),
-        lamports_per_signature: u64,
+        wens_per_signature: u64,
         rent_for_sysvars: bool,
         leave_nonce_on_success: bool,
     ) -> Vec<(&'a Pubkey, &'a AccountSharedData)> {
@@ -1210,7 +1210,7 @@ impl Accounts {
                         is_fee_payer,
                         maybe_nonce,
                         durable_nonce,
-                        lamports_per_signature,
+                        wens_per_signature,
                     );
 
                     if execution_status.is_ok() || is_nonce_account || is_fee_payer {
@@ -1243,7 +1243,7 @@ fn prepare_if_nonce_account<'a>(
     is_fee_payer: bool,
     maybe_nonce: Option<(&'a NonceFull, bool)>,
     &(durable_nonce, separate_domains): &(DurableNonce, bool),
-    lamports_per_signature: u64,
+    wens_per_signature: u64,
 ) -> bool {
     if let Some((nonce, rollback)) = maybe_nonce {
         if address == nonce.address() {
@@ -1266,7 +1266,7 @@ fn prepare_if_nonce_account<'a>(
                 let nonce_state = NonceState::new_initialized(
                     &data.authority,
                     durable_nonce,
-                    lamports_per_signature,
+                    wens_per_signature,
                 );
                 let nonce_versions = NonceVersions::new(nonce_state, separate_domains);
                 account.set_state(&nonce_versions).unwrap();
@@ -1379,14 +1379,14 @@ mod tests {
     fn load_accounts_with_fee_and_rent(
         tx: Transaction,
         ka: &[(Pubkey, AccountSharedData)],
-        lamports_per_signature: u64,
+        wens_per_signature: u64,
         rent_collector: &RentCollector,
         error_counters: &mut TransactionErrorMetrics,
         feature_set: &FeatureSet,
         fee_structure: &FeeStructure,
     ) -> Vec<TransactionLoadResult> {
         let mut hash_queue = BlockhashQueue::new(100);
-        hash_queue.register_hash(&tx.message().recent_blockhash, lamports_per_signature);
+        hash_queue.register_hash(&tx.message().recent_blockhash, wens_per_signature);
         let accounts = Accounts::new_with_config_for_tests(
             Vec::new(),
             &ClusterType::Development,
@@ -1416,13 +1416,13 @@ mod tests {
     fn load_accounts_with_fee(
         tx: Transaction,
         ka: &[(Pubkey, AccountSharedData)],
-        lamports_per_signature: u64,
+        wens_per_signature: u64,
         error_counters: &mut TransactionErrorMetrics,
     ) -> Vec<TransactionLoadResult> {
         load_accounts_with_fee_and_rent(
             tx,
             ka,
-            lamports_per_signature,
+            wens_per_signature,
             &RentCollector::default(),
             error_counters,
             &FeatureSet::all_enabled(),
@@ -1629,7 +1629,7 @@ mod tests {
             &EpochSchedule::default(),
             500_000.0,
             &Rent {
-                lamports_per_byte_year: 42,
+                wens_per_byte_year: 42,
                 ..Rent::default()
             },
         );
@@ -3127,7 +3127,7 @@ mod tests {
         is_fee_payer: bool,
         maybe_nonce: Option<(&NonceFull, bool)>,
         durable_nonce: &(DurableNonce, /*separate_domains:*/ bool),
-        lamports_per_signature: u64,
+        wens_per_signature: u64,
         expect_account: &AccountSharedData,
     ) -> bool {
         // Verify expect_account's relationship
@@ -3147,7 +3147,7 @@ mod tests {
             is_fee_payer,
             maybe_nonce,
             durable_nonce,
-            lamports_per_signature,
+            wens_per_signature,
         );
         assert_eq!(expect_account, account);
         expect_account == account
@@ -3160,7 +3160,7 @@ mod tests {
             pre_account,
             mut post_account,
             blockhash,
-            lamports_per_signature,
+            wens_per_signature,
             maybe_fee_payer_account,
         ) = create_accounts_prepare_if_nonce_account();
         let post_account_address = pre_account_address;
@@ -3176,7 +3176,7 @@ mod tests {
                 NonceState::Initialized(nonce::state::Data::new(
                     Pubkey::default(),
                     blockhash.0,
-                    lamports_per_signature,
+                    wens_per_signature,
                 )),
                 true, // separate_domains
             ))
@@ -3189,7 +3189,7 @@ mod tests {
             false,
             Some((&nonce, true)),
             &blockhash,
-            lamports_per_signature,
+            wens_per_signature,
             &expect_account,
         ));
     }
@@ -3201,7 +3201,7 @@ mod tests {
             _pre_account,
             _post_account,
             blockhash,
-            lamports_per_signature,
+            wens_per_signature,
             _maybe_fee_payer_account,
         ) = create_accounts_prepare_if_nonce_account();
         let post_account_address = pre_account_address;
@@ -3215,7 +3215,7 @@ mod tests {
             false,
             None,
             &blockhash,
-            lamports_per_signature,
+            wens_per_signature,
             &expect_account,
         ));
     }
@@ -3227,7 +3227,7 @@ mod tests {
             pre_account,
             mut post_account,
             blockhash,
-            lamports_per_signature,
+            wens_per_signature,
             maybe_fee_payer_account,
         ) = create_accounts_prepare_if_nonce_account();
 
@@ -3242,7 +3242,7 @@ mod tests {
             false,
             Some((&nonce, true)),
             &blockhash,
-            lamports_per_signature,
+            wens_per_signature,
             &expect_account,
         ));
     }
@@ -3254,7 +3254,7 @@ mod tests {
             pre_account,
             mut post_account,
             blockhash,
-            lamports_per_signature,
+            wens_per_signature,
             maybe_fee_payer_account,
         ) = create_accounts_prepare_if_nonce_account();
         let post_account_address = pre_account_address;
@@ -3267,7 +3267,7 @@ mod tests {
                 NonceState::Initialized(nonce::state::Data::new(
                     Pubkey::default(),
                     blockhash.0,
-                    lamports_per_signature,
+                    wens_per_signature,
                 )),
                 true, // separate_domains
             ))
@@ -3283,7 +3283,7 @@ mod tests {
             false,
             Some((&nonce, true)),
             &blockhash,
-            lamports_per_signature,
+            wens_per_signature,
             &expect_account,
         ));
     }

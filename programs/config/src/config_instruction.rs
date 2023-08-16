@@ -17,7 +17,7 @@ fn initialize_account<T: ConfigState>(config_pubkey: &Pubkey) -> Instruction {
 pub fn create_account<T: ConfigState>(
     from_account_pubkey: &Pubkey,
     config_account_pubkey: &Pubkey,
-    lamports: u64,
+    wens: u64,
     keys: Vec<(Pubkey, bool)>,
 ) -> Vec<Instruction> {
     let space = T::max_space() + ConfigKeys::serialized_size(keys);
@@ -25,7 +25,7 @@ pub fn create_account<T: ConfigState>(
         system_instruction::create_account(
             from_account_pubkey,
             config_account_pubkey,
-            lamports,
+            wens,
             space,
             &id(),
         ),

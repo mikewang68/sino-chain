@@ -60,7 +60,7 @@ pub enum ProgramInstruction {
     /// # Account references
     ///   0. `[WRITE]` Address lookup table account to close
     ///   1. `[SIGNER]` Current authority
-    ///   2. `[WRITE]` Recipient of closed account lamports
+    ///   2. `[WRITE]` Recipient of closed account wens
     CloseLookupTable,
 }
 
@@ -153,7 +153,7 @@ pub fn deactivate_lookup_table(
 }
 
 /// Returns an instruction that closes an address lookup table
-/// account. The account will be deallocated and the lamports
+/// account. The account will be deallocated and the wens
 /// will be drained to the recipient address.
 pub fn close_lookup_table(
     lookup_table_address: Pubkey,

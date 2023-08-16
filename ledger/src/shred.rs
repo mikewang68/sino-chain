@@ -1736,7 +1736,7 @@ pub mod tests {
             let instruction = sdk::system_instruction::transfer(
                 &from_pubkey,
                 &Pubkey::new_unique(), // to
-                rng.gen(),             // lamports
+                rng.gen(),             // wens
             );
             let message = sdk::message::Message::new(&[instruction], Some(&from_pubkey));
             let mut tx = sdk::transaction::Transaction::new_unsigned(message);

@@ -1,10 +1,10 @@
 #![cfg(feature = "test-bpf")]
 
-use solana_program::{
+use sino_program::{
     instruction::{AccountMeta, Instruction, InstructionError},
     pubkey::Pubkey,
 };
-use solana_program_test::*;
+use sino_program_test::*;
 use solana_sdk::{
     signature::{Keypair, Signer},
     transaction::{Transaction, TransactionError},

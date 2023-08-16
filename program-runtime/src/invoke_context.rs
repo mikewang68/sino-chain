@@ -216,7 +216,7 @@ pub struct InvokeContext<'a> {
     pub feature_set: Arc<FeatureSet>,
     pub timings: ExecuteDetailsTimings,
     pub blockhash: Hash,
-    pub lamports_per_signature: u64,
+    pub wens_per_signature: u64,
     pub return_data: (Pubkey, Vec<u8>),
     evm_executor: Option<Rc<RefCell<evm_state::Executor>>>,
 }
@@ -233,7 +233,7 @@ impl<'a> InvokeContext<'a> {
         executors: Rc<RefCell<Executors>>,
         feature_set: Arc<FeatureSet>,
         blockhash: Hash,
-        lamports_per_signature: u64,
+        wens_per_signature: u64,
         initial_accounts_data_len: u64,
         evm_executor: Option<Rc<RefCell<evm_state::Executor>>>,
     ) -> Self {
@@ -254,7 +254,7 @@ impl<'a> InvokeContext<'a> {
             feature_set,
             timings: ExecuteDetailsTimings::default(),
             blockhash,
-            lamports_per_signature,
+            wens_per_signature,
             return_data: (Pubkey::default(), Vec::new()),
             evm_executor,
         }
@@ -474,7 +474,7 @@ impl<'a> InvokeContext<'a> {
                     err
                 })?;
             pre_sum = pre_sum
-                .checked_add(u128::from(pre_account.lamports()))
+                .checked_add(u128::from(pre_account.wens()))
                 .ok_or(InstructionError::UnbalancedInstruction)?;
             post_sum = post_sum
                 .checked_add(u128::from(account.wens()))
@@ -493,7 +493,7 @@ impl<'a> InvokeContext<'a> {
         };
         instruction.visit_each_account(&mut work)?;
 
-        // Verify that the total sum of all the lamports did not change
+        // Verify that the total sum of all the wens did not change
         if pre_sum != post_sum {
             return Err(InstructionError::UnbalancedInstruction);
         }
@@ -559,7 +559,7 @@ impl<'a> InvokeContext<'a> {
                                 err
                             })?;
                         pre_sum = pre_sum
-                            .checked_add(u128::from(pre_account.lamports()))
+                            .checked_add(u128::from(pre_account.wens()))
                             .ok_or(InstructionError::UnbalancedInstruction)?;
                         post_sum = post_sum
                             .checked_add(u128::from(account.wens()))
@@ -585,7 +585,7 @@ impl<'a> InvokeContext<'a> {
         };
         instruction.visit_each_account(&mut work)?;
 
-        // Verify that the total sum of all the lamports did not change
+        // Verify that the total sum of all the wens did not change
         if pre_sum != post_sum {
             return Err(InstructionError::UnbalancedInstruction);
         }

@@ -609,7 +609,7 @@ impl RpcSubscriptions {
             .spawn(move || {
                 let pool = rayon::ThreadPoolBuilder::new()
                     .num_threads(notification_threads.unwrap_or_else(get_thread_count))
-                    .thread_name(|i| format!("sol-sub-notif-{}", i))
+                    .thread_name(|i| format!("sor-sub-notif-{}", i))
                     .build()
                     .unwrap();
                 pool.install(|| {
@@ -1270,7 +1270,7 @@ pub(crate) mod tests {
                 BankNotification, OptimisticallyConfirmedBank, OptimisticallyConfirmedBankTracker,
             },
             rpc::create_test_transactions_and_populate_blockstore,
-            rpc_pubsub::RpcSolPubSubInternal,
+            rpc_pubsub::RpcSorPubSubInternal,
             rpc_pubsub_service,
         },
         serial_test::serial,
@@ -1296,7 +1296,7 @@ pub(crate) mod tests {
         },
     };
 
-    fn make_account_result(lamports: u64, subscription: u64, data: &str) -> serde_json::Value {
+    fn make_account_result(wens: u64, subscription: u64, data: &str) -> serde_json::Value {
         json!({
            "jsonrpc": "2.0",
            "method": "accountNotification",
@@ -1306,8 +1306,8 @@ pub(crate) mod tests {
                    "value": {
                        "data": data,
                        "executable": false,
-                       "lamports": lamports,
-                       "lamportsStr": lamports.to_string(),
+                       "wens": wens,
+                       "wensStr": wens.to_string(),
                        "owner": "11111111111111111111111111111111",
                        "rentEpoch": 0,
                     },
@@ -1827,8 +1827,8 @@ pub(crate) mod tests {
                        "account": {
                           "data": "1111111111111111",
                           "executable": false,
-                          "lamports": 1,
-                          "lamportsStr": 1.to_string(),
+                          "wens": 1,
+                          "wensStr": 1.to_string(),
                           "owner": "Stake11111111111111111111111111111111111111",
                           "rentEpoch": 0,
                        },
@@ -1983,7 +1983,7 @@ pub(crate) mod tests {
         );
 
         // a closure to reduce code duplications in building expected responses:
-        let build_expected_resp = |slot: Slot, lamports: u64, pubkey: &str, subscription: i32| {
+        let build_expected_resp = |slot: Slot, wens: u64, pubkey: &str, subscription: i32| {
             json!({
                "jsonrpc": "2.0",
                "method": "programNotification",
@@ -1994,8 +1994,8 @@ pub(crate) mod tests {
                            "account": {
                               "data": "1111111111111111",
                               "executable": false,
-                              "lamports": lamports,
-                              "lamportsStr": lamports.to_string(),
+                              "wens": wens,
+                              "wensStr": wens.to_string(),
                               "owner": "Stake11111111111111111111111111111111111111",
                               "rentEpoch": 0,
                            },
@@ -2264,7 +2264,7 @@ pub(crate) mod tests {
         );
 
         // a closure to reduce code duplications in building expected responses:
-        let build_expected_resp = |slot: Slot, lamports: u64, pubkey: &str, subscription: i32| {
+        let build_expected_resp = |slot: Slot, wens: u64, pubkey: &str, subscription: i32| {
             json!({
                "jsonrpc": "2.0",
                "method": "programNotification",
@@ -2275,8 +2275,8 @@ pub(crate) mod tests {
                            "account": {
                               "data": "1111111111111111",
                               "executable": false,
-                              "lamports": lamports,
-                              "lamportsStr": lamports.to_string(),
+                              "wens": wens,
+                              "wensStr": wens.to_string(),
                               "owner": "Stake11111111111111111111111111111111111111",
                               "rentEpoch": 0,
                            },
@@ -2763,8 +2763,8 @@ pub(crate) mod tests {
                    "value": {
                        "data": "1111111111111111",
                        "executable": false,
-                       "lamports": 1,
-                       "lamportsStr": 1.to_string(),
+                       "wens": 1,
+                       "wensStr": 1.to_string(),
                        "owner": "Stake11111111111111111111111111111111111111",
                        "rentEpoch": 0,
                     },
@@ -2812,8 +2812,8 @@ pub(crate) mod tests {
                    "value": {
                        "data": "1111111111111111",
                        "executable": false,
-                       "lamports": 1,
-                       "lamportsStr": 1.to_string(),
+                       "wens": 1,
+                       "wensStr": 1.to_string(),
                        "owner": "Stake11111111111111111111111111111111111111",
                        "rentEpoch": 0,
                     },

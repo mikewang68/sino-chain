@@ -12,16 +12,16 @@ use {
 pub fn request_airdrop_transaction(
     _faucet_addr: &SocketAddr,
     _id: &Pubkey,
-    lamports: u64,
+    wens: u64,
     _blockhash: Hash,
 ) -> Result<Transaction, Error> {
-    if lamports == 0 {
+    if wens == 0 {
         Err(Error::new(ErrorKind::Other, "Airdrop failed"))
     } else {
         let key = Keypair::new();
         let to = sdk::pubkey::new_rand();
         let blockhash = Hash::default();
-        let tx = system_transaction::transfer(&key, &to, lamports, blockhash);
+        let tx = system_transaction::transfer(&key, &to, wens, blockhash);
         Ok(tx)
     }
 }

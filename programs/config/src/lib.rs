@@ -52,12 +52,12 @@ pub fn get_config_data(bytes: &[u8]) -> Result<&[u8], bincode::Error> {
 pub fn create_config_account<T: ConfigState>(
     keys: Vec<(Pubkey, bool)>,
     config_data: &T,
-    lamports: u64,
+    wens: u64,
 ) -> AccountSharedData {
     let mut data = serialize(&ConfigKeys { keys }).unwrap();
     data.extend_from_slice(&serialize(config_data).unwrap());
     AccountSharedData::from(Account {
-        lamports,
+        wens,
         data,
         owner: id(),
         ..Account::default()

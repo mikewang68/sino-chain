@@ -11,10 +11,10 @@ use {
     std::cell::RefCell,
 };
 
-pub fn create_account(lamports: u64, separate_domains: bool) -> RefCell<AccountSharedData> {
+pub fn create_account(wens: u64, separate_domains: bool) -> RefCell<AccountSharedData> {
     RefCell::new(
         AccountSharedData::new_data_with_space(
-            lamports,
+            wens,
             &Versions::new(State::Uninitialized, separate_domains),
             State::size(),
             &crate::system_program::id(),
@@ -40,7 +40,7 @@ pub fn verify_nonce_account(
         .flatten()
 }
 
-pub fn lamports_per_signature_of(account: &AccountSharedData) -> Option<u64> {
+pub fn wens_per_signature_of(account: &AccountSharedData) -> Option<u64> {
     match StateMut::<Versions>::state(account).ok()?.state() {
         State::Initialized(data) => Some(data.fee_calculator.wens_per_signature),
         State::Uninitialized => None,
@@ -81,7 +81,7 @@ mod tests {
 
     fn new_nonce_account(versions: Versions) -> AccountSharedData {
         AccountSharedData::new_data(
-            1_000_000,             // lamports
+            1_000_000,             // wens
             &versions,             // state
             &system_program::id(), // owner
         )

@@ -41,20 +41,20 @@ impl Feature {
 
 /// Activate a feature
 pub fn activate(feature_id: &Pubkey, funding_address: &Pubkey, rent: &Rent) -> Vec<Instruction> {
-    activate_with_lamports(
+    activate_with_wens(
         feature_id,
         funding_address,
         rent.minimum_balance(Feature::size_of()),
     )
 }
 
-pub fn activate_with_lamports(
+pub fn activate_with_wens(
     feature_id: &Pubkey,
     funding_address: &Pubkey,
-    lamports: u64,
+    wens: u64,
 ) -> Vec<Instruction> {
     vec![
-        system_instruction::transfer(funding_address, feature_id, lamports),
+        system_instruction::transfer(funding_address, feature_id, wens),
         system_instruction::allocate(feature_id, Feature::size_of() as u64),
         system_instruction::assign(feature_id, &id()),
     ]

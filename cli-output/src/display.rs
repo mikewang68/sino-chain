@@ -4,7 +4,7 @@ use {
     console::style,
     indicatif::{ProgressBar, ProgressStyle},
     sdk::{
-        clock::UnixTimestamp, hash::Hash, message::Message, native_token::lamports_to_sol,
+        clock::UnixTimestamp, hash::Hash, message::Message, native_token::wens_to_sor,
         program_utils::limited_deserialize, pubkey::Pubkey, stake, transaction::Transaction,
     },
     transaction_status::UiTransactionStatusMeta,
@@ -14,7 +14,7 @@ use {
 
 #[derive(Clone, Debug)]
 pub struct BuildBalanceMessageConfig {
-    pub use_lamports_unit: bool,
+    pub use_wens_unit: bool,
     pub show_unit: bool,
     pub trim_trailing_zeros: bool,
 }
@@ -22,7 +22,7 @@ pub struct BuildBalanceMessageConfig {
 impl Default for BuildBalanceMessageConfig {
     fn default() -> Self {
         Self {
-            use_lamports_unit: false,
+            use_wens_unit: false,
             show_unit: true,
             trim_trailing_zeros: true,
         }
@@ -35,29 +35,29 @@ fn is_memo_program(k: &Pubkey) -> bool {
 }
 
 pub fn build_balance_message_with_config(
-    lamports: u64,
+    wens: u64,
     config: &BuildBalanceMessageConfig,
 ) -> String {
-    let value = if config.use_lamports_unit {
-        lamports.to_string()
+    let value = if config.use_wens_unit {
+        wens.to_string()
     } else {
-        let sol = lamports_to_sol(lamports);
-        let sol_str = format!("{:.9}", sol);
+        let sor = wens_to_sor(wens);
+        let sor_str = format!("{:.9}", sor);
         if config.trim_trailing_zeros {
-            sol_str
+            sor_str
                 .trim_end_matches('0')
                 .trim_end_matches('.')
                 .to_string()
         } else {
-            sol_str
+            sor_str
         }
     };
     let unit = if config.show_unit {
-        if config.use_lamports_unit {
-            let ess = if lamports == 1 { "" } else { "s" };
-            format!(" lamport{}", ess)
+        if config.use_wens_unit {
+            let ess = if wens == 1 { "" } else { "s" };
+            format!(" wen{}", ess)
         } else {
-            " VLX".to_string()
+            " SOR".to_string()
         }
     } else {
         "".to_string()
@@ -65,11 +65,11 @@ pub fn build_balance_message_with_config(
     format!("{}{}", value, unit)
 }
 
-pub fn build_balance_message(lamports: u64, use_lamports_unit: bool, show_unit: bool) -> String {
+pub fn build_balance_message(wens: u64, use_wens_unit: bool, show_unit: bool) -> String {
     build_balance_message_with_config(
-        lamports,
+        wens,
         &BuildBalanceMessageConfig {
-            use_lamports_unit,
+            use_wens_unit,
             show_unit,
             ..BuildBalanceMessageConfig::default()
         },
@@ -285,7 +285,7 @@ pub fn write_transaction<W: io::Write>(
             w,
             "{}  Fee: ◎{}",
             prefix,
-            lamports_to_sol(transaction_status.fee)
+            wens_to_sor(transaction_status.fee)
         )?;
         assert_eq!(
             transaction_status.pre_balances.len(),
@@ -303,7 +303,7 @@ pub fn write_transaction<W: io::Write>(
                     "{}  Account {} balance: ◎{}",
                     prefix,
                     i,
-                    lamports_to_sol(*pre)
+                    wens_to_sor(*pre)
                 )?;
             } else {
                 writeln!(
@@ -311,8 +311,8 @@ pub fn write_transaction<W: io::Write>(
                     "{}  Account {} balance: ◎{} -> ◎{}",
                     prefix,
                     i,
-                    lamports_to_sol(*pre),
-                    lamports_to_sol(*post)
+                    wens_to_sor(*pre),
+                    wens_to_sor(*post)
                 )?;
             }
         }
@@ -335,7 +335,7 @@ pub fn write_transaction<W: io::Write>(
                     prefix, "Address", "Type", "Amount", "New Balance"
                 )?;
                 for reward in rewards {
-                    let sign = if reward.lamports < 0 { "-" } else { "" };
+                    let sign = if reward.wens < 0 { "-" } else { "" };
                     writeln!(
                         w,
                         "{}  {:<44}  {:^15}  {}◎{:<14.9}  ◎{:<18.9}",
@@ -347,8 +347,8 @@ pub fn write_transaction<W: io::Write>(
                             "-".to_string()
                         },
                         sign,
-                        lamports_to_sol(reward.lamports.unsigned_abs()),
-                        lamports_to_sol(reward.post_balance)
+                        wens_to_sor(reward.wens.unsigned_abs()),
+                        wens_to_sor(reward.post_balance)
                     )?;
                 }
             }

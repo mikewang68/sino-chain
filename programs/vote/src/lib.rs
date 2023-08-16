@@ -16,7 +16,7 @@ pub use sdk::vote::program::{check_id, id};
 
 
 /// Amount of stake to be in majority = 1M
-pub const MIN_STAKERS_TO_BE_MAJORITY: u64 = 1_000_000 * sdk::native_token::LAMPORTS_PER_VLX;
+pub const MIN_STAKERS_TO_BE_MAJORITY: u64 = 1_000_000 * sdk::native_token::WENS_PER_SOR;
 
-/// Number of stakers with lamports more than 1M, to start filtering = 19
+/// Number of stakers with wens more than 1M, to start filtering = 19
 pub const NUM_MAJOR_STAKERS_FOR_FILTERING: usize = 19;

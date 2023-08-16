@@ -38,7 +38,7 @@ impl<'a> KeyedAccount<'a> {
         self.is_writable
     }
 
-    pub fn lamports(&self) -> Result<u64, InstructionError> {
+    pub fn wens(&self) -> Result<u64, InstructionError> {
         Ok(self.try_borrow()?.wens())
     }
 

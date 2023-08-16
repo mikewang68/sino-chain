@@ -14,7 +14,7 @@ use {
 };
 
 pub struct NonCirculatingSupply {
-    pub lamports: u64,
+    pub wens: u64,
     pub accounts: Vec<Pubkey>,
 }
 
@@ -40,7 +40,7 @@ pub fn calculate_non_circulating_supply(bank: &Arc<Bank>) -> ScanResult<NonCircu
             &IndexKey::ProgramId(stake::program::id()),
             // The program-id account index checks for Account owner on inclusion. However, due to
             // the current AccountsDb implementation, an account may remain in storage as a
-            // zero-lamport Account::Default() after being wiped and reinitialized in later
+            // zero-wen Account::Default() after being wiped and reinitialized in later
             // updates. We include the redundant filter here to avoid returning these accounts.
             |account| account.owner() == &stake::program::id(),
             config,
@@ -71,13 +71,13 @@ pub fn calculate_non_circulating_supply(bank: &Arc<Bank>) -> ScanResult<NonCircu
         }
     }
 
-    let lamports = non_circulating_accounts_set
+    let wens = non_circulating_accounts_set
         .iter()
         .map(|pubkey| bank.get_balance(pubkey))
         .sum();
 
     Ok(NonCirculatingSupply {
-        lamports,
+        wens,
         accounts: non_circulating_accounts_set.into_iter().collect(),
     })
 }
@@ -288,7 +288,7 @@ mod tests {
 
         let non_circulating_supply = calculate_non_circulating_supply(&bank).unwrap();
         assert_eq!(
-            non_circulating_supply.lamports,
+            non_circulating_supply.wens,
             (num_non_circulating_accounts + num_stake_accounts) * balance
         );
         assert_eq!(
@@ -306,7 +306,7 @@ mod tests {
         }
         let non_circulating_supply = calculate_non_circulating_supply(&bank).unwrap();
         assert_eq!(
-            non_circulating_supply.lamports,
+            non_circulating_supply.wens,
             (num_non_circulating_accounts * new_balance) + (num_stake_accounts * balance)
         );
         assert_eq!(
@@ -321,7 +321,7 @@ mod tests {
         assert_eq!(bank.epoch(), 1);
         let non_circulating_supply = calculate_non_circulating_supply(&bank).unwrap();
         assert_eq!(
-            non_circulating_supply.lamports,
+            non_circulating_supply.wens,
             num_non_circulating_accounts * new_balance
         );
         assert_eq!(

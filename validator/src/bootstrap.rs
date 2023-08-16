@@ -363,11 +363,11 @@ fn check_vote_account(
         ));
     }
 
-    // Maybe we can calculate minimum voting fee; rather than 1 lamport
-    if identity_account.lamports <= 1 {
+    // Maybe we can calculate minimum voting fee; rather than 1 wen
+    if identity_account.wens <= 1 {
         return Err(format!(
-            "underfunded identity account ({}): only {} lamports available",
-            identity_pubkey, identity_account.lamports
+            "underfunded identity account ({}): only {} wens available",
+            identity_pubkey, identity_account.wens
         ));
     }
 

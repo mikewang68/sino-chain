@@ -50,7 +50,7 @@ version = { path = "../version", version = "=0.6.3" }
 vote-program = { path = "../programs/vote", version = "=1.9.29" }
 sino-send-transaction-service = { path = "../send-transaction-service", version = "=1.9.29" }
 relying-party-program = { path = "../programs/relying-party-program" }
-spl-token = { version = "=3.2.0", features = ["no-entrypoint"] }
+spl-token = { path = "../spl-token-3.2.0", version = "=3.2.0", features = ["no-entrypoint"] }
 stream-cancel = "0.8.1"
 streamer = { path = "../streamer", version = "=1.9.29" }
 storage-bigtable = { path = "../storage-bigtable", version = "=1.9.29" }

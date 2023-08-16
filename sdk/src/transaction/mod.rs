@@ -71,8 +71,8 @@
 //! #[derive(BorshSerialize, BorshDeserialize)]
 //! enum BankInstruction {
 //!     Initialize,
-//!     Deposit { lamports: u64 },
-//!     Withdraw { lamports: u64 },
+//!     Deposit { wens: u64 },
+//!     Withdraw { wens: u64 },
 //! }
 //!
 //! fn send_initialize_tx(
@@ -230,8 +230,8 @@ impl Transaction {
     /// #[derive(BorshSerialize, BorshDeserialize)]
     /// enum BankInstruction {
     ///     Initialize,
-    ///     Deposit { lamports: u64 },
-    ///     Withdraw { lamports: u64 },
+    ///     Deposit { wens: u64 },
+    ///     Withdraw { wens: u64 },
     /// }
     ///
     /// fn send_initialize_tx(
@@ -309,8 +309,8 @@ impl Transaction {
     /// #[derive(BorshSerialize, BorshDeserialize)]
     /// enum BankInstruction {
     ///     Initialize,
-    ///     Deposit { lamports: u64 },
-    ///     Withdraw { lamports: u64 },
+    ///     Deposit { wens: u64 },
+    ///     Withdraw { wens: u64 },
     /// }
     ///
     /// fn send_initialize_tx(
@@ -388,8 +388,8 @@ impl Transaction {
     /// #[derive(BorshSerialize, BorshDeserialize)]
     /// enum BankInstruction {
     ///     Initialize,
-    ///     Deposit { lamports: u64 },
-    ///     Withdraw { lamports: u64 },
+    ///     Deposit { wens: u64 },
+    ///     Withdraw { wens: u64 },
     /// }
     ///
     /// fn send_initialize_tx(
@@ -464,8 +464,8 @@ impl Transaction {
     /// #[derive(BorshSerialize, BorshDeserialize)]
     /// enum BankInstruction {
     ///     Initialize,
-    ///     Deposit { lamports: u64 },
-    ///     Withdraw { lamports: u64 },
+    ///     Deposit { wens: u64 },
+    ///     Withdraw { wens: u64 },
     /// }
     ///
     /// fn send_initialize_tx(
@@ -517,7 +517,7 @@ impl Transaction {
     ///
     /// * `from_keypairs` - The keys used to sign the transaction.
     /// * `keys` - The keys for the transaction.  These are the program state
-    ///    instances or lamport recipient keys.
+    ///    instances or wen recipient keys.
     /// * `recent_blockhash` - The PoH hash.
     /// * `program_ids` - The keys that identify programs used in the `instruction` vector.
     /// * `instructions` - Instructions that will be executed atomically.
@@ -672,8 +672,8 @@ impl Transaction {
     /// #[derive(BorshSerialize, BorshDeserialize)]
     /// enum BankInstruction {
     ///     Initialize,
-    ///     Deposit { lamports: u64 },
-    ///     Withdraw { lamports: u64 },
+    ///     Deposit { wens: u64 },
+    ///     Withdraw { wens: u64 },
     /// }
     ///
     /// fn send_initialize_tx(
@@ -813,8 +813,8 @@ impl Transaction {
     /// #[derive(BorshSerialize, BorshDeserialize)]
     /// enum BankInstruction {
     ///     Initialize,
-    ///     Deposit { lamports: u64 },
-    ///     Withdraw { lamports: u64 },
+    ///     Deposit { wens: u64 },
+    ///     Withdraw { wens: u64 },
     /// }
     ///
     /// fn send_initialize_tx(

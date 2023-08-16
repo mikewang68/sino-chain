@@ -83,7 +83,7 @@ impl RentCollector {
             .due(account.wens(), account.data().len(), years_elapsed)
     }
 
-    // Updates the account's lamports and status, and returns the amount of rent collected, if any.
+    // Updates the account's wens and status, and returns the amount of rent collected, if any.
     // This is NOT thread safe at some level. If we try to collect from the same account in
     // parallel, we may collect twice.
     #[must_use = "add to Bank::collected_rent"]
@@ -114,18 +114,18 @@ impl RentCollector {
         };
         account.set_rent_epoch(self.epoch + epoch_increment);
 
-        let begin_lamports = account.wens();
-        account.saturating_sub_lamports(rent_due.lamports());
-        let end_lamports = account.wens();
+        let begin_wens = account.wens();
+        account.saturating_sub_wens(rent_due.wens());
+        let end_wens = account.wens();
 
         let mut account_data_len_reclaimed = 0;
-        if end_lamports == 0 {
+        if end_wens == 0 {
             account_data_len_reclaimed = account.data().len() as u64;
             *account = AccountSharedData::default();
         }
 
         CollectedInfo {
-            rent_amount: begin_lamports - end_lamports,
+            rent_amount: begin_wens - end_wens,
             account_data_len_reclaimed,
         }
     }
@@ -164,7 +164,7 @@ impl RentCollector {
 pub struct CollectedInfo {
     /// Amount of rent collected from account
     pub rent_amount: u64,
-    /// Size of data reclaimed from account (happens when account's lamports go to zero)
+    /// Size of data reclaimed from account (happens when account's wens go to zero)
     pub account_data_len_reclaimed: u64,
 }
 
@@ -191,13 +191,13 @@ mod tests {
 
     #[test]
     fn test_collect_from_account_created_and_existing() {
-        let old_lamports = 1000;
+        let old_wens = 1000;
         let old_epoch = 1;
         let new_epoch = 3;
 
         let (mut created_account, mut existing_account) = {
             let account = AccountSharedData::from(Account {
-                lamports: old_lamports,
+                wens: old_wens,
                 rent_epoch: old_epoch,
                 ..Account::default()
             });
@@ -213,10 +213,10 @@ mod tests {
             &mut created_account,
             true,
         );
-        assert!(created_account.wens() < old_lamports);
+        assert!(created_account.wens() < old_wens);
         assert_eq!(
             created_account.wens() + collected.rent_amount,
-            old_lamports
+            old_wens
         );
         assert_ne!(created_account.rent_epoch(), old_epoch);
         assert_eq!(collected.account_data_len_reclaimed, 0);
@@ -228,10 +228,10 @@ mod tests {
             true,
             None,
         );
-        assert!(existing_account.wens() < old_lamports);
+        assert!(existing_account.wens() < old_wens);
         assert_eq!(
             existing_account.wens() + collected.rent_amount,
-            old_lamports
+            old_wens
         );
         assert_ne!(existing_account.rent_epoch(), old_epoch);
         assert_eq!(collected.account_data_len_reclaimed, 0);
@@ -245,11 +245,11 @@ mod tests {
     fn test_rent_exempt_temporal_escape() {
         let mut account = AccountSharedData::default();
         let epoch = 3;
-        let huge_lamports = 123_456_789_012;
-        let tiny_lamports = 789_012;
+        let huge_wens = 123_456_789_012;
+        let tiny_wens = 789_012;
         let pubkey = sdk::pubkey::new_rand();
 
-        account.set_wens(huge_lamports);
+        account.set_wens(huge_wens);
         assert_eq!(account.rent_epoch(), 0);
 
         // create a tested rent collector
@@ -258,25 +258,25 @@ mod tests {
         // first mark account as being collected while being rent-exempt
         let collected =
             rent_collector.collect_from_existing_account(&pubkey, &mut account, true, None);
-        assert_eq!(account.wens(), huge_lamports);
+        assert_eq!(account.wens(), huge_wens);
         assert_eq!(collected, CollectedInfo::default());
 
         // decrease the balance not to be rent-exempt
-        account.set_wens(tiny_lamports);
+        account.set_wens(tiny_wens);
 
         // ... and trigger another rent collection on the same epoch and check that rent is working
         let collected =
             rent_collector.collect_from_existing_account(&pubkey, &mut account, true, None);
-        assert_eq!(account.wens(), tiny_lamports - collected.rent_amount);
+        assert_eq!(account.wens(), tiny_wens - collected.rent_amount);
         assert_ne!(collected, CollectedInfo::default());
     }
 
     #[test]
     fn test_rent_exempt_sysvar() {
-        let tiny_lamports = 1;
+        let tiny_wens = 1;
         let mut account = AccountSharedData::default();
         account.set_owner(sysvar::id());
-        account.set_wens(tiny_lamports);
+        account.set_wens(tiny_wens);
 
         let pubkey = sdk::pubkey::new_rand();
 
@@ -288,7 +288,7 @@ mod tests {
         // old behavior: sysvars are special-cased
         let collected =
             rent_collector.collect_from_existing_account(&pubkey, &mut account, false, None);
-        assert_eq!(account.wens(), tiny_lamports);
+        assert_eq!(account.wens(), tiny_wens);
         assert_eq!(collected, CollectedInfo::default());
 
         // new behavior: sysvars are NOT special-cased
@@ -302,11 +302,11 @@ mod tests {
     #[test]
     fn test_collect_cleans_up_account() {
         sino_logger::setup();
-        let account_lamports = 1; // must be *below* rent amount
+        let account_wens = 1; // must be *below* rent amount
         let account_data_len = 567;
         let account_rent_epoch = 11;
         let mut account = AccountSharedData::from(Account {
-            lamports: account_lamports, // <-- must be below rent-exempt amount
+            wens: account_wens, // <-- must be below rent-exempt amount
             data: vec![u8::default(); account_data_len],
             rent_epoch: account_rent_epoch,
             ..Account::default()
@@ -320,7 +320,7 @@ mod tests {
             None,
         );
 
-        assert_eq!(collected.rent_amount, account_lamports);
+        assert_eq!(collected.rent_amount, account_wens);
         assert_eq!(
             collected.account_data_len_reclaimed,
             account_data_len as u64

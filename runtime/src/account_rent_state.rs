@@ -10,12 +10,12 @@ use {
 
 #[derive(Debug, PartialEq)]
 pub(crate) enum RentState {
-    /// account.lamports == 0
+    /// account.wens == 0
     Uninitialized,
-    /// 0 < account.lamports < rent-exempt-minimum
+    /// 0 < account.wens < rent-exempt-minimum
     /// Parameter is the size of the account data
     RentPaying(usize),
-    /// account.lamports >= rent-exempt-minimum
+    /// account.wens >= rent-exempt-minimum
     RentExempt,
 }
 
@@ -97,7 +97,7 @@ mod tests {
         let account_data_size = 100;
 
         let rent = Rent::free();
-        let rent_exempt_account = AccountSharedData::new(1, account_data_size, &program_id); // if rent is free, all accounts with non-zero lamports and non-empty data are rent-exempt
+        let rent_exempt_account = AccountSharedData::new(1, account_data_size, &program_id); // if rent is free, all accounts with non-zero wens and non-empty data are rent-exempt
 
         assert_eq!(
             RentState::from_account(&uninitialized_account, &rent),

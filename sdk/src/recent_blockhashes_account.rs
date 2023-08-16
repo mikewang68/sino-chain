@@ -40,12 +40,12 @@ where
     note = "Please use `create_account_with_data_for_test` instead"
 )]
 #[allow(deprecated)]
-pub fn create_account_with_data<'a, I>(lamports: u64, recent_blockhash_iter: I) -> AccountSharedData
+pub fn create_account_with_data<'a, I>(wens: u64, recent_blockhash_iter: I) -> AccountSharedData
 where
     I: IntoIterator<Item = IterItem<'a>>,
 {
     #[allow(deprecated)]
-    create_account_with_data_and_fields(recent_blockhash_iter, (lamports, INITIAL_RENT_EPOCH))
+    create_account_with_data_and_fields(recent_blockhash_iter, (wens, INITIAL_RENT_EPOCH))
 }
 
 #[deprecated(
@@ -103,9 +103,9 @@ mod tests {
     #[test]
     fn test_create_account_full() {
         let def_hash = Hash::default();
-        let def_lamports_per_signature = 0;
+        let def_wens_per_signature = 0;
         let account = create_account_with_data_for_test(
-            vec![IterItem(0u64, &def_hash, def_lamports_per_signature); MAX_ENTRIES].into_iter(),
+            vec![IterItem(0u64, &def_hash, def_wens_per_signature); MAX_ENTRIES].into_iter(),
         );
         let recent_blockhashes = from_account::<RecentBlockhashes, _>(&account).unwrap();
         assert_eq!(recent_blockhashes.len(), MAX_ENTRIES);
@@ -114,9 +114,9 @@ mod tests {
     #[test]
     fn test_create_account_truncate() {
         let def_hash = Hash::default();
-        let def_lamports_per_signature = 0;
+        let def_wens_per_signature = 0;
         let account = create_account_with_data_for_test(
-            vec![IterItem(0u64, &def_hash, def_lamports_per_signature); MAX_ENTRIES + 1]
+            vec![IterItem(0u64, &def_hash, def_wens_per_signature); MAX_ENTRIES + 1]
                 .into_iter(),
         );
         let recent_blockhashes = from_account::<RecentBlockhashes, _>(&account).unwrap();
@@ -125,7 +125,7 @@ mod tests {
 
     #[test]
     fn test_create_account_unsorted() {
-        let def_lamports_per_signature = 0;
+        let def_wens_per_signature = 0;
         let mut unsorted_blocks: Vec<_> = (0..MAX_ENTRIES)
             .map(|i| {
                 (i as u64, {
@@ -141,13 +141,13 @@ mod tests {
         let account = create_account_with_data_for_test(
             unsorted_blocks
                 .iter()
-                .map(|(i, hash)| IterItem(*i, hash, def_lamports_per_signature)),
+                .map(|(i, hash)| IterItem(*i, hash, def_wens_per_signature)),
         );
         let recent_blockhashes = from_account::<RecentBlockhashes, _>(&account).unwrap();
 
         let mut unsorted_recent_blockhashes: Vec<_> = unsorted_blocks
             .iter()
-            .map(|(i, hash)| IterItem(*i, hash, def_lamports_per_signature))
+            .map(|(i, hash)| IterItem(*i, hash, def_wens_per_signature))
             .collect();
         unsorted_recent_blockhashes.sort();
         unsorted_recent_blockhashes.reverse();

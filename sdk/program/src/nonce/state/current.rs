@@ -25,12 +25,12 @@ impl Data {
     pub fn new(
         authority: Pubkey,
         durable_nonce: DurableNonce,
-        lamports_per_signature: u64,
+        wens_per_signature: u64,
     ) -> Self {
         Data {
             authority,
             durable_nonce,
-            fee_calculator: FeeCalculator::new(lamports_per_signature),
+            fee_calculator: FeeCalculator::new(wens_per_signature),
         }
     }
 
@@ -41,7 +41,7 @@ impl Data {
         self.durable_nonce.0
     }
 
-    pub fn get_lamports_per_signature(&self) -> u64 {
+    pub fn get_wens_per_signature(&self) -> u64 {
         self.fee_calculator.wens_per_signature
     }
 }
@@ -77,9 +77,9 @@ impl State {
     pub fn new_initialized(
         authority: &Pubkey,
         durable_nonce: DurableNonce,
-        lamports_per_signature: u64,
+        wens_per_signature: u64,
     ) -> Self {
-        Self::Initialized(Data::new(*authority, durable_nonce, lamports_per_signature))
+        Self::Initialized(Data::new(*authority, durable_nonce, wens_per_signature))
     }
     pub fn size() -> usize {
         let data = Versions::new(

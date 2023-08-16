@@ -1,5 +1,5 @@
 //! The `faucet` module provides an object for launching a Solana Faucet,
-//! which is the custodian of any remaining lamports in a mint.
+//! which is the custodian of any remaining wens in a mint.
 //! The Solana Faucet builds and sends airdrop transactions,
 //! checking requests against a single-request cap and a per-IP limit
 //! for a given time time_slice.
@@ -14,7 +14,7 @@ use {
         hash::Hash,
         instruction::Instruction,
         message::Message,
-        native_token::lamports_to_sol,
+        native_token::wens_to_sor,
         packet::PACKET_DATA_SIZE,
         pubkey::Pubkey,
         signature::{Keypair, Signer},
@@ -78,7 +78,7 @@ pub enum FaucetError {
 #[derive(Serialize, Deserialize, Debug, Clone, Copy)]
 pub enum FaucetRequest {
     GetAirdrop {
-        lamports: u64,
+        wens: u64,
         to: Pubkey,
         blockhash: Hash,
     },
@@ -127,10 +127,10 @@ impl Faucet {
         if let Some((per_request_cap, per_time_cap)) = per_request_cap.zip(per_time_cap) {
             if per_time_cap < per_request_cap {
                 warn!(
-                    "per_time_cap {} SOL < per_request_cap {} SOL; \
+                    "per_time_cap {} SOR < per_request_cap {} SOR; \
                     maximum single requests will fail",
-                    lamports_to_sol(per_time_cap),
-                    lamports_to_sol(per_request_cap),
+                    wens_to_sor(per_time_cap),
+                    wens_to_sor(per_request_cap),
                 );
             }
         }
@@ -155,10 +155,10 @@ impl Faucet {
         if let Some(cap) = self.per_time_cap {
             if new_total > cap {
                 return Err(FaucetError::PerTimeCapExceeded(
-                    lamports_to_sol(request_amount),
+                    wens_to_sor(request_amount),
                     to.to_string(),
-                    lamports_to_sol(new_total),
-                    lamports_to_sol(cap),
+                    wens_to_sor(new_total),
+                    wens_to_sor(cap),
                 ));
             }
         }
@@ -173,7 +173,7 @@ impl Faucet {
     /// Checks per-request and per-time-ip limits; if both pass, this method returns a signed
     /// SystemProgram::Transfer transaction from the faucet keypair to the requested recipient. If
     /// the request exceeds this per-request limit, this method returns a signed SPL Memo
-    /// transaction with the memo: "request too large; req: <REQUEST> SOL cap: <CAP> SOL"
+    /// transaction with the memo: "request too large; req: <REQUEST> SOR cap: <CAP> SOR"
     pub fn build_airdrop_transaction(
         &mut self,
         req: FaucetRequest,
@@ -182,24 +182,24 @@ impl Faucet {
         trace!("build_airdrop_transaction: {:?}", req);
         match req {
             FaucetRequest::GetAirdrop {
-                lamports,
+                wens,
                 to,
                 blockhash,
             } => {
                 let mint_pubkey = self.faucet_keypair.pubkey();
                 info!(
-                    "Requesting airdrop of {} SOL to {:?}",
-                    lamports_to_sol(lamports),
+                    "Requesting airdrop of {} SOR to {:?}",
+                    wens_to_sor(wens),
                     to
                 );
 
                 if let Some(cap) = self.per_request_cap {
-                    if lamports > cap {
+                    if wens > cap {
                         let memo = format!(
                             "{}",
                             FaucetError::PerRequestCapExceeded(
-                                lamports_to_sol(lamports),
-                                lamports_to_sol(cap),
+                                wens_to_sor(wens),
+                                wens_to_sor(cap),
                             )
                         );
                         let memo_instruction = Instruction {
@@ -215,12 +215,12 @@ impl Faucet {
                     }
                 }
                 if !ip.is_loopback() && !self.allowed_ips.contains(&ip) {
-                    self.check_time_request_limit(lamports, ip)?;
+                    self.check_time_request_limit(wens, ip)?;
                 }
-                self.check_time_request_limit(lamports, to)?;
+                self.check_time_request_limit(wens, to)?;
 
                 let transfer_instruction =
-                    system_instruction::transfer(&mint_pubkey, &to, lamports);
+                    system_instruction::transfer(&mint_pubkey, &to, wens);
                 let message = Message::new(&[transfer_instruction], Some(&mint_pubkey));
                 Ok(FaucetTransaction::Airdrop(Transaction::new(
                     &[&self.faucet_keypair],
@@ -278,18 +278,18 @@ impl Drop for Faucet {
 pub fn request_airdrop_transaction(
     faucet_addr: &SocketAddr,
     id: &Pubkey,
-    lamports: u64,
+    wens: u64,
     blockhash: Hash,
 ) -> Result<Transaction, FaucetError> {
     info!(
-        "request_airdrop_transaction: faucet_addr={} id={} lamports={} blockhash={}",
-        faucet_addr, id, lamports, blockhash
+        "request_airdrop_transaction: faucet_addr={} id={} wens={} blockhash={}",
+        faucet_addr, id, wens, blockhash
     );
 
     let mut stream = TcpStream::connect_timeout(faucet_addr, Duration::new(3, 0))?;
     stream.set_read_timeout(Some(Duration::new(10, 0)))?;
     let req = FaucetRequest::GetAirdrop {
-        lamports,
+        wens,
         blockhash,
         to: *id,
     };
@@ -410,7 +410,7 @@ async fn process(
     let mut request = vec![
         0u8;
         serialized_size(&FaucetRequest::GetAirdrop {
-            lamports: u64::default(),
+            wens: u64::default(),
             to: Pubkey::default(),
             blockhash: Hash::default(),
         })
@@ -548,7 +548,7 @@ mod tests {
         let to = Pubkey::new_unique();
         let blockhash = Hash::default();
         let request = FaucetRequest::GetAirdrop {
-            lamports: 2,
+            wens: 2,
             to,
             blockhash,
         };
@@ -573,7 +573,7 @@ mod tests {
             assert_eq!(message.instructions.len(), 1);
             let instruction: SystemInstruction =
                 deserialize(&message.instructions[0].data).unwrap();
-            assert_eq!(instruction, SystemInstruction::Transfer { lamports: 2 });
+            assert_eq!(instruction, SystemInstruction::Transfer { wens: 2 });
         } else {
             panic!("airdrop should succeed");
         }
@@ -592,7 +592,7 @@ mod tests {
         let other = Pubkey::new_unique();
         let _tx0 = faucet.build_airdrop_transaction(request, ip).unwrap(); // first request succeeds
         let request1 = FaucetRequest::GetAirdrop {
-            lamports: 2,
+            wens: 2,
             to: other,
             blockhash,
         };
@@ -611,7 +611,7 @@ mod tests {
         let other = Pubkey::new_unique();
         let _tx0 = faucet.build_airdrop_transaction(request, ip).unwrap(); // first request succeeds
         let request1 = FaucetRequest::GetAirdrop {
-            lamports: 2,
+            wens: 2,
             to: other,
             blockhash,
         };
@@ -652,9 +652,9 @@ mod tests {
     fn test_process_faucet_request() {
         let to = sdk::pubkey::new_rand();
         let blockhash = Hash::new(to.as_ref());
-        let lamports = 50;
+        let wens = 50;
         let req = FaucetRequest::GetAirdrop {
-            lamports,
+            wens,
             blockhash,
             to,
         };
@@ -662,7 +662,7 @@ mod tests {
         let req = serialize(&req).unwrap();
 
         let keypair = Keypair::new();
-        let expected_instruction = system_instruction::transfer(&keypair.pubkey(), &to, lamports);
+        let expected_instruction = system_instruction::transfer(&keypair.pubkey(), &to, wens);
         let message = Message::new(&[expected_instruction], Some(&keypair.pubkey()));
         let expected_tx = Transaction::new(&[&keypair], message, blockhash);
         let expected_bytes = serialize(&expected_tx).unwrap();

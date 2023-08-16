@@ -145,7 +145,7 @@ pub fn process_instruction(
 //         crate::{config_instruction, get_config_data, id, ConfigKeys, ConfigState},
 //         bincode::serialized_size,
 //         serde_derive::{Deserialize, Serialize},
-//         solana_program_runtime::invoke_context::mock_process_instruction,
+//         sino_program_runtime::invoke_context::mock_process_instruction,
 //         sdk::{
 //             account::AccountSharedData,
 //             pubkey::Pubkey,
@@ -205,7 +205,7 @@ pub fn process_instruction(
 //         let system_instruction = limited_deserialize(&instructions[0].data).unwrap();
 //         let space = match system_instruction {
 //             SystemInstruction::CreateAccount {
-//                 lamports: _,
+//                 wens: _,
 //                 space,
 //                 owner: _,
 //             } => space,
