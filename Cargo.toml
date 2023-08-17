@@ -39,6 +39,7 @@ members = [
     "programs/stake",
     "program-runtime",
     "rayon-threadlimit",
+    "rbpf-0.2.24",
     "remote-wallet",
     "rpc",
     "runtime",

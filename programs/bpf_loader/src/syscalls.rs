@@ -7,7 +7,7 @@ use {
         stable_log,
         timings::ExecuteTimings,
     },
-    solana_rbpf::{
+    rbpf::{
         aligned_memory::AlignedMemory,
         ebpf,
         error::EbpfError,
@@ -2957,7 +2957,7 @@ mod tests {
     use {
         super::*,
         program_runtime::{invoke_context::InvokeContext, sysvar_cache::SysvarCache},
-        solana_rbpf::{
+        rbpf::{
             ebpf::HOST_ALIGN, memory_region::MemoryRegion, user_error::UserError, vm::Config,
         },
         sdk::{

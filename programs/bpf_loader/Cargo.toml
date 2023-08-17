@@ -18,7 +18,8 @@ measure = { path = "../../measure", version = "=1.9.29" }
 metrics = { path = "../../metrics", version = "=1.9.29" }
 program-runtime = { path = "../../program-runtime", version = "=1.9.29" }
 sdk = { path = "../../sdk", version = "=1.9.29" }
-solana_rbpf = "=0.2.24"
+#solana_rbpf = "=0.2.24"
+rbpf = { path = "../../rbpf-0.2.24", version = "=0.2.24" }
 thiserror = "1.0"
 
 [dev-dependencies]

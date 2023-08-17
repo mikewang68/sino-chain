@@ -53,7 +53,7 @@ mod test {
         super::*,
         spl_associated_token_account::{
             create_associated_token_account,
-            sino_program::{
+            solana_program::{
                 instruction::CompiledInstruction as SplAssociatedTokenCompiledInstruction,
                 message::Message, pubkey::Pubkey as SplAssociatedTokenPubkey,
             },

@@ -1,6 +1,6 @@
 use {
     byteorder::{ByteOrder, LittleEndian, WriteBytesExt},
-    solana_rbpf::{aligned_memory::AlignedMemory, ebpf::HOST_ALIGN},
+    rbpf::{aligned_memory::AlignedMemory, ebpf::HOST_ALIGN},
     sdk::{
         account::{ReadableAccount, WritableAccount},
         bpf_loader_deprecated,

@@ -24,7 +24,7 @@ use {
         log_collector::LogCollector,
         stable_log,
     },
-    solana_rbpf::{
+    rbpf::{
         aligned_memory::AlignedMemory,
         ebpf::HOST_ALIGN,
         elf::Executable,
@@ -1167,7 +1167,7 @@ mod tests {
         super::*,
         rand::Rng,
         program_runtime::invoke_context::mock_process_instruction,
-        solana_rbpf::vm::SyscallRegistry,
+        rbpf::vm::SyscallRegistry,
         runtime::{bank::Bank, bank_client::BankClient},
         sdk::{
             account::{
@@ -1243,7 +1243,7 @@ mod tests {
         ];
         let input = &mut [0x00];
         let mut bpf_functions = std::collections::BTreeMap::<u32, (usize, String)>::new();
-        solana_rbpf::elf::register_bpf_function(&mut bpf_functions, 0, "entrypoint", false)
+        rbpf::elf::register_bpf_function(&mut bpf_functions, 0, "entrypoint", false)
             .unwrap();
         let program = Executable::<BpfError, TestInstructionMeter>::from_text_bytes(
             program,
