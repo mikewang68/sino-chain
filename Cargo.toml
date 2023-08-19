@@ -5,6 +5,7 @@ members = [
     "bucket_map",
     "core",
     "clap-utils",
+    "cli",
     "cli-config",
     "cli-output",
     "download-utils",
