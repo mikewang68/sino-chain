@@ -31,7 +31,7 @@ crate-type = ["lib"]
 name = "faucet"
 
 [[bin]]
-name = "faucet"
+name = "sino-faucet"
 path = "src/bin/faucet.rs"
 
 [package.metadata.docs.rs]

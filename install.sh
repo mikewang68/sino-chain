@@ -45,7 +45,7 @@ fi
 cd target/release
 
 echo "copying files to $FILE_PATH"
-cp evm-bridge faucet gossip sino-genesis sino-keygen test-validator validator $FILE_PATH
+cp sino evm-bridge sino-faucet sino-gossip sino-genesis sino-keygen test-validator validator $FILE_PATH
 
 cd ~
 zsh=.zshrc

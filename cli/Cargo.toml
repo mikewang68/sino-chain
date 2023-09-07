@@ -60,7 +60,7 @@ test-validator = { path = "../test-validator", version = "=1.9.29" }
 tempfile = "3.2.0"
 
 [[bin]]
-name = "velas"
+name = "sino"
 path = "src/main.rs"
 
 [package.metadata.docs.rs]

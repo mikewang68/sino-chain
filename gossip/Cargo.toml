@@ -63,7 +63,7 @@ rustc_version = "0.4"
 # name = "crds_shards"
 
 [[bin]]
-name = "gossip"
+name = "sino-gossip"
 path = "src/main.rs"
 
 [package.metadata.docs.rs]
