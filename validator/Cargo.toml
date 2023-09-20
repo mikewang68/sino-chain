@@ -1,13 +1,13 @@
 [package]
 authors = [""]
 edition = "2021"
-name = "validator"
+name = "sino-validator"
 description = "Blockchain, Rebuilt for Scale"
 version = "1.9.29"
 repository = ""
 license = "Apache-2.0"
 homepage = ""
-default-run = "validator"
+default-run = "sino-validator"
 
 [dependencies]
 chrono = { version = "0.4.11", features = ["serde"] }

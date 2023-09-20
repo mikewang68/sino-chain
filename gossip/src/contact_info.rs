@@ -2,9 +2,9 @@ use {
     crate::crds_value::MAX_WALLCLOCK,
     sdk::{
         pubkey::Pubkey,
-        rpc_port,
+        //rpc_port,
         sanitize::{Sanitize, SanitizeError},
-        signature::{Keypair, Signer},
+        //signature,
         timing::timestamp,
     },
     sino_streamer::socket::SocketAddrSpace,

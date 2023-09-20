@@ -44,7 +44,7 @@ impl Header {
 }
 
 pub struct BucketStorage {
-    path: PathBuf,
+    //path: PathBuf,
     mmap: MmapMut,
     pub cell_size: u64,
     pub capacity_pow2: u8,
@@ -161,9 +161,9 @@ impl BucketStorage {
         stats: Arc<BucketStats>,
     ) -> Self {
         let cell_size = elem_size * num_elems + std::mem::size_of::<Header>() as u64;
-        let (mmap, path) = Self::new_map(&drives, cell_size as usize, capacity_pow2, &stats);
+        let (mmap, _path) = Self::new_map(&drives, cell_size as usize, capacity_pow2, &stats);
         Self {
-            path,
+            //path,
             mmap,
             cell_size,
             used: AtomicU64::new(0),

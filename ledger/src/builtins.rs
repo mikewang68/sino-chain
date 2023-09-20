@@ -1,13 +1,13 @@
 use runtime::builtins::{Builtin, BuiltinFeatureTransition, Builtins};
 
-macro_rules! to_builtin {
-    ($b:expr) => {
-        Builtin::new(&$b.0, $b.1, $b.2)
-    };
-}
+// macro_rules! to_builtin {
+//     ($b:expr) => {
+//         Builtin::new(&$b.0, $b.1, $b.2)
+//     };
+// }
 
 // Builtin programs that are always available
-fn genesis_builtins(bpf_jit: bool) -> Vec<Builtin> {
+fn genesis_builtins(_bpf_jit: bool) -> Vec<Builtin> {
     // Currently JIT is not supported on the BPF VM:
     // !x86_64: https://github.com/qmonnet/rbpf/issues/48
     // Windows: https://github.com/solana-labs/rbpf/issues/217

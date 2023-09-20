@@ -75,7 +75,7 @@ use {
         sync::{Arc, RwLock},
         time::{Duration, SystemTime},
     },
-    validator::{
+    sino_validator::{
         admin_rpc_service, bootstrap, dashboard::Dashboard, ledger_lockfile, lock_ledger,
         new_spinner_progress_bar, println_name_value, redirect_stderr_to_file,
     },
@@ -605,7 +605,7 @@ pub fn main() {
                 .takes_value(true)
                 .requires("evm_state_archive_path")
                 .requires("evm_height_index_source")
-                .validator(validator::port_validator)
+                .validator(sino_validator::port_validator)
                 .help("Enable evm state rpc on this port"),
         )
         .arg(
@@ -718,7 +718,7 @@ pub fn main() {
                 .long("rpc-port")
                 .value_name("PORT")
                 .takes_value(true)
-                .validator(validator::port_validator)
+                .validator(sino_validator::port_validator)
                 .help("Enable JSON RPC on this port, and the next port for the RPC websocket"),
         )
         .arg(
@@ -927,7 +927,7 @@ pub fn main() {
                 .value_name("MIN_PORT-MAX_PORT")
                 .takes_value(true)
                 .default_value(default_dynamic_port_range)
-                .validator(validator::port_range_validator)
+                .validator(sino_validator::port_range_validator)
                 .help("Range to use for dynamically assigned ports"),
         )
         .arg(
@@ -1452,7 +1452,7 @@ pub fn main() {
                 .long("accountsdb-repl-port")
                 .value_name("PORT")
                 .takes_value(true)
-                .validator(validator::port_validator)
+                .validator(sino_validator::port_validator)
                 .hidden(true)
                 .help("Enable AccountsDb Replication Service on this port"),
         )

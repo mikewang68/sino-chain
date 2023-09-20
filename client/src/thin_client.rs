@@ -4,45 +4,45 @@
 //! unstable and may change in future releases.
 
 use {
-    crate::{rpc_client::RpcClient, rpc_config::RpcProgramAccountsConfig, rpc_response::Response},
-    bincode::{serialize_into, serialized_size},
-    log::*,
-    sdk::{
-        account::Account,
-        client::{AsyncClient, Client, SyncClient},
-        clock::{Slot, MAX_PROCESSING_AGE},
-        commitment_config::CommitmentConfig,
-        epoch_info::EpochInfo,
-        fee_calculator::{FeeCalculator, FeeRateGovernor},
-        hash::Hash,
-        instruction::Instruction,
-        message::Message,
-        packet::PACKET_DATA_SIZE,
-        pubkey::Pubkey,
-        signature::{Keypair, Signature, Signer},
-        signers::Signers,
-        system_instruction,
-        timing::duration_as_ms,
-        transaction::{self, Transaction},
-        transport::Result as TransportResult,
-    },
+    crate::rpc_client::RpcClient,
+    //bincode,
+    //log::*,
+    // sdk::{
+    //     account::Account,
+    //     client,
+    //     clock,
+    //     commitment_config::CommitmentConfig,
+    //     epoch_info::EpochInfo,
+    //     fee_calculator,
+    //     hash::Hash,
+    //     instruction::Instruction,
+    //     message::Message,
+    //     packet::PACKET_DATA_SIZE,
+    //     pubkey::Pubkey,
+    //     signature,
+    //     signers::Signers,
+    //     system_instruction,
+    //     timing::duration_as_ms,
+    //     transaction,
+    //     transport::Result as TransportResult,
+    // },
     std::{
-        io,
+        //io,
         net::{IpAddr, Ipv4Addr, SocketAddr, UdpSocket},
-        sync::{
-            atomic::{AtomicBool, AtomicUsize, Ordering},
-            RwLock,
-        },
-        time::{Duration, Instant},
+        // sync::{
+        //     atomic,
+        //     RwLock,
+        // },
+        time::Duration,
     },
 };
 
 struct ClientOptimizer {
-    cur_index: AtomicUsize,
-    experiment_index: AtomicUsize,
-    experiment_done: AtomicBool,
-    times: RwLock<Vec<u64>>,
-    num_clients: usize,
+    // cur_index: AtomicUsize,
+    // experiment_index: AtomicUsize,
+    // experiment_done: AtomicBool,
+    // times: RwLock<Vec<u64>>,
+    // num_clients: usize,
 }
 
 // fn min_index(array: &[u64]) -> (u64, usize) {
@@ -58,13 +58,13 @@ struct ClientOptimizer {
 // }
 
 impl ClientOptimizer {
-    fn new(num_clients: usize) -> Self {
+    fn new(_num_clients: usize) -> Self {
         Self {
-            cur_index: AtomicUsize::new(0),
-            experiment_index: AtomicUsize::new(0),
-            experiment_done: AtomicBool::new(false),
-            times: RwLock::new(vec![std::u64::MAX; num_clients]),
-            num_clients,
+            // cur_index: AtomicUsize::new(0),
+            // experiment_index: AtomicUsize::new(0),
+            // experiment_done: AtomicBool::new(false),
+            // times: RwLock::new(vec![std::u64::MAX; num_clients]),
+            // num_clients,
         }
     }
 
@@ -118,10 +118,10 @@ impl ClientOptimizer {
 
 /// An object for querying and sending transactions to the network.
 pub struct ThinClient {
-    transactions_socket: UdpSocket,
-    tpu_addrs: Vec<SocketAddr>,
-    rpc_clients: Vec<RpcClient>,
-    optimizer: ClientOptimizer,
+    // transactions_socket: UdpSocket,
+    // tpu_addrs: Vec<SocketAddr>,
+    // rpc_clients: Vec<RpcClient>,
+    // optimizer: ClientOptimizer,
 }
 
 impl ThinClient {
@@ -146,33 +146,33 @@ impl ThinClient {
     }
 
     fn new_from_client(
-        tpu_addr: SocketAddr,
-        transactions_socket: UdpSocket,
-        rpc_client: RpcClient,
+        _tpu_addr: SocketAddr,
+        _transactions_socket: UdpSocket,
+        _rpc_client: RpcClient,
     ) -> Self {
         Self {
-            transactions_socket,
-            tpu_addrs: vec![tpu_addr],
-            rpc_clients: vec![rpc_client],
-            optimizer: ClientOptimizer::new(0),
+            // transactions_socket,
+            // tpu_addrs: vec![tpu_addr],
+            // rpc_clients: vec![rpc_client],
+            // optimizer: ClientOptimizer::new(0),
         }
     }
 
     pub fn new_from_addrs(
         rpc_addrs: Vec<SocketAddr>,
         tpu_addrs: Vec<SocketAddr>,
-        transactions_socket: UdpSocket,
+        _transactions_socket: UdpSocket,
     ) -> Self {
         assert!(!rpc_addrs.is_empty());
         assert_eq!(rpc_addrs.len(), tpu_addrs.len());
 
         let rpc_clients: Vec<_> = rpc_addrs.into_iter().map(RpcClient::new_socket).collect();
-        let optimizer = ClientOptimizer::new(rpc_clients.len());
+        let _optimizer = ClientOptimizer::new(rpc_clients.len());
         Self {
-            transactions_socket,
-            tpu_addrs,
-            rpc_clients,
-            optimizer,
+            // transactions_socket,
+            // tpu_addrs,
+            // rpc_clients,
+            // optimizer,
         }
     }
 

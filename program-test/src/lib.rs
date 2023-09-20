@@ -10,36 +10,36 @@ use {
     //solana_banks_client::start_client,
     //solana_banks_server::banks_server::start_local_server,
     program_runtime::{
-        compute_budget::ComputeBudget, ic_msg, invoke_context::ProcessInstructionWithContext,
+        ic_msg, invoke_context::ProcessInstructionWithContext,
         stable_log, timings::ExecuteTimings,
     },
     runtime::{
-        bank::{Bank, CommitTransactionCounts},
-        bank_forks::BankForks,
+        //bank,
+        //bank_forks::BankForks,
         builtins::Builtin,
-        commitment::BlockCommitmentCache,
-        genesis_utils::{create_genesis_config_with_leader_ex, GenesisConfigInfo},
+        //commitment::BlockCommitmentCache,
+        //genesis_utils,
     },
     sdk::{
         account::{Account, AccountSharedData, ReadableAccount, WritableAccount},
         account_info::AccountInfo,
-        clock::Slot,
+        // clock::Slot,
         entrypoint::{ProgramResult, SUCCESS},
-        feature_set::FEATURE_NAMES,
-        fee_calculator::{FeeCalculator, FeeRateGovernor},
-        genesis_config::{ClusterType, GenesisConfig},
+        //feature_set::FEATURE_NAMES,
+        fee_calculator::FeeCalculator,
+        //genesis_config::GenesisConfig,
         hash::Hash,
         instruction::{Instruction, InstructionError},
         message::{Message, SanitizedMessage},
-        native_token::sor_to_wens,
-        poh_config::PohConfig,
+        //native_token::sor_to_wens,
+        //poh_config::PohConfig,
         program_error::{ProgramError, ACCOUNT_BORROW_FAILED, UNSUPPORTED_SYSVAR},
         pubkey::Pubkey,
         rent::Rent,
-        signature::{Keypair, Signer},
-        sysvar::{Sysvar, SysvarId},
+        signature::Keypair,
+        sysvar::Sysvar,
     },
-    vote_program::vote_state::{VoteState, VoteStateVersions},
+    //vote_program::vote_state::VoteState,
     std::{
         cell::RefCell,
         collections::{HashMap, HashSet},
@@ -51,9 +51,9 @@ use {
         rc::Rc,
         sync::{
             atomic::{AtomicBool, Ordering},
-            Arc, RwLock,
+            Arc,
         },
-        time::{Duration, Instant},
+        //time::Duration,
     },
     thiserror::Error,
     tokio::task::JoinHandle,
@@ -432,46 +432,46 @@ pub fn read_file<P: AsRef<Path>>(path: P) -> Vec<u8> {
     file_data
 }
 
-fn setup_fees(bank: Bank) -> Bank {
-    // Realistic fees part 1: Fake a single signature by calling
-    // `bank.commit_transactions()` so that the fee in the child bank will be
-    // initialized with a non-zero fee.
-    assert_eq!(bank.signature_count(), 0);
-    let (last_blockhash, wens_per_signature) = bank.last_blockhash_and_wens_per_signature();
-    bank.commit_transactions(
-        &[],     // transactions
-        &mut [], // loaded accounts
-        vec![],  // transaction execution results
-        last_blockhash,
-        wens_per_signature,
-        CommitTransactionCounts {
-            committed_transactions_count: 0,
-            committed_with_failure_result_count: 0,
-            signature_count: 1,
-        },
-        &mut ExecuteTimings::default(),
-        None,
-    );
-    assert_eq!(bank.signature_count(), 1);
+// fn setup_fees(bank: Bank) -> Bank {
+//     // Realistic fees part 1: Fake a single signature by calling
+//     // `bank.commit_transactions()` so that the fee in the child bank will be
+//     // initialized with a non-zero fee.
+//     assert_eq!(bank.signature_count(), 0);
+//     let (last_blockhash, wens_per_signature) = bank.last_blockhash_and_wens_per_signature();
+//     bank.commit_transactions(
+//         &[],     // transactions
+//         &mut [], // loaded accounts
+//         vec![],  // transaction execution results
+//         last_blockhash,
+//         wens_per_signature,
+//         CommitTransactionCounts {
+//             committed_transactions_count: 0,
+//             committed_with_failure_result_count: 0,
+//             signature_count: 1,
+//         },
+//         &mut ExecuteTimings::default(),
+//         None,
+//     );
+//     assert_eq!(bank.signature_count(), 1);
 
-    // Advance beyond slot 0 for a slightly more realistic test environment
-    let bank = Arc::new(bank);
-    let bank = Bank::new_from_parent(&bank, bank.collector_id(), bank.slot() + 1);
-    debug!("Bank slot: {}", bank.slot());
+//     // Advance beyond slot 0 for a slightly more realistic test environment
+//     let bank = Arc::new(bank);
+//     let bank = Bank::new_from_parent(&bank, bank.collector_id(), bank.slot() + 1);
+//     debug!("Bank slot: {}", bank.slot());
 
-    // Realistic fees part 2: Tick until a new blockhash is produced to pick up the
-    // non-zero fees
-    let last_blockhash = bank.last_blockhash();
-    while last_blockhash == bank.last_blockhash() {
-        bank.register_tick(&Hash::new_unique());
-    }
+//     // Realistic fees part 2: Tick until a new blockhash is produced to pick up the
+//     // non-zero fees
+//     let last_blockhash = bank.last_blockhash();
+//     while last_blockhash == bank.last_blockhash() {
+//         bank.register_tick(&Hash::new_unique());
+//     }
 
-    // Make sure a fee is now required
-    let wens_per_signature = bank.get_wens_per_signature();
-    assert_ne!(wens_per_signature, 0);
+//     // Make sure a fee is now required
+//     let wens_per_signature = bank.get_wens_per_signature();
+//     assert_ne!(wens_per_signature, 0);
 
-    bank
-}
+//     bank
+// }
 
 pub struct ProgramTest {
     accounts: Vec<(Pubkey, AccountSharedData)>,
@@ -747,133 +747,133 @@ impl ProgramTest {
         self.deactivate_feature_set.insert(feature_id);
     }
 
-    fn setup_bank(
-        &self,
-    ) -> (
-        Arc<RwLock<BankForks>>,
-        Arc<RwLock<BlockCommitmentCache>>,
-        Hash,
-        GenesisConfigInfo,
-    ) {
-        {
-            use std::sync::Once;
-            static ONCE: Once = Once::new();
+    // fn setup_bank(
+    //     &self,
+    // ) -> (
+    //     Arc<RwLock<BankForks>>,
+    //     Arc<RwLock<BlockCommitmentCache>>,
+    //     Hash,
+    //     GenesisConfigInfo,
+    // ) {
+    //     {
+    //         use std::sync::Once;
+    //         static ONCE: Once = Once::new();
 
-            ONCE.call_once(|| {
-                sdk::program_stubs::set_syscall_stubs(Box::new(SyscallStubs {}));
-            });
-        }
+    //         ONCE.call_once(|| {
+    //             sdk::program_stubs::set_syscall_stubs(Box::new(SyscallStubs {}));
+    //         });
+    //     }
 
-        let rent = Rent::default();
-        let fee_rate_governor = FeeRateGovernor::default();
-        let bootstrap_validator_pubkey = Pubkey::new_unique();
-        let bootstrap_validator_stake_wens =
-            rent.minimum_balance(VoteState::size_of()) + sor_to_wens(1_000_000.0);
+    //     let rent = Rent::default();
+    //     let fee_rate_governor = FeeRateGovernor::default();
+    //     let bootstrap_validator_pubkey = Pubkey::new_unique();
+    //     let bootstrap_validator_stake_wens =
+    //         rent.minimum_balance(VoteState::size_of()) + sor_to_wens(1_000_000.0);
 
-        let mint_keypair = Keypair::new();
-        let voting_keypair = Keypair::new();
+    //     let mint_keypair = Keypair::new();
+    //     let voting_keypair = Keypair::new();
 
-        let mut genesis_config = create_genesis_config_with_leader_ex(
-            sor_to_wens(1_000_000.0),
-            &mint_keypair.pubkey(),
-            &bootstrap_validator_pubkey,
-            &voting_keypair.pubkey(),
-            &Pubkey::new_unique(),
-            bootstrap_validator_stake_wens,
-            42,
-            fee_rate_governor,
-            rent,
-            ClusterType::Development,
-            vec![],
-        );
+    //     let mut genesis_config = create_genesis_config_with_leader_ex(
+    //         sor_to_wens(1_000_000.0),
+    //         &mint_keypair.pubkey(),
+    //         &bootstrap_validator_pubkey,
+    //         &voting_keypair.pubkey(),
+    //         &Pubkey::new_unique(),
+    //         bootstrap_validator_stake_wens,
+    //         42,
+    //         fee_rate_governor,
+    //         rent,
+    //         ClusterType::Development,
+    //         vec![],
+    //     );
 
-        // Remove features tagged to deactivate
-        for deactivate_feature_pk in &self.deactivate_feature_set {
-            if FEATURE_NAMES.contains_key(deactivate_feature_pk) {
-                match genesis_config.accounts.remove(deactivate_feature_pk) {
-                    Some(_) => debug!("Feature for {:?} deactivated", deactivate_feature_pk),
-                    None => warn!(
-                        "Feature {:?} set for deactivation not found in genesis_config account list, ignored.",
-                        deactivate_feature_pk
-                    ),
-                }
-            } else {
-                warn!(
-                    "Feature {:?} set for deactivation is not a known Feature public key",
-                    deactivate_feature_pk
-                );
-            }
-        }
+    //     // Remove features tagged to deactivate
+    //     for deactivate_feature_pk in &self.deactivate_feature_set {
+    //         if FEATURE_NAMES.contains_key(deactivate_feature_pk) {
+    //             match genesis_config.accounts.remove(deactivate_feature_pk) {
+    //                 Some(_) => debug!("Feature for {:?} deactivated", deactivate_feature_pk),
+    //                 None => warn!(
+    //                     "Feature {:?} set for deactivation not found in genesis_config account list, ignored.",
+    //                     deactivate_feature_pk
+    //                 ),
+    //             }
+    //         } else {
+    //             warn!(
+    //                 "Feature {:?} set for deactivation is not a known Feature public key",
+    //                 deactivate_feature_pk
+    //             );
+    //         }
+    //     }
 
-        let target_tick_duration = Duration::from_micros(100);
-        genesis_config.poh_config = PohConfig::new_sleep(target_tick_duration);
-        debug!("Payer address: {}", mint_keypair.pubkey());
-        debug!("Genesis config: {}", genesis_config);
+    //     let target_tick_duration = Duration::from_micros(100);
+    //     genesis_config.poh_config = PohConfig::new_sleep(target_tick_duration);
+    //     debug!("Payer address: {}", mint_keypair.pubkey());
+    //     debug!("Genesis config: {}", genesis_config);
 
-        let mut bank = Bank::new_for_tests(&genesis_config);
+    //     let mut bank = Bank::new_for_tests(&genesis_config);
 
-        // Add loaders
-        macro_rules! add_builtin {
-            ($b:expr) => {
-                bank.add_builtin(&$b.0, &$b.1, $b.2)
-            };
-        }
-        add_builtin!(bpf_loader_deprecated_program!());
-        if self.use_bpf_jit {
-            add_builtin!(bpf_loader_program_with_jit!());
-            add_builtin!(bpf_loader_upgradeable_program_with_jit!());
-        } else {
-            add_builtin!(bpf_loader_program!());
-            add_builtin!(bpf_loader_upgradeable_program!());
-        }
+    //     // Add loaders
+    //     macro_rules! add_builtin {
+    //         ($b:expr) => {
+    //             bank.add_builtin(&$b.0, &$b.1, $b.2)
+    //         };
+    //     }
+    //     add_builtin!(bpf_loader_deprecated_program!());
+    //     if self.use_bpf_jit {
+    //         add_builtin!(bpf_loader_program_with_jit!());
+    //         add_builtin!(bpf_loader_upgradeable_program_with_jit!());
+    //     } else {
+    //         add_builtin!(bpf_loader_program!());
+    //         add_builtin!(bpf_loader_upgradeable_program!());
+    //     }
 
-        // Add commonly-used SPL programs as a convenience to the user
-        for (program_id, account) in programs::spl_programs(&Rent::default()).iter() {
-            bank.store_account(program_id, account);
-        }
+    //     // Add commonly-used SPL programs as a convenience to the user
+    //     for (program_id, account) in programs::spl_programs(&Rent::default()).iter() {
+    //         bank.store_account(program_id, account);
+    //     }
 
-        // User-supplied additional builtins
-        for builtin in self.builtins.iter() {
-            bank.add_builtin(
-                &builtin.name,
-                &builtin.id,
-                builtin.process_instruction_with_context,
-            );
-        }
+    //     // User-supplied additional builtins
+    //     for builtin in self.builtins.iter() {
+    //         bank.add_builtin(
+    //             &builtin.name,
+    //             &builtin.id,
+    //             builtin.process_instruction_with_context,
+    //         );
+    //     }
 
-        for (address, account) in self.accounts.iter() {
-            if bank.get_account(address).is_some() {
-                info!("Overriding account at {}", address);
-            }
-            bank.store_account(address, account);
-        }
-        bank.set_capitalization();
-        if let Some(max_units) = self.compute_max_units {
-            bank.set_compute_budget(Some(ComputeBudget {
-                max_units,
-                ..ComputeBudget::default()
-            }));
-        }
-        let bank = setup_fees(bank);
-        let slot = bank.slot();
-        let last_blockhash = bank.last_blockhash();
-        let bank_forks = Arc::new(RwLock::new(BankForks::new(bank)));
-        let block_commitment_cache = Arc::new(RwLock::new(
-            BlockCommitmentCache::new_for_tests_with_slots(slot, slot),
-        ));
+    //     for (address, account) in self.accounts.iter() {
+    //         if bank.get_account(address).is_some() {
+    //             info!("Overriding account at {}", address);
+    //         }
+    //         bank.store_account(address, account);
+    //     }
+    //     bank.set_capitalization();
+    //     if let Some(max_units) = self.compute_max_units {
+    //         bank.set_compute_budget(Some(ComputeBudget {
+    //             max_units,
+    //             ..ComputeBudget::default()
+    //         }));
+    //     }
+    //     let bank = setup_fees(bank);
+    //     let slot = bank.slot();
+    //     let last_blockhash = bank.last_blockhash();
+    //     let bank_forks = Arc::new(RwLock::new(BankForks::new(bank)));
+    //     let block_commitment_cache = Arc::new(RwLock::new(
+    //         BlockCommitmentCache::new_for_tests_with_slots(slot, slot),
+    //     ));
 
-        (
-            bank_forks,
-            block_commitment_cache,
-            last_blockhash,
-            GenesisConfigInfo {
-                genesis_config,
-                mint_keypair,
-                voting_keypair,
-                validator_pubkey: bootstrap_validator_pubkey,
-            },
-        )
-    }
+    //     (
+    //         bank_forks,
+    //         block_commitment_cache,
+    //         last_blockhash,
+    //         GenesisConfigInfo {
+    //             genesis_config,
+    //             mint_keypair,
+    //             voting_keypair,
+    //             validator_pubkey: bootstrap_validator_pubkey,
+    //         },
+    //     )
+    // }
 
     // pub async fn start(self) -> (BanksClient, Keypair, Hash) {
     //     let (bank_forks, block_commitment_cache, last_blockhash, gci) = self.setup_bank();
@@ -1013,9 +1013,9 @@ pub struct ProgramTestContext {
     // pub banks_client: BanksClient,
     pub last_blockhash: Hash,
     pub payer: Keypair,
-    genesis_config: GenesisConfig,
-    bank_forks: Arc<RwLock<BankForks>>,
-    block_commitment_cache: Arc<RwLock<BlockCommitmentCache>>,
+    //genesis_config: GenesisConfig,
+    //bank_forks: Arc<RwLock<BankForks>>,
+    //block_commitment_cache: Arc<RwLock<BlockCommitmentCache>>,
     _bank_task: DroppableTask<()>,
 }
 

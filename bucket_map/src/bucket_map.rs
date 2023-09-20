@@ -16,8 +16,8 @@ pub enum BucketMapError {
 
 pub struct BucketMap<T: Clone + Copy + Debug> {
     buckets: Vec<Arc<BucketApi<T>>>,
-    drives: Arc<Vec<PathBuf>>,
-    max_buckets_pow2: u8,
+    //drives: Arc<Vec<PathBuf>>,
+    //max_buckets_pow2: u8,
     pub stats: Arc<BucketMapStats>,
     pub temp_dir: Option<TempDir>,
 }
@@ -69,12 +69,12 @@ impl<T: Clone + Copy + Debug> BucketMap<T> {
             .collect();
 
         // A simple log2 function that is correct if x is a power of two
-        let log2 = |x: usize| usize::BITS - x.leading_zeros() - 1;
+        let _log2 = |x: usize| usize::BITS - x.leading_zeros() - 1;
 
         Self {
             buckets,
-            drives,
-            max_buckets_pow2: log2(config.max_buckets) as u8,
+            //drives,
+            //max_buckets_pow2: log2(config.max_buckets) as u8,
             stats,
             temp_dir,
         }

@@ -231,24 +231,24 @@ impl PingCache {
     }
 
     // Only for tests and simulations.
-    pub(crate) fn mock_clone(&self) -> Self {
-        let mut clone = Self {
-            ttl: self.ttl,
-            pings: LruCache::new(self.pings.cap()),
-            pongs: LruCache::new(self.pongs.cap()),
-            pending_cache: LruCache::new(self.pending_cache.cap()),
-        };
-        for (k, v) in self.pongs.iter().rev() {
-            clone.pings.put(*k, *v);
-        }
-        for (k, v) in self.pongs.iter().rev() {
-            clone.pongs.put(*k, *v);
-        }
-        for (k, v) in self.pending_cache.iter().rev() {
-            clone.pending_cache.put(*k, *v);
-        }
-        clone
-    }
+    // pub(crate) fn mock_clone(&self) -> Self {
+    //     let mut clone = Self {
+    //         ttl: self.ttl,
+    //         pings: LruCache::new(self.pings.cap()),
+    //         pongs: LruCache::new(self.pongs.cap()),
+    //         pending_cache: LruCache::new(self.pending_cache.cap()),
+    //     };
+    //     for (k, v) in self.pongs.iter().rev() {
+    //         clone.pings.put(*k, *v);
+    //     }
+    //     for (k, v) in self.pongs.iter().rev() {
+    //         clone.pongs.put(*k, *v);
+    //     }
+    //     for (k, v) in self.pending_cache.iter().rev() {
+    //         clone.pending_cache.put(*k, *v);
+    //     }
+    //     clone
+    // }
 
     /// Only for tests and simulations.
     pub fn mock_pong(&mut self, node: Pubkey, socket: SocketAddr, now: Instant) {

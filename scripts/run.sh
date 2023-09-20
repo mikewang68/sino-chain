@@ -15,13 +15,13 @@ else
   cd "$script_dir"
 fi
 
-# profile=debug
-# if [[ -n $NDEBUG ]]; then
-#     profile=release
-# fi
-# PATH=$PWD/target/$profile:$PATH
+profile=debug
+if [[ -n $NDEBUG ]]; then
+    profile=release
+fi
+PATH=$PWD/target/$profile:$PATH
 
-# ok=true
+ok=true
 for program in sino-{faucet,genesis,keygen,validator}; do
     $program -V || ok=false
 done

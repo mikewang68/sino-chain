@@ -12,7 +12,7 @@ use {
         },
         rpc_health::*,
     },
-    evm_rpc::*,
+    //evm_rpc::*,
     jsonrpc_core::{futures::prelude::*, MetaIoHandler},
     jsonrpc_http_server::{
         hyper, AccessControlAllowOrigin, CloseHandle, DomainsValidation, RequestMiddleware,

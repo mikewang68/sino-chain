@@ -598,21 +598,21 @@ impl Crds {
     }
 
     // Only for tests and simulations.
-    pub(crate) fn mock_clone(&self) -> Self {
-        Self {
-            table: self.table.clone(),
-            cursor: self.cursor,
-            shards: self.shards.clone(),
-            nodes: self.nodes.clone(),
-            votes: self.votes.clone(),
-            epoch_slots: self.epoch_slots.clone(),
-            records: self.records.clone(),
-            entries: self.entries.clone(),
-            purged: self.purged.clone(),
-            shred_versions: self.shred_versions.clone(),
-            stats: Mutex::<CrdsStats>::default(),
-        }
-    }
+    // pub(crate) fn mock_clone(&self) -> Self {
+    //     Self {
+    //         table: self.table.clone(),
+    //         cursor: self.cursor,
+    //         shards: self.shards.clone(),
+    //         nodes: self.nodes.clone(),
+    //         votes: self.votes.clone(),
+    //         epoch_slots: self.epoch_slots.clone(),
+    //         records: self.records.clone(),
+    //         entries: self.entries.clone(),
+    //         purged: self.purged.clone(),
+    //         shred_versions: self.shred_versions.clone(),
+    //         stats: Mutex::<CrdsStats>::default(),
+    //     }
+    // }
 }
 
 impl Default for CrdsDataStats {
