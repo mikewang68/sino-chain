@@ -109,6 +109,7 @@ use {
     },
 };
 
+
 const MAX_COMPLETED_DATA_SETS_IN_CHANNEL: usize = 100_000;
 const WAIT_FOR_SUPERMAJORITY_THRESHOLD_PERCENT: u64 = 80;
 
@@ -349,6 +350,7 @@ impl Validator {
         evm_state_archive: Option<evm_state::Storage>,
         socket_addr_space: SocketAddrSpace,
     ) -> Self {
+
         let id = identity_keypair.pubkey();
         assert_eq!(id, node.info.id);
 
@@ -464,6 +466,7 @@ impl Validator {
             !config.no_os_network_stats_reporting,
         ));
 
+        println!("new_banks_from_ledger");
         let (
             genesis_config,
             bank_forks,
@@ -533,6 +536,7 @@ impl Validator {
             };
 
         info!("Starting validator with working bank slot {}", bank.slot());
+        println!("Starting validator with working bank slot {}", bank.slot());
         {
             let hard_forks: Vec<_> = bank.hard_forks().read().unwrap().iter().copied().collect();
             if !hard_forks.is_empty() {
@@ -663,6 +667,8 @@ impl Validator {
             } else {
                 None
             };
+
+            println!("JsonRpcService");
             (
                 Some(JsonRpcService::new(
                     rpc_addr,
@@ -717,6 +723,7 @@ impl Validator {
             (None, None, None, None, None)
         };
 
+        print!("evm_state_rpc_service");
         let evm_state_rpc_service = match (config.evm_state_rpc_addr.as_ref(), config.evm_state_rpc_config.as_ref(), evm_state_archive) {
             (Some(addr), Some(config), Some(archive)) => {
 
@@ -778,6 +785,8 @@ impl Validator {
                 Some(node.info.shred_version),
             )),
         };
+
+        println!("GossipService");
         let gossip_service = GossipService::new(
             &cluster_info,
             Some(bank_forks.clone()),
@@ -848,6 +857,7 @@ impl Validator {
         let wait_for_vote_to_start_leader =
             !waited_for_supermajority && !config.no_wait_for_vote_to_start_leader;
 
+        print!("PohService");
         let poh_service = PohService::new(
             poh_recorder.clone(),
             &poh_config,
@@ -878,6 +888,8 @@ impl Validator {
             RpcCompletedSlotsService::spawn(completed_slots_receiver, rpc_subscriptions.clone());
 
         let (replay_vote_sender, replay_vote_receiver) = unbounded();
+
+        println!("Tvu");
         let tvu = Tvu::new(
             vote_account,
             authorized_voter_keypairs,
@@ -961,6 +973,7 @@ impl Validator {
             config.wait_to_vote_slot,
         );
 
+        print!("Tpu");
         let tpu = Tpu::new(
             &cluster_info,
             &poh_recorder,
@@ -989,7 +1002,7 @@ impl Validator {
             &cost_model,
             &identity_keypair,
         );
-
+        
         datapoint_info!(
             "validator-new",
             ("id", id.to_string(), String),
