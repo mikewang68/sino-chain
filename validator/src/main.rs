@@ -1895,6 +1895,7 @@ pub fn main() {
         )
         .get_matches();
 
+    sino_logger::setup_with("info");
     let socket_addr_space = SocketAddrSpace::new(matches.is_present("allow_private_addr"));
     let ledger_path = PathBuf::from(matches.value_of("ledger_path").unwrap());
 
