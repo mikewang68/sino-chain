@@ -109,7 +109,7 @@ args=(
     --gossip-port 8001
     --full-rpc-api
     --rpc-port 8899
-    --rpc-faucet-address 127.0.0.1:9900
+    --rpc-faucet-address 192.168.101.101:9900
     --log -
     --enable-rpc-transaction-history
     --enable-cpi-and-log-storage
@@ -127,7 +127,7 @@ args=(
     --account-index velas-accounts-owners
     --account-index velas-accounts-operationals
     --evm-state-archive "$ledgerDir"/archive-evm
-    --gossip-host 127.0.0.1
+    --gossip-host 192.168.101.101
     --allow-private-addr
 )
 # shellcheck disable=SC2086
