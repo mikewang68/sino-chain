@@ -13,7 +13,7 @@ fn genesis_builtins(_bpf_jit: bool) -> Vec<Builtin> {
     // Windows: https://github.com/solana-labs/rbpf/issues/217
     #[cfg(any(not(target_arch = "x86_64"), target_family = "windows"))]
     let bpf_jit = {
-        if bpf_jit {
+        if _bpf_jit {
             info!("BPF JIT is not supported on this target");
         }
         false
