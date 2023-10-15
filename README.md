@@ -43,7 +43,7 @@ $ softwareupdate --install-rosetta
 
 ```shell
 $ git clone https://github.com/mikewang68/sino-chain.git
-$ cd velas-chain
+$ cd sino-chain
 ```
 
 ### **3. Build.**
