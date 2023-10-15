@@ -1469,7 +1469,7 @@ impl Bank {
     #[allow(clippy::too_many_arguments)]
     pub fn new_with_paths(
         genesis_config: &GenesisConfig,
-        // TODO(velas): Remove option, currently need for Bank::new/default, that is used for tests
+        // TODO(sino): Remove option, currently need for Bank::new/default, that is used for tests
         evm_paths: Option<(&Path, &Path)>,
         paths: Vec<PathBuf>,
         debug_keys: Option<Arc<HashSet<Pubkey>>>,
@@ -1500,7 +1500,7 @@ impl Bank {
             )
             .unwrap()
         } else {
-            //TODO(velas): Rename default to test
+            //TODO(sino): Rename default to test
             evm_state::EvmState::default()
         };
         let mut bank = Self::default_with_accounts(accounts, evm_state);
@@ -4244,7 +4244,7 @@ impl Bank {
             process_message_time.as_us()
         );
 
-        //TODO(velas): Move evm_state apply to update executors
+        //TODO(sino): Move evm_state apply to update executors
         let evm_new_error_handling = self
             .feature_set
             .is_active(&sdk::feature_set::sino::evm_new_error_handling::id());
@@ -7048,7 +7048,7 @@ impl Bank {
         }
     }
 
-    fn reconfigure_token2_native_mint(&mut self, reconfigure_token2_native_mint_velas: bool) {
+    fn reconfigure_token2_native_mint(&mut self, reconfigure_token2_native_mint_sino: bool) {
         let reconfigure_token2_native_mint_old = match self.cluster_type() {
             ClusterType::Development => true,
             ClusterType::Devnet => true,
@@ -7058,7 +7058,7 @@ impl Bank {
 
         // It's okay if we trigget two activations sequentionally.
         let reconfigure_token2_native_mint =
-            reconfigure_token2_native_mint_old || reconfigure_token2_native_mint_velas;
+            reconfigure_token2_native_mint_old || reconfigure_token2_native_mint_sino;
 
         if reconfigure_token2_native_mint {
             let mut native_mint_account = sdk::account::AccountSharedData::from(Account {
@@ -7098,7 +7098,7 @@ impl Bank {
             ClusterType::Development => false,
             // never do this for devnet; we're pristine here. :)
             ClusterType::Devnet => false,
-            // tds is not exist in velas so dont do this
+            // tds is not exist in sino so dont do this
             ClusterType::Testnet => false,
             // never do this for stable; we're pristine here. :)
             ClusterType::MainnetBeta => false,

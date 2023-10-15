@@ -55,7 +55,7 @@ mod utils;
 #[cfg(test)]
 pub(crate) use tests::reconstruct_accounts_db_via_serialization;
 
-// NOTE(velas):
+// NOTE(sino):
 // - old enum `SerdeStyle` was removed as single variant enum
 // - this enum should be treated as new, EVM only related enum without any previous history
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]

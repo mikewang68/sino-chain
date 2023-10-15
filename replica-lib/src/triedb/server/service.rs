@@ -67,7 +67,7 @@ impl Service {
         let (exit_signal_sender, exit_signal_receiver) = oneshot::channel::<()>();
         let server_handle = self.server.clone();
         let thread = Builder::new()
-            .name("velas-state-rpc-runtime".to_string())
+            .name("sino-state-rpc-runtime".to_string())
             .spawn(move || {
                 self.block_on(exit_signal_receiver);
             })?;

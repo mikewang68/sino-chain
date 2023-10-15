@@ -108,7 +108,7 @@ use {
 use tracing_attributes::instrument;
 
 use runtime::accounts_index::ScanResult;
-use account_program::{VelasAccountType, ACCOUNT_LEN as ACCOUNT_SIZE};
+use account_program::{SinoAccountType, ACCOUNT_LEN as ACCOUNT_SIZE};
 use relying_party_program::RelyingPartyData;
 
 type RpcCustomResult<T> = std::result::Result<T, RpcCustomError>;
@@ -240,7 +240,7 @@ pub struct JsonRpcRequestProcessor {
 
 impl JsonRpcRequestProcessor {
     #[allow(deprecated)]
-    // TODO(velas): hide it again
+    // TODO(sino): hide it again
     pub(crate) fn bank(&self, commitment: Option<CommitmentConfig>) -> Arc<Bank> {
         debug!("RPC commitment_config: {:?}", commitment);
 
@@ -750,7 +750,7 @@ impl JsonRpcRequestProcessor {
         }
     }
 
-    // TODO(velas): hide it again
+    // TODO(sino): hide it again
     pub fn get_slot(&self, commitment: Option<CommitmentConfig>) -> Slot {
         self.bank(commitment).slot()
     }
@@ -2428,66 +2428,66 @@ impl JsonRpcRequestProcessor {
         block
     }
 
-    fn get_velas_accounts_by_storage_key(
+    fn get_sino_accounts_by_storage_key(
         &self,
         bank: &Arc<Bank>,
         storage_key: Pubkey,
     ) -> Option<ScanResult<Vec<(Pubkey, AccountSharedData)>>> {
         // this filter doesn't dismiss accounts which are not related to specified storage_key
-        let is_target_velas_account = |account: &AccountSharedData| -> bool {
+        let is_target_sino_account = |account: &AccountSharedData| -> bool {
             *account.owner() == account_program::id()
                 && account.data().len() == ACCOUNT_SIZE
                 && matches!(
-                    VelasAccountType::try_from(account.data()),
-                    Ok(VelasAccountType::Account(_account_info))
+                    SinoAccountType::try_from(account.data()),
+                    Ok(SinoAccountType::Account(_account_info))
                 )
         };
 
         self.config
             .account_indexes
-            .contains(&AccountIndex::VelasAccountStorage)
+            .contains(&AccountIndex::SinoAccountStorage)
             .then(|| {
                 bank.get_filtered_indexed_accounts(
-                    &IndexKey::VelasAccountStorage(storage_key),
-                    is_target_velas_account,
+                    &IndexKey::SinoAccountStorage(storage_key),
+                    is_target_sino_account,
                     &ScanConfig::default(),
                     bank.byte_limit_for_scans(),
                 )
             })
     }
 
-    fn get_velas_accounts_by_owner_key(
+    fn get_sino_accounts_by_owner_key(
         &self,
         bank: &Arc<Bank>,
         owner_key: Pubkey,
     ) -> Option<ScanResult<Vec<(Pubkey, AccountSharedData)>>> {
-        let is_target_velas_account_storage = |account: &AccountSharedData| -> bool {
+        let is_target_sino_account_storage = |account: &AccountSharedData| -> bool {
             *account.owner() == account_program::id()
-                && match VelasAccountType::try_from(account.data()) {
-                    Ok(VelasAccountType::Account(account)) => account.owners.contains(&owner_key),
+                && match SinoAccountType::try_from(account.data()) {
+                    Ok(SinoAccountType::Account(account)) => account.owners.contains(&owner_key),
                     _ => false,
                 }
         };
 
         self.config
             .account_indexes
-            .contains(&AccountIndex::VelasAccountOwner)
+            .contains(&AccountIndex::SinoAccountOwner)
             .then(|| {
                 bank.get_filtered_indexed_accounts(
-                    &IndexKey::VelasAccountOwner(owner_key),
-                    is_target_velas_account_storage,
+                    &IndexKey::SinoAccountOwner(owner_key),
+                    is_target_sino_account_storage,
                     &ScanConfig::default(),
                     bank.byte_limit_for_scans(),
                 )
             })
     }
 
-    fn get_velas_relying_party_by_owner_key(
+    fn get_sino_relying_party_by_owner_key(
         &self,
         bank: &Arc<Bank>,
         owner_key: Pubkey,
     ) -> Option<ScanResult<Vec<(Pubkey, AccountSharedData)>>> {
-        let is_target_velas_account_storage = |account: &AccountSharedData| -> bool {
+        let is_target_sino_account_storage = |account: &AccountSharedData| -> bool {
             *account.owner() == relying_party_program::id()
                 && match RelyingPartyData::try_from(account.data()) {
                     Ok(acc) => acc.authority == owner_key,
@@ -2497,26 +2497,26 @@ impl JsonRpcRequestProcessor {
 
         self.config
             .account_indexes
-            .contains(&AccountIndex::VelasRelyingOwner)
+            .contains(&AccountIndex::SinoRelyingOwner)
             .then(|| {
                 bank.get_filtered_indexed_accounts(
-                    &IndexKey::VelasRelyingOwner(owner_key),
-                    is_target_velas_account_storage,
+                    &IndexKey::SinoRelyingOwner(owner_key),
+                    is_target_sino_account_storage,
                     &ScanConfig::default(),
                     bank.byte_limit_for_scans(),
                 )
             })
     }
 
-    fn get_velas_accounts_storages_by_operational_key(
+    fn get_sino_accounts_storages_by_operational_key(
         &self,
         bank: &Arc<Bank>,
         operational_key: Pubkey,
     ) -> Option<ScanResult<Vec<(Pubkey, AccountSharedData)>>> {
-        let is_target_velas_account_storage = |account: &AccountSharedData| -> bool {
+        let is_target_sino_account_storage = |account: &AccountSharedData| -> bool {
             *account.owner() == account_program::id()
-                && match VelasAccountType::try_from(account.data()) {
-                    Ok(VelasAccountType::Storage(account_storage)) => account_storage
+                && match SinoAccountType::try_from(account.data()) {
+                    Ok(SinoAccountType::Storage(account_storage)) => account_storage
                         .operationals
                         .iter()
                         .any(|operational| operational.pubkey == operational_key),
@@ -2526,11 +2526,11 @@ impl JsonRpcRequestProcessor {
 
         self.config
             .account_indexes
-            .contains(&AccountIndex::VelasAccountOperational)
+            .contains(&AccountIndex::SinoAccountOperational)
             .then(|| {
                 bank.get_filtered_indexed_accounts(
-                    &IndexKey::VelasAccountOperational(operational_key),
-                    is_target_velas_account_storage,
+                    &IndexKey::SinoAccountOperational(operational_key),
+                    is_target_sino_account_storage,
                     &ScanConfig::default(),
                     bank.byte_limit_for_scans(),
                 )
@@ -2908,7 +2908,7 @@ pub mod rpc_minimal {
         #[rpc(meta, name = "getVersion")]
         fn get_version(&self, meta: Self::Metadata) -> Result<RpcVersionInfo>;
 
-        // TODO: Refactor `velas-validator wait-for-restart-window` to not require this method, so
+        // TODO: Refactor `sino-validator wait-for-restart-window` to not require this method, so
         //       it can be removed from rpc_minimal
         #[rpc(meta, name = "getVoteAccounts")]
         fn get_vote_accounts(
@@ -2917,7 +2917,7 @@ pub mod rpc_minimal {
             config: Option<RpcGetVoteAccountsConfig>,
         ) -> Result<RpcVoteAccountStatus>;
 
-        // TODO: Refactor `velas-validator wait-for-restart-window` to not require this method, so
+        // TODO: Refactor `sino-validator wait-for-restart-window` to not require this method, so
         //       it can be removed from rpc_minimal
         #[rpc(meta, name = "getLeaderSchedule")]
         fn get_leader_schedule(
@@ -3059,7 +3059,7 @@ pub mod rpc_minimal {
             })
         }
 
-        // TODO: Refactor `velas-validator wait-for-restart-window` to not require this method, so
+        // TODO: Refactor `sino-validator wait-for-restart-window` to not require this method, so
         //       it can be removed from rpc_minimal
         fn get_vote_accounts(
             &self,
@@ -3070,7 +3070,7 @@ pub mod rpc_minimal {
             meta.get_vote_accounts(config)
         }
 
-        // TODO: Refactor `velas-validator wait-for-restart-window` to not require this method, so
+        // TODO: Refactor `sino-validator wait-for-restart-window` to not require this method, so
         //       it can be removed from rpc_minimal
         fn get_leader_schedule(
             &self,
@@ -3442,22 +3442,22 @@ pub mod rpc_accounts {
             config: Option<RpcAccountInfoConfig>,
         ) -> Result<RpcResponse<Vec<RpcKeyedAccount>>>;
 
-        #[rpc(meta, name = "getVelasAccountsByOperationalKey")]
-        fn get_velas_accounts_by_operational_key(
+        #[rpc(meta, name = "getSinoAccountsByOperationalKey")]
+        fn get_sino_accounts_by_operational_key(
             &self,
             meta: Self::Metadata,
             pubkey_str: String,
         ) -> Result<RpcResponse<Vec<String>>>;
 
-        #[rpc(meta, name = "getVelasAccountsByOwnerKey")]
-        fn get_velas_accounts_by_owner_key(
+        #[rpc(meta, name = "getSinoAccountsByOwnerKey")]
+        fn get_sino_accounts_by_owner_key(
             &self,
             meta: Self::Metadata,
             pubkey_str: String,
         ) -> Result<RpcResponse<Vec<String>>>;
 
-        #[rpc(meta, name = "getVelasRelyingPartiesByOwnerKey")]
-        fn get_velas_relying_parties_by_owner_key(
+        #[rpc(meta, name = "getSinoRelyingPartiesByOwnerKey")]
+        fn get_sino_relying_parties_by_owner_key(
             &self,
             meta: Self::Metadata,
             pubkey_str: String,
@@ -3651,28 +3651,28 @@ pub mod rpc_accounts {
             meta.get_token_accounts_by_delegate(&delegate, token_account_filter, config)
         }
 
-        // Velas scope
+        // Sino scope
 
-        fn get_velas_accounts_by_owner_key(
+        fn get_sino_accounts_by_owner_key(
             &self,
             meta: Self::Metadata,
             pubkey_str: String,
         ) -> Result<RpcResponse<Vec<String>>> {
             debug!(
-                "get_velas_accounts_by_owner_key rpc request received: {:?}",
+                "get_sino_accounts_by_owner_key rpc request received: {:?}",
                 pubkey_str
             );
 
-            check_index!(&meta.config, AccountIndex::VelasAccountOwner);
+            check_index!(&meta.config, AccountIndex::SinoAccountOwner);
 
             let owner_key = verify_pubkey(&pubkey_str)?;
             let bank = meta.bank(None);
 
-            let accounts = meta.get_velas_accounts_by_owner_key(&bank, owner_key).transpose().map_err(|e|RpcCustomError::ScanError {
+            let accounts = meta.get_sino_accounts_by_owner_key(&bank, owner_key).transpose().map_err(|e|RpcCustomError::ScanError {
                 message: e.to_string(),
             })?;
             debug!(
-                "get_velas_accounts_by_owner_key velas accounts {:?}",
+                "get_sino_accounts_by_owner_key sino accounts {:?}",
                 accounts
             );
 
@@ -3686,26 +3686,26 @@ pub mod rpc_accounts {
             ))
         }
 
-        fn get_velas_relying_parties_by_owner_key(
+        fn get_sino_relying_parties_by_owner_key(
             &self,
             meta: Self::Metadata,
             pubkey_str: String,
         ) -> Result<RpcResponse<Vec<String>>> {
             debug!(
-                "get_velas_relying_parties_by_owner_key rpc request received: {:?}",
+                "get_sino_relying_parties_by_owner_key rpc request received: {:?}",
                 pubkey_str
             );
 
-            check_index!(&meta.config, AccountIndex::VelasRelyingOwner);
+            check_index!(&meta.config, AccountIndex::SinoRelyingOwner);
 
             let owner_key = verify_pubkey(&pubkey_str)?;
             let bank = meta.bank(None);
 
-            let accounts = meta.get_velas_relying_party_by_owner_key(&bank, owner_key).transpose().map_err(|e|RpcCustomError::ScanError {
+            let accounts = meta.get_sino_relying_party_by_owner_key(&bank, owner_key).transpose().map_err(|e|RpcCustomError::ScanError {
                 message: e.to_string(),
             })?;
             debug!(
-                "get_velas_relying_parties_by_owner_key velas accounts storages {:?}",
+                "get_sino_relying_parties_by_owner_key sino accounts storages {:?}",
                 accounts
             );
 
@@ -3719,44 +3719,44 @@ pub mod rpc_accounts {
             ))
         }
 
-        fn get_velas_accounts_by_operational_key(
+        fn get_sino_accounts_by_operational_key(
             &self,
             meta: Self::Metadata,
             pubkey_str: String,
         ) -> Result<RpcResponse<Vec<String>>> {
             debug!(
-                "get_velas_accounts_by_operational_key rpc request received: {:?}",
+                "get_sino_accounts_by_operational_key rpc request received: {:?}",
                 pubkey_str
             );
 
-            check_index!(&meta.config, AccountIndex::VelasAccountOperational);
-            check_index!(&meta.config, AccountIndex::VelasAccountStorage);
+            check_index!(&meta.config, AccountIndex::SinoAccountOperational);
+            check_index!(&meta.config, AccountIndex::SinoAccountStorage);
 
             let operational_key = verify_pubkey(&pubkey_str)?;
             let bank = meta.bank(None);
 
             let storages =
-                meta.get_velas_accounts_storages_by_operational_key(&bank, operational_key).transpose().map_err(|e|RpcCustomError::ScanError {
+                meta.get_sino_accounts_storages_by_operational_key(&bank, operational_key).transpose().map_err(|e|RpcCustomError::ScanError {
                     message: e.to_string(),
                 })?;
             debug!(
-                "get_velas_accounts_by_operational_key velas accounts storages {:?}",
+                "get_sino_accounts_by_operational_key sino accounts storages {:?}",
                 storages
             );
 
             let accounts: std::result::Result<Vec<_>,_> = storages
-                .expect("velas account operational index to be activated")
+                .expect("sino account operational index to be activated")
                 .into_iter()
                 .map(|(storage, _)| {
-                    meta.get_velas_accounts_by_storage_key(&bank, storage)
-                        .expect("velas account storage index to be activated")
+                    meta.get_sino_accounts_by_storage_key(&bank, storage)
+                        .expect("sino account storage index to be activated")
                 })
                 .collect();
             let accounts = accounts.map_err(|e|RpcCustomError::ScanError {
                 message: e.to_string(),
             })?;
             debug!(
-                "get_velas_accounts_by_operational_key velas accounts {:?}",
+                "get_sino_accounts_by_operational_key sino accounts {:?}",
                 accounts
             );
 

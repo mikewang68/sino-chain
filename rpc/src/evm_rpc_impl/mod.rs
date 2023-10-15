@@ -191,7 +191,7 @@
 //     type Metadata = Arc<JsonRpcRequestProcessor>;
 
 //     fn client_version(&self, _meta: Self::Metadata) -> Result<String, Error> {
-//         Ok(String::from("velas-chain/v0.5.0"))
+//         Ok(String::from("sino-chain/v0.5.0"))
 //     }
 
 //     fn sha3(&self, _meta: Self::Metadata, bytes: Bytes) -> Result<Hex<H256>, Error> {
@@ -871,7 +871,7 @@
 //                     tx_hash,
 //                     true,
 //                     simulation_entrypoint(
-//                         PrecompileSet::VelasClassic,
+//                         PrecompileSet::SinoClassic,
 //                         &evm_keyed_account,
 //                         &user_accounts,
 //                     ),
@@ -1101,11 +1101,11 @@
 //         estimate_config,
 //         evm_state::executor::FeatureSet::new(
 //             bank.feature_set
-//                 .is_active(&solana_sdk::feature_set::velas::unsigned_tx_fix::id()),
+//                 .is_active(&solana_sdk::feature_set::sino::unsigned_tx_fix::id()),
 //             bank.feature_set
-//                 .is_active(&solana_sdk::feature_set::velas::clear_logs_on_error::id()),
+//                 .is_active(&solana_sdk::feature_set::sino::clear_logs_on_error::id()),
 //             bank.feature_set.is_active(
-//                 &solana_sdk::feature_set::velas::accept_zero_gas_price_with_native_fee::id(),
+//                 &solana_sdk::feature_set::sino::accept_zero_gas_price_with_native_fee::id(),
 //             ),
 //         ),
 //     );
@@ -1226,7 +1226,7 @@
 //             tx_hash,
 //             true,
 //             simulation_entrypoint(
-//                 PrecompileSet::VelasClassic,
+//                 PrecompileSet::SinoClassic,
 //                 &evm_keyed_account,
 //                 &user_accounts,
 //             ),

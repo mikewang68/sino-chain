@@ -1565,10 +1565,10 @@ pub fn main() {
                     "program-id",
                     "spl-token-owner",
                     "spl-token-mint",
-                    "velas-accounts-storages",
-                    "velas-accounts-owners",
-                    "velas-accounts-operationals",
-                    "velas-relying-party-owners",
+                    "sino-accounts-storages",
+                    "sino-accounts-owners",
+                    "sino-accounts-operationals",
+                    "sino-relying-party-owners",
                 ])
                 .value_name("INDEX")
                 .help("Enable an accounts index, indexed by the selected account field"),
@@ -2075,7 +2075,7 @@ pub fn main() {
         let logfile = matches
             .value_of("logfile")
             .map(|s| s.into())
-            .unwrap_or_else(|| format!("velas-validator-{}.log", identity_keypair.pubkey()));
+            .unwrap_or_else(|| format!("sino-validator-{}.log", identity_keypair.pubkey()));
 
         if logfile == "-" {
             None
@@ -2896,10 +2896,10 @@ fn process_account_indexes(matches: &ArgMatches) -> AccountSecondaryIndexes {
             "program-id" => AccountIndex::ProgramId,
             "spl-token-mint" => AccountIndex::SplTokenMint,
             "spl-token-owner" => AccountIndex::SplTokenOwner,
-            "velas-accounts-storages" => AccountIndex::VelasAccountStorage,
-            "velas-accounts-owners" => AccountIndex::VelasAccountOwner,
-            "velas-accounts-operationals" => AccountIndex::VelasAccountOperational,
-            "velas-relying-party-owners" => AccountIndex::VelasRelyingOwner,
+            "sino-accounts-storages" => AccountIndex::SinoAccountStorage,
+            "sino-accounts-owners" => AccountIndex::SinoAccountOwner,
+            "sino-accounts-operationals" => AccountIndex::SinoAccountOperational,
+            "sino-relying-party-owners" => AccountIndex::SinoRelyingOwner,
             unexpected => panic!("Unable to handle account_index {}", unexpected),
         })
         .collect();

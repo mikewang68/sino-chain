@@ -1697,7 +1697,7 @@ pub fn verify_snapshot_archive<P, Q, R>(
 
     // TODO: Make evm-state snapshot more consistent, currently rocksdb incremental backup is
     // not consistent (because it support more than one backup at a time)
-    // TODO(velas): uncomment this check
+    // TODO(sino): uncomment this check
     assert!(!cmp_dir::is_different(&snapshots_to_verify, unpacked_snapshots, true).unwrap());
 
     // Check the account entries are the same

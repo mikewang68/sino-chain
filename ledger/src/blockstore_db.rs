@@ -116,7 +116,7 @@ pub enum BlockstoreError {
     SlotUnavailable,
     UnsupportedTransactionVersion,
     MissingTransactionMetadata,
-    Other(&'static str), // TODO(velas): remove, use specific error variant
+    Other(&'static str), // TODO(sino): remove, use specific error variant
 }
 pub type Result<T> = std::result::Result<T, BlockstoreError>;
 
@@ -512,7 +512,7 @@ impl Rocks {
                 }
             }
         };
-        // this is only needed for LedgerCleanupService. so guard with PrimaryOnly (i.e. running velas-validator)
+        // this is only needed for LedgerCleanupService. so guard with PrimaryOnly (i.e. running sino-validator)
         if matches!(access_type, AccessType::PrimaryOnly) {
             for cf_name in cf_names {
                 // these special column families must be excluded from LedgerCleanupService's rocksdb

@@ -22,8 +22,8 @@ lazy_static! {
     static ref SYSTEM_PROGRAM_ID: Pubkey = system_program::id();
     static ref SYSVAR_PROGRAM_ID: Pubkey = sysvar::id();
     static ref VOTE_PROGRAM_ID: Pubkey = vote_program::id();
-    static ref VELAS_ACCOUNT_PROGRAM_ID: Pubkey = account_program::id();
-    static ref VELAS_RELYING_PARTY_PROGRAM_ID: Pubkey = relying_party_program::id();
+    static ref SINO_ACCOUNT_PROGRAM_ID: Pubkey = account_program::id();
+    static ref SINO_RELYING_PARTY_PROGRAM_ID: Pubkey = relying_party_program::id();
     pub static ref PARSABLE_PROGRAM_IDS: HashMap<Pubkey, ParsableAccount> = {
         let mut m = HashMap::new();
         m.insert(
@@ -38,10 +38,10 @@ lazy_static! {
         m.insert(*STAKE_PROGRAM_ID, ParsableAccount::Stake);
         m.insert(*SYSVAR_PROGRAM_ID, ParsableAccount::Sysvar);
         m.insert(*VOTE_PROGRAM_ID, ParsableAccount::Vote);
-        m.insert(*VELAS_ACCOUNT_PROGRAM_ID, ParsableAccount::VelasAccount);
+        m.insert(*SINO_ACCOUNT_PROGRAM_ID, ParsableAccount::SinoAccount);
         m.insert(
-            *VELAS_RELYING_PARTY_PROGRAM_ID,
-            ParsableAccount::VelasRelyingParty,
+            *SINO_RELYING_PARTY_PROGRAM_ID,
+            ParsableAccount::SinoRelyingParty,
         );
         m
     };
@@ -69,7 +69,7 @@ impl From<account_program::ParseError> for ParseAccountError {
     fn from(err: account_program::ParseError) -> Self {
         match err {
             account_program::ParseError::AccountNotParsable => {
-                Self::AccountNotParsable(ParsableAccount::VelasAccount)
+                Self::AccountNotParsable(ParsableAccount::SinoAccount)
             }
         }
     }
@@ -79,7 +79,7 @@ impl From<relying_party_program::ParseError> for ParseAccountError {
     fn from(err: relying_party_program::ParseError) -> Self {
         match err {
             relying_party_program::ParseError::AccountNotParsable => {
-                Self::AccountNotParsable(ParsableAccount::VelasRelyingParty)
+                Self::AccountNotParsable(ParsableAccount::SinoRelyingParty)
             }
         }
     }
@@ -103,8 +103,8 @@ pub enum ParsableAccount {
     Stake,
     Sysvar,
     Vote,
-    VelasAccount,
-    VelasRelyingParty,
+    SinoAccount,
+    SinoRelyingParty,
 }
 
 #[derive(Default)]
@@ -134,10 +134,10 @@ pub fn parse_account_data(
         ParsableAccount::Stake => serde_json::to_value(parse_stake(data)?)?,
         ParsableAccount::Sysvar => serde_json::to_value(parse_sysvar(data, pubkey)?)?,
         ParsableAccount::Vote => serde_json::to_value(parse_vote(data)?)?,
-        ParsableAccount::VelasAccount => {
-            serde_json::to_value(account_program::VelasAccountType::try_from(data)?)?
+        ParsableAccount::SinoAccount => {
+            serde_json::to_value(account_program::SinoAccountType::try_from(data)?)?
         }
-        ParsableAccount::VelasRelyingParty => serde_json::to_value(
+        ParsableAccount::SinoRelyingParty => serde_json::to_value(
             relying_party_program::RelyingPartyData::try_from(data)?,
         )?,
     };

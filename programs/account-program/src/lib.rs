@@ -12,7 +12,7 @@ sdk::declare_id!("VAcccHVjpknkW5N5R9sfRppQxYJrJYVV7QJGKchkQj5");
 #[derive(BorshSerialize, BorshDeserialize, BorshSchema)]
 #[derive(Serialize, Deserialize)]
 #[serde(rename_all = "camelCase", tag = "type", content = "info")]
-pub enum VelasAccountType {
+pub enum SinoAccountType {
     Account(VAccountInfo),
     Storage(VAccountStorage),
 }
@@ -122,14 +122,14 @@ pub enum ParseError {
     AccountNotParsable,
 }
 
-impl TryFrom<&[u8]> for VelasAccountType {
+impl TryFrom<&[u8]> for SinoAccountType {
     type Error = ParseError;
 
     fn try_from(data: &[u8]) -> Result<Self, Self::Error> {
         if data.len() == ACCOUNT_LEN {
-            VAccountInfo::try_from_slice(data).map(VelasAccountType::Account)
+            VAccountInfo::try_from_slice(data).map(SinoAccountType::Account)
         } else {
-            VAccountStorage::deserialize_stream_array(data).map(VelasAccountType::Storage)
+            VAccountStorage::deserialize_stream_array(data).map(SinoAccountType::Storage)
         }
         .map_err(|_| ParseError::AccountNotParsable)
     }

@@ -661,7 +661,7 @@ fn main() -> Result<(), Box<dyn error::Error>> {
     ) {
         runtime::genesis_utils::activate_all_features(&mut genesis_config);
     } else {
-        runtime::genesis_utils::activate_velas_features_on_prod(&mut genesis_config);
+        runtime::genesis_utils::activate_sino_features_on_prod(&mut genesis_config);
     }
 
     // ----------------- 从原始账户中获取账户信息 ----------------------

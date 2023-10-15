@@ -411,7 +411,7 @@ pub enum CliCommand {
         derived_address_seed: Option<String>,
         derived_address_program_id: Option<Pubkey>,
     },
-    // Velas EVM Commands
+    // Sino EVM Commands
     Evm(EvmCliCommand),
 }
 
@@ -659,7 +659,7 @@ pub fn parse_command(
                 crate_description!(),
                 sino_version::version!(),
             )
-            .gen_completions_to("velas", shell_choice, &mut stdout());
+            .gen_completions_to("sino", shell_choice, &mut stdout());
             std::process::exit(0);
         }
         // Cluster Query Commands

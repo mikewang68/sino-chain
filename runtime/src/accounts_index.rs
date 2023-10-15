@@ -36,7 +36,7 @@ use {
     thiserror::Error,
 };
 
-use account_program::{VAccountStorage, VelasAccountType};
+use account_program::{VAccountStorage, SinoAccountType};
 use relying_party_program::RelyingPartyData;
 
 pub const ITER_BATCH_SIZE: usize = 1000;
@@ -129,10 +129,10 @@ pub enum IndexKey {
     ProgramId(Pubkey),
     SplTokenMint(Pubkey),
     SplTokenOwner(Pubkey),
-    VelasAccountStorage(Pubkey),
-    VelasAccountOwner(Pubkey),
-    VelasAccountOperational(Pubkey),
-    VelasRelyingOwner(Pubkey),
+    SinoAccountStorage(Pubkey),
+    SinoAccountOwner(Pubkey),
+    SinoAccountOperational(Pubkey),
+    SinoRelyingOwner(Pubkey),
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -140,10 +140,10 @@ pub enum AccountIndex {
     ProgramId,
     SplTokenMint,
     SplTokenOwner,
-    VelasAccountStorage,
-    VelasAccountOwner,
-    VelasAccountOperational,
-    VelasRelyingOwner,
+    SinoAccountStorage,
+    SinoAccountOwner,
+    SinoAccountOperational,
+    SinoRelyingOwner,
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
@@ -189,10 +189,10 @@ impl AccountIndex {
             AccountIndex::ProgramId => "Program ID",
             AccountIndex::SplTokenMint => "SPL Token Mint",
             AccountIndex::SplTokenOwner => "SPL Token Owner",
-            AccountIndex::VelasAccountStorage => "Velas Account Storage",
-            AccountIndex::VelasAccountOwner => "Velas Account Owner",
-            AccountIndex::VelasAccountOperational => "Velas Account Operational",
-            AccountIndex::VelasRelyingOwner => "Velas Relying Owner",
+            AccountIndex::SinoAccountStorage => "Sino Account Storage",
+            AccountIndex::SinoAccountOwner => "Sino Account Owner",
+            AccountIndex::SinoAccountOperational => "Sino Account Operational",
+            AccountIndex::SinoRelyingOwner => "Sino Relying Owner",
         }
     }
 }
@@ -857,11 +857,11 @@ pub struct AccountsIndex<T: IndexValue> {
     // on any of these slots fails. This is safe to purge once the associated Bank is dropped and
     // scanning the fork with that Bank at the tip is no longer possible.
     pub removed_bank_ids: Mutex<HashSet<BankId>>,
-    // Velas Indices
-    velas_account_storage_index: SecondaryIndex<DashMapSecondaryIndexEntry>,
-    velas_account_owner_index: SecondaryIndex<DashMapSecondaryIndexEntry>,
-    velas_account_operational_index: SecondaryIndex<DashMapSecondaryIndexEntry>,
-    velas_relying_party_owner_index: SecondaryIndex<DashMapSecondaryIndexEntry>,
+    // Sino Indices
+    sino_account_storage_index: SecondaryIndex<DashMapSecondaryIndexEntry>,
+    sino_account_owner_index: SecondaryIndex<DashMapSecondaryIndexEntry>,
+    sino_account_operational_index: SecondaryIndex<DashMapSecondaryIndexEntry>,
+    sino_relying_party_owner_index: SecondaryIndex<DashMapSecondaryIndexEntry>,
 
     storage: AccountsIndexStorage<T>,
 
@@ -904,11 +904,11 @@ impl<T: IndexValue> AccountsIndex<T> {
             storage,
             scan_results_limit_bytes,
 
-            //Velas indexes
-            velas_account_storage_index: SecondaryIndex::<DashMapSecondaryIndexEntry>::new("velas_account_storage_index"),
-            velas_account_owner_index: SecondaryIndex::<DashMapSecondaryIndexEntry>::new("velas_account_owner_index"),
-            velas_account_operational_index: SecondaryIndex::<DashMapSecondaryIndexEntry>::new("velas_account_operational_index"),
-            velas_relying_party_owner_index: SecondaryIndex::<DashMapSecondaryIndexEntry>::new("velas_relying_party_owner_index"),
+            //Sino indexes
+            sino_account_storage_index: SecondaryIndex::<DashMapSecondaryIndexEntry>::new("sino_account_storage_index"),
+            sino_account_owner_index: SecondaryIndex::<DashMapSecondaryIndexEntry>::new("sino_account_owner_index"),
+            sino_account_operational_index: SecondaryIndex::<DashMapSecondaryIndexEntry>::new("sino_account_operational_index"),
+            sino_relying_party_owner_index: SecondaryIndex::<DashMapSecondaryIndexEntry>::new("sino_relying_party_owner_index"),
         }
     }
 
@@ -1133,38 +1133,38 @@ impl<T: IndexValue> AccountsIndex<T> {
                 );
             }
 
-            ScanTypes::Indexed(IndexKey::VelasAccountStorage(va_storage_key)) => self
+            ScanTypes::Indexed(IndexKey::SinoAccountStorage(va_storage_key)) => self
                 .do_scan_secondary_index(
                     ancestors,
                     func,
-                    &self.velas_account_storage_index,
+                    &self.sino_account_storage_index,
                     &va_storage_key,
                     Some(max_root),
                     config,
                 ),
-            ScanTypes::Indexed(IndexKey::VelasAccountOwner(va_owner_key)) => self
+            ScanTypes::Indexed(IndexKey::SinoAccountOwner(va_owner_key)) => self
                 .do_scan_secondary_index(
                     ancestors,
                     func,
-                    &self.velas_account_owner_index,
+                    &self.sino_account_owner_index,
                     &va_owner_key,
                     Some(max_root),
                     config,
                 ),
-            ScanTypes::Indexed(IndexKey::VelasAccountOperational(va_operational_key)) => self
+            ScanTypes::Indexed(IndexKey::SinoAccountOperational(va_operational_key)) => self
                 .do_scan_secondary_index(
                     ancestors,
                     func,
-                    &self.velas_account_operational_index,
+                    &self.sino_account_operational_index,
                     &va_operational_key,
                     Some(max_root),
                     config,
                 ),
-            ScanTypes::Indexed(IndexKey::VelasRelyingOwner(va_owner_key)) => self
+            ScanTypes::Indexed(IndexKey::SinoRelyingOwner(va_owner_key)) => self
                 .do_scan_secondary_index(
                     ancestors,
                     func,
-                    &self.velas_relying_party_owner_index,
+                    &self.sino_relying_party_owner_index,
                     &va_owner_key,
                     Some(max_root),
                     config,
@@ -1698,45 +1698,45 @@ impl<T: IndexValue> AccountsIndex<T> {
             account_indexes,
         );
 
-        // Velas account
+        // Sino account
         if *account_owner == account_program::id() {
-            match VelasAccountType::try_from(account_data) {
-                Ok(VelasAccountType::Account(account_info)) => {
-                    if account_indexes.contains(&AccountIndex::VelasAccountStorage) {
+            match SinoAccountType::try_from(account_data) {
+                Ok(SinoAccountType::Account(account_info)) => {
+                    if account_indexes.contains(&AccountIndex::SinoAccountStorage) {
                         let storage = account_info.find_storage_key(pubkey);
-                        self.velas_account_storage_index.insert(&storage, pubkey);
+                        self.sino_account_storage_index.insert(&storage, pubkey);
                     }
 
-                    if account_indexes.contains(&AccountIndex::VelasAccountOwner) {
+                    if account_indexes.contains(&AccountIndex::SinoAccountOwner) {
                         for owner in account_info.owners {
                             if owner != Pubkey::default() {
-                                self.velas_account_owner_index.insert(&owner, pubkey);
+                                self.sino_account_owner_index.insert(&owner, pubkey);
                             }
                         }
                     }
                 }
-                Ok(VelasAccountType::Storage(VAccountStorage { operationals })) => {
-                    if account_indexes.contains(&AccountIndex::VelasAccountOperational) {
+                Ok(SinoAccountType::Storage(VAccountStorage { operationals })) => {
+                    if account_indexes.contains(&AccountIndex::SinoAccountOperational) {
                         for operational in operationals {
-                            self.velas_account_operational_index
+                            self.sino_account_operational_index
                                 .insert(&operational.pubkey, pubkey);
                         }
                     }
                 }
-                Err(err) => log::warn!("Unable to parse Velas Account: {:?}", err),
+                Err(err) => log::warn!("Unable to parse Sino Account: {:?}", err),
             }
         }
 
-        // Velas relying party data
+        // Sino relying party data
         if *account_owner == relying_party_program::id() {
             match RelyingPartyData::try_from(account_data) {
                 Ok(acc) => {
-                    if account_indexes.contains(&AccountIndex::VelasRelyingOwner) {
-                        self.velas_relying_party_owner_index
+                    if account_indexes.contains(&AccountIndex::SinoRelyingOwner) {
+                        self.sino_relying_party_owner_index
                             .insert(&acc.authority, pubkey);
                     }
                 }
-                Err(err) => log::warn!("Unable to parse Velas Account: {:?}", err),
+                Err(err) => log::warn!("Unable to parse Sino Account: {:?}", err),
             }
         }
     }

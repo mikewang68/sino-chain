@@ -365,7 +365,7 @@ impl JsonRpcService {
             tokio::runtime::Builder::new_multi_thread()
                 .worker_threads(rpc_threads)
                 .on_thread_start(move || renice_this_thread(rpc_niceness_adj).unwrap())
-                .thread_name("velas-rpc")
+                .thread_name("sino-rpc")
                 .enable_all()
                 .build()
                 .expect("Runtime"),
@@ -456,7 +456,7 @@ impl JsonRpcService {
                     .unwrap_or_else(|| Targets::default().with_default(LevelFilter::WARN));
 
                 let tracer = opentelemetry_jaeger::new_pipeline()
-                    .with_service_name("velas-jsonrpc-tracer")
+                    .with_service_name("sino-jsonrpc-tracer")
                     .with_collector_endpoint(collector)
                     .install_batch(opentelemetry::runtime::Tokio)
                     .unwrap();
@@ -476,7 +476,7 @@ impl JsonRpcService {
 
         let (close_handle_sender, close_handle_receiver) = channel();
         let thread_hdl = Builder::new()
-            .name("velas-jsonrpc".to_string())
+            .name("sino-jsonrpc".to_string())
             .spawn(move || {
                 renice_this_thread(rpc_niceness_adj).unwrap();
 
@@ -642,7 +642,7 @@ mod tests {
             None,
         );
         let thread = rpc_service.thread_hdl.thread();
-        assert_eq!(thread.name().unwrap(), "velas-jsonrpc");
+        assert_eq!(thread.name().unwrap(), "sino-jsonrpc");
 
         assert_eq!(
             10_000,

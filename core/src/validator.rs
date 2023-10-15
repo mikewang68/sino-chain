@@ -726,7 +726,7 @@ impl Validator {
 
                 let runtime = tokio::runtime::Builder::new_multi_thread()
                     .worker_threads(30)
-                    .thread_name("velas-evm-state-rpc-worker")
+                    .thread_name("sino-evm-state-rpc-worker")
                     .enable_all()
                     .build();
                 match runtime {
@@ -752,7 +752,7 @@ impl Validator {
                         
                     }, 
                     Err(err) => {
-                        error!("error initializing velas-evm-state-rpc-worker runtime {:#?}", err);
+                        error!("error initializing sino-evm-state-rpc-worker runtime {:#?}", err);
                         None
                     }
                     
