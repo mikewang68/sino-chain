@@ -357,7 +357,7 @@ impl LedgerStorage {
         credential_path: Option<String>,
     ) -> Result<Self> {
         let connection =
-            bigtable::BigTableConnection::new("solana-ledger", read_only, timeout, credential_path)
+            bigtable::BigTableConnection::new("sino-ledger", read_only, timeout, credential_path)
                 .await?;
         Ok(Self { connection })
     }

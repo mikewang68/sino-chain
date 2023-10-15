@@ -64,15 +64,15 @@ type DispatchResult = Result<(Box<dyn ReadRange>, Box<dyn EvmHeightIndex>), Disp
 
 const SECONDARY_CATCH_UP_SECONDS: u64 = 40;
 
-fn spin_off_sync_up_thread(solana_blockstore: Arc<Blockstore>) {
+fn spin_off_sync_up_thread(sino_blockstore: Arc<Blockstore>) {
     let _jh = std::thread::spawn(move || loop {
-        match solana_blockstore.try_catch_up_with_primary() {
+        match sino_blockstore.try_catch_up_with_primary() {
             Ok(true) => {
-                log::warn!("successfully synced up secondary solana_blockstore with primary");
+                log::warn!("successfully synced up secondary sino_blockstore with primary");
             }
             Err(err) => {
                 log::error!(
-                    "problem with syncing up secondary solana_blockstore with primary {:?}",
+                    "problem with syncing up secondary sino_blockstore with primary {:?}",
                     err
                 );
             }
@@ -86,7 +86,7 @@ fn spin_off_sync_up_thread(solana_blockstore: Arc<Blockstore>) {
 pub(super) fn dispatch_sources(
     config: Config,
     bigtable_blockstore: Option<CachedRootsLedgerStorage>,
-    solana_blockstore: Option<Arc<Blockstore>>,
+    sino_blockstore: Option<Arc<Blockstore>>,
 ) -> DispatchResult {
     let mut sor_blockstore_selected = false;
     let range: Box<dyn ReadRange> = match config.range_source {
@@ -102,13 +102,13 @@ pub(super) fn dispatch_sources(
             Box::new(bigtable_blockstore)
         }
 
-        RangeSource::SolanaBlockstore => {
-            let solana_blockstore = solana_blockstore
+        RangeSource::SinoBlockstore => {
+            let sino_blockstore = sino_blockstore
                 .clone()
-                .ok_or(DispatchSourcesError::SolanaBlockstoreNonInit)?;
-            spin_off_sync_up_thread(solana_blockstore.clone());
+                .ok_or(DispatchSourcesError::SinoBlockstoreNonInit)?;
+            spin_off_sync_up_thread(sino_blockstore.clone());
             sor_blockstore_selected = true;
-            Box::new(solana_blockstore)
+            Box::new(sino_blockstore)
         }
     };
     let index: Box<dyn EvmHeightIndex> = match config.height_index_source {
@@ -118,13 +118,13 @@ pub(super) fn dispatch_sources(
             Box::new(bigtable_blockstore)
         }
 
-        HeightIndexSource::SolanaBlockstore => {
-            let solana_blockstore =
-                solana_blockstore.ok_or(DispatchSourcesError::SolanaBlockstoreNonInit)?;
+        HeightIndexSource::SinoBlockstore => {
+            let sino_blockstore =
+                sino_blockstore.ok_or(DispatchSourcesError::SinoBlockstoreNonInit)?;
             if !sor_blockstore_selected {
-                spin_off_sync_up_thread(solana_blockstore.clone());
+                spin_off_sync_up_thread(sino_blockstore.clone());
             }
-            Box::new(solana_blockstore)
+            Box::new(sino_blockstore)
         }
     };
     Ok((range, index))

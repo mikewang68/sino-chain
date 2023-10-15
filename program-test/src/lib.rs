@@ -1,4 +1,4 @@
-//! The solana-program-test provides a BanksClient-based test framework BPF programs
+//! The sino-program-test provides a BanksClient-based test framework BPF programs
 #![allow(clippy::integer_arithmetic)]
 
 // Export tokio for test clients
@@ -7,8 +7,8 @@ use {
     async_trait::async_trait,
     chrono_humanize::{Accuracy, HumanTime, Tense},
     log::*,
-    //solana_banks_client::start_client,
-    //solana_banks_server::banks_server::start_local_server,
+    //sino_banks_client::start_client,
+    //sino_banks_server::banks_server::start_local_server,
     program_runtime::{
         ic_msg, invoke_context::ProcessInstructionWithContext,
         stable_log, timings::ExecuteTimings,
@@ -58,9 +58,9 @@ use {
     thiserror::Error,
     tokio::task::JoinHandle,
 };
-// Export types so test clients can limit their solana crate dependencies
+// Export types so test clients can limit their sino crate dependencies
 pub use {
-    //solana_banks_client::{BanksClient, BanksClientError},
+    //sino_banks_client::{BanksClient, BanksClientError},
     program_runtime::invoke_context::InvokeContext,
 };
 
@@ -176,7 +176,7 @@ pub fn builtin_process_instruction(
     Ok(())
 }
 
-/// Converts a `solana-program`-style entrypoint into the runtime's entrypoint style, for
+/// Converts a `sino-program`-style entrypoint into the runtime's entrypoint style, for
 /// use with `ProgramTest::add_program`
 #[macro_export]
 macro_rules! processor {
@@ -497,9 +497,9 @@ impl Default for ProgramTest {
     ///
     fn default() -> Self {
         sino_logger::setup_with_default(
-            "solana_rbpf::vm=debug,\
-             solana_runtime::message_processor=debug,\
-             solana_runtime::system_instruction_processor=trace,\
+            "sino_rbpf::vm=debug,\
+             sino_runtime::message_processor=debug,\
+             sino_runtime::system_instruction_processor=trace,\
              sino_program_test=info",
         );
         let prefer_bpf = std::env::var("BPF_OUT_DIR").is_ok();

@@ -223,7 +223,7 @@ pub fn process_instruction(
 
 //     #[test]
 //     fn test_process_create_ok() {
-//         solana_logger::setup();
+//         sino_logger::setup();
 //         let (_, config_account) = create_config_account(vec![]);
 //         assert_eq!(
 //             Some(MyConfig::default()),
@@ -233,7 +233,7 @@ pub fn process_instruction(
 
 //     #[test]
 //     fn test_process_store_ok() {
-//         solana_logger::setup();
+//         sino_logger::setup();
 //         let keys = vec![];
 //         let (config_keypair, config_account) = create_config_account(keys.clone());
 //         let config_pubkey = config_keypair.pubkey();
@@ -253,7 +253,7 @@ pub fn process_instruction(
 
 //     #[test]
 //     fn test_process_store_fail_instruction_data_too_large() {
-//         solana_logger::setup();
+//         sino_logger::setup();
 //         let keys = vec![];
 //         let (config_keypair, config_account) = create_config_account(keys.clone());
 //         let config_pubkey = config_keypair.pubkey();
@@ -270,7 +270,7 @@ pub fn process_instruction(
 
 //     #[test]
 //     fn test_process_store_fail_account0_not_signer() {
-//         solana_logger::setup();
+//         sino_logger::setup();
 //         let keys = vec![];
 //         let (config_keypair, config_account) = create_config_account(keys);
 //         let config_pubkey = config_keypair.pubkey();
@@ -287,7 +287,7 @@ pub fn process_instruction(
 
 //     #[test]
 //     fn test_process_store_with_additional_signers() {
-//         solana_logger::setup();
+//         sino_logger::setup();
 //         let pubkey = Pubkey::new_unique();
 //         let signer0_pubkey = Pubkey::new_unique();
 //         let signer1_pubkey = Pubkey::new_unique();
@@ -322,7 +322,7 @@ pub fn process_instruction(
 
 //     #[test]
 //     fn test_process_store_without_config_signer() {
-//         solana_logger::setup();
+//         sino_logger::setup();
 //         let pubkey = Pubkey::new_unique();
 //         let signer0_pubkey = Pubkey::new_unique();
 //         let keys = vec![(pubkey, false), (signer0_pubkey, true)];
@@ -341,7 +341,7 @@ pub fn process_instruction(
 
 //     #[test]
 //     fn test_process_store_with_bad_additional_signer() {
-//         solana_logger::setup();
+//         sino_logger::setup();
 //         let signer0_pubkey = Pubkey::new_unique();
 //         let signer1_pubkey = Pubkey::new_unique();
 //         let signer0_account = AccountSharedData::new_ref(0, 0, &Pubkey::new_unique());
@@ -373,7 +373,7 @@ pub fn process_instruction(
 
 //     #[test]
 //     fn test_config_updates() {
-//         solana_logger::setup();
+//         sino_logger::setup();
 //         let pubkey = Pubkey::new_unique();
 //         let signer0_pubkey = Pubkey::new_unique();
 //         let signer1_pubkey = Pubkey::new_unique();
@@ -443,7 +443,7 @@ pub fn process_instruction(
 
 //     #[test]
 //     fn test_config_initialize_contains_duplicates_fails() {
-//         solana_logger::setup();
+//         sino_logger::setup();
 //         let config_address = Pubkey::new_unique();
 //         let signer0_pubkey = Pubkey::new_unique();
 //         let signer0_account = AccountSharedData::new_ref(0, 0, &Pubkey::new_unique());
@@ -471,7 +471,7 @@ pub fn process_instruction(
 
 //     #[test]
 //     fn test_config_update_contains_duplicates_fails() {
-//         solana_logger::setup();
+//         sino_logger::setup();
 //         let config_address = Pubkey::new_unique();
 //         let signer0_pubkey = Pubkey::new_unique();
 //         let signer1_pubkey = Pubkey::new_unique();
@@ -514,7 +514,7 @@ pub fn process_instruction(
 
 //     #[test]
 //     fn test_config_updates_requiring_config() {
-//         solana_logger::setup();
+//         sino_logger::setup();
 //         let pubkey = Pubkey::new_unique();
 //         let signer0_pubkey = Pubkey::new_unique();
 //         let signer0_account = AccountSharedData::new_ref(0, 0, &Pubkey::new_unique());

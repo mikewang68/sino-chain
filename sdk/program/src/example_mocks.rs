@@ -13,7 +13,7 @@
 #![doc(hidden)]
 #![allow(clippy::new_without_default)]
 
-pub mod solana_client {
+pub mod sino_client {
     pub mod client_error {
         use thiserror::Error;
 
@@ -57,10 +57,10 @@ pub mod solana_client {
     }
 }
 
-/// Re-exports and mocks of solana-program modules that mirror those from
-/// solana-program.
+/// Re-exports and mocks of sino-program modules that mirror those from
+/// sino-program.
 ///
-/// This lets examples in solana-program appear to be written as client
+/// This lets examples in sino-program appear to be written as client
 /// programs.
 pub mod sdk {
     pub use crate::hash;

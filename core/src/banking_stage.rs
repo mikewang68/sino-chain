@@ -433,7 +433,7 @@ impl BankingStage {
                 let data_budget = data_budget.clone();
                 let qos_service = qos_service.clone();
                 Builder::new()
-                    .name("solana-banking-stage-tx".to_string())
+                    .name("sino-banking-stage-tx".to_string())
                     .spawn(move || {
                         Self::process_loop(
                             &verified_receiver,
@@ -1050,7 +1050,7 @@ impl BankingStage {
 
     pub fn num_threads() -> u32 {
         cmp::max(
-            env::var("SOLANA_BANKING_THREADS")
+            env::var("SINO_BANKING_THREADS")
                 .map(|x| x.parse().unwrap_or(NUM_THREADS))
                 .unwrap_or(NUM_THREADS),
             NUM_VOTE_PROCESSING_THREADS + MIN_THREADS_BANKING,
@@ -3017,7 +3017,7 @@ mod tests {
         let poh_recorder = poh_recorder.clone();
         let is_exited = poh_recorder.lock().unwrap().is_exited.clone();
         let tick_producer = Builder::new()
-            .name("solana-simulate_poh".to_string())
+            .name("sino-simulate_poh".to_string())
             .spawn(move || loop {
                 PohService::read_record_receiver_and_process(
                     &poh_recorder,

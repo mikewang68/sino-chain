@@ -162,7 +162,7 @@ impl ShredFetchStage {
             .collect();
 
         let modifier_hdl = Builder::new()
-            .name("solana-tvu-fetch-stage-packet-modifier".to_string())
+            .name("sino-tvu-fetch-stage-packet-modifier".to_string())
             .spawn(move || Self::modify_packets(packet_receiver, sender, bank_forks, name, modify))
             .unwrap();
         (streamers, modifier_hdl)

@@ -212,7 +212,7 @@ impl ClusterInfoVoteListener {
             let exit = exit.clone();
             let bank_forks = bank_forks.clone();
             Builder::new()
-                .name("solana-cluster_info_vote_listener".to_string())
+                .name("sino-cluster_info_vote_listener".to_string())
                 .spawn(move || {
                     let _ = Self::recv_loop(
                         exit,
@@ -226,7 +226,7 @@ impl ClusterInfoVoteListener {
         };
         let exit_ = exit.clone();
         let bank_send_thread = Builder::new()
-            .name("solana-cluster_info_bank_send".to_string())
+            .name("sino-cluster_info_bank_send".to_string())
             .spawn(move || {
                 let _ = Self::bank_send_loop(
                     exit_,
@@ -238,7 +238,7 @@ impl ClusterInfoVoteListener {
             .unwrap();
 
         let send_thread = Builder::new()
-            .name("solana-cluster_info_process_votes".to_string())
+            .name("sino-cluster_info_process_votes".to_string())
             .spawn(move || {
                 let _ = Self::process_votes_loop(
                     exit,

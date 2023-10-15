@@ -1,5 +1,5 @@
 #![allow(clippy::integer_arithmetic)]
-// Copyright 2020 Solana Maintainers <maintainers@solana.com>
+// Copyright 2020 Sino Maintainers <maintainers@sino.com>
 //
 // Licensed under the Apache License, Version 2.0 <http://www.apache.org/licenses/LICENSE-2.0> or
 // the MIT license <http://opensource.org/licenses/MIT>, at your option. This file may not be

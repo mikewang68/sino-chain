@@ -16,7 +16,7 @@ impl RpcCompletedSlotsService {
         rpc_subscriptions: Arc<RpcSubscriptions>,
     ) -> JoinHandle<()> {
         Builder::new()
-            .name("solana-rpc-completed-slots-service".to_string())
+            .name("sino-rpc-completed-slots-service".to_string())
             .spawn(move || {
                 for slots in completed_slots_receiver.iter() {
                     for slot in slots {

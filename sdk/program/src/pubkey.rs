@@ -182,11 +182,11 @@ impl Pubkey {
 
     /// Find a valid [program derived address][pda] and its corresponding bump seed.
     ///
-    /// [pda]: https://docs.solana.com/developing/programming-model/calling-between-programs#program-derived-addresses
+    /// [pda]: https://docs.sino.com/developing/programming-model/calling-between-programs#program-derived-addresses
     ///
     /// Program derived addresses (PDAs) are account keys that only the program,
     /// `program_id`, has the authority to sign. The address is of the same form
-    /// as a Solana `Pubkey`, except they are ensured to not be on the ed25519
+    /// as a Sino `Pubkey`, except they are ensured to not be on the ed25519
     /// curve and thus have no associated private key. When performing
     /// cross-program invocations the program can "sign" for the key by calling
     /// [`invoke_signed`] and passing the same seeds used to generate the
@@ -218,7 +218,7 @@ impl Pubkey {
     /// there is a chance that the program's budget may be occasionally
     /// and unpredictably exceeded.
     ///
-    /// As all account addresses accessed by an on-chain Solana program must be
+    /// As all account addresses accessed by an on-chain Sino program must be
     /// explicitly passed to the program, it is typical for the PDAs to be
     /// derived in off-chain client programs, avoiding the compute cost of
     /// generating the address on-chain. The address may or may not then be
@@ -256,16 +256,16 @@ impl Pubkey {
     /// This example illustrates a simple case of creating a "vault" account
     /// which is derived from the payer account, but owned by an on-chain
     /// program. The program derived address is derived in an off-chain client
-    /// program, which invokes an on-chain Solana program that uses the address
+    /// program, which invokes an on-chain Sino program that uses the address
     /// to create a new account owned and controlled by the program itself.
     ///
     /// By convention, the on-chain program will be compiled for use in two
     /// different contexts: both on-chain, to interpret a custom program
-    /// instruction as a Solana transaction; and off-chain, as a library, so
+    /// instruction as a Sino transaction; and off-chain, as a library, so
     /// that clients can share the instruction data structure, constructors, and
     /// other common code.
     ///
-    /// First the on-chain Solana program:
+    /// First the on-chain Sino program:
     ///
     /// ```
     /// # use borsh::{BorshSerialize, BorshDeserialize};
@@ -347,7 +347,7 @@ impl Pubkey {
     /// The client program:
     ///
     /// ```ignore
-    /// # // NB: This example depends on sdk and solana_client, and adding
+    /// # // NB: This example depends on sdk and sino_client, and adding
     /// # // those as dev-dependencies would create an unpublishable circular
     /// # // dependency, hence it is ignored.
     /// #
@@ -360,7 +360,7 @@ impl Pubkey {
     /// # use sdk::signature::Keypair;
     /// # use sdk::signature::{Signer, Signature};
     /// # use sdk::transaction::Transaction;
-    /// # use solana_client::rpc_client::RpcClient;
+    /// # use sino_client::rpc_client::RpcClient;
     /// # use std::convert::TryFrom;
     /// #
     /// # #[derive(BorshSerialize, BorshDeserialize, Debug)]
@@ -425,7 +425,7 @@ impl Pubkey {
 
     /// Find a valid [program derived address][pda] and its corresponding bump seed.
     ///
-    /// [pda]: https://docs.solana.com/developing/programming-model/calling-between-programs#program-derived-addresses
+    /// [pda]: https://docs.sino.com/developing/programming-model/calling-between-programs#program-derived-addresses
     ///
     /// The only difference between this method and [`find_program_address`]
     /// is that this one returns `None` in the statistically improbable event
@@ -488,7 +488,7 @@ impl Pubkey {
 
     /// Create a valid [program derived address][pda] without searching for a bump seed.
     ///
-    /// [pda]: https://docs.solana.com/developing/programming-model/calling-between-programs#program-derived-addresses
+    /// [pda]: https://docs.sino.com/developing/programming-model/calling-between-programs#program-derived-addresses
     ///
     /// Because this function does not create a bump seed, it may unpredictably
     /// return an error for any given set of seeds and is not generally suitable

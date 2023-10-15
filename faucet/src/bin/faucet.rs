@@ -19,7 +19,7 @@ use {
 async fn main() {
     let default_keypair = cli_config::Config::default().keypair_path;
 
-    sino_logger::setup_with_default("solana=info");
+    sino_logger::setup_with_default("sino=info");
     metrics::set_panic_hook("faucet", /*version:*/ None);
     let matches = App::new(crate_name!())
         .about(crate_description!())

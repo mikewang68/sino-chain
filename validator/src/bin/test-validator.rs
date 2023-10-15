@@ -42,7 +42,7 @@ use {
 
 /* 10,000 was derived empirically by watching the size
  * of the rocksdb/ directory self-limit itself to the
- * 40MB-150MB range when running `solana-test-validator`
+ * 40MB-150MB range when running `sino-test-validator`
  */
 const DEFAULT_MAX_LEDGER_SHREDS: u64 = 10_000;
 
@@ -61,7 +61,7 @@ fn main() {
     let default_limit_ledger_size = DEFAULT_MAX_LEDGER_SHREDS.to_string();
     let default_faucet_sor = DEFAULT_FAUCET_SOR.to_string();
 
-    let matches = App::new("solana-test-validator")
+    let matches = App::new("sino-test-validator")
         .about("Test Validator")
         .version(sino_version::version!())
         .arg({
@@ -85,7 +85,7 @@ fn main() {
                 .takes_value(true)
                 .validator(is_url_or_moniker)
                 .help(
-                    "URL for Solana's JSON RPC or moniker (or their first letter): \
+                    "URL for Sino's JSON RPC or moniker (or their first letter): \
                    [mainnet-beta, testnet, devnet, localhost]",
                 ),
         )
@@ -181,7 +181,7 @@ fn main() {
                 .number_of_values(2)
                 .multiple(true)
                 .help(
-                    "Load an account from the provided JSON file (see `solana account --help` on how to dump \
+                    "Load an account from the provided JSON file (see `sino account --help` on how to dump \
                         an account to file). Files are searched for relatively to CWD and tests/fixtures. \
                         If the ledger already exists then this parameter is silently ignored",
                 ),
@@ -578,7 +578,7 @@ fn main() {
     } else if random_mint {
         println_name_value(
             "\nNotice!",
-            "No wallet available. `solana airdrop` localnet SOR after creating one\n",
+            "No wallet available. `sino airdrop` localnet SOR after creating one\n",
         );
     }
 

@@ -1,8 +1,8 @@
 //! Atomically-committed sequences of instructions.
 //!
-//! While [`Instruction`]s are the basic unit of computation in Solana, they are
+//! While [`Instruction`]s are the basic unit of computation in Sino, they are
 //! submitted by clients in [`Transaction`]s containing one or more
-//! instructions, and signed by one or more [`Signer`]s. Solana executes the
+//! instructions, and signed by one or more [`Signer`]s. Sino executes the
 //! instructions in a transaction in order, and only commits any changes if all
 //! instructions terminate without producing an error or exception.
 //!
@@ -10,7 +10,7 @@
 //! a [`Message`], a precompiled representation of a sequence of instructions.
 //! `Message`'s constructors handle the complex task of reordering the
 //! individual lists of accounts required by each instruction into a single flat
-//! list of deduplicated accounts required by the Solana runtime. The
+//! list of deduplicated accounts required by the Sino runtime. The
 //! `Transaction` type has constructors that build the `Message` so that clients
 //! don't need to interact with them directly.
 //!
@@ -18,12 +18,12 @@
 //! more keypairs, and this signing is typically performed by an abstract
 //! [`Signer`], which may be a [`Keypair`] but may also be other types of
 //! signers including remote wallets, such as Ledger devices, as represented by
-//! the [`RemoteKeypair`] type in the [`solana-remote-wallet`] crate.
+//! the [`RemoteKeypair`] type in the [`sino-remote-wallet`] crate.
 //!
 //! [`Signer`]: crate::signer::Signer
 //! [`Keypair`]: crate::signer::keypair::Keypair
-//! [`solana-remote-wallet`]: https://docs.rs/solana-remote-wallet/latest/
-//! [`RemoteKeypair`]: https://docs.rs/solana-remote-wallet/latest/solana_remote_wallet/remote_keypair/struct.RemoteKeypair.html
+//! [`sino-remote-wallet`]: https://docs.rs/sino-remote-wallet/latest/
+//! [`RemoteKeypair`]: https://docs.rs/sino-remote-wallet/latest/sino_remote_wallet/remote_keypair/struct.RemoteKeypair.html
 //!
 //! Every transaction must be signed by a fee-paying account, the account from
 //! which the cost of executing the transaction is withdrawn. Other required
@@ -42,21 +42,21 @@
 //! transaction nonce]_ mechanism instead of a recent blockhash to ensure unique
 //! transactions.
 //!
-//! [`RpcClient::get_latest_blockhash`]: https://docs.rs/solana-client/latest/solana_client/rpc_client/struct.RpcClient.html#method.get_latest_blockhash
-//! [durable transaction nonce]: https://docs.solana.com/implemented-proposals/durable-tx-nonces
+//! [`RpcClient::get_latest_blockhash`]: https://docs.rs/sino-client/latest/sino_client/rpc_client/struct.RpcClient.html#method.get_latest_blockhash
+//! [durable transaction nonce]: https://docs.sino.com/implemented-proposals/durable-tx-nonces
 //!
 //! # Examples
 //!
-//! This example uses the [`solana_client`] and [`anyhow`] crates.
+//! This example uses the [`sino_client`] and [`anyhow`] crates.
 //!
-//! [`solana_client`]: https://docs.rs/solana-client
+//! [`sino_client`]: https://docs.rs/sino-client
 //! [`anyhow`]: https://docs.rs/anyhow
 //!
 //! ```
-//! # use sdk::example_mocks::solana_client;
+//! # use sdk::example_mocks::sino_client;
 //! use anyhow::Result;
 //! use borsh::{BorshSerialize, BorshDeserialize};
-//! use solana_client::rpc_client::RpcClient;
+//! use sino_client::rpc_client::RpcClient;
 //! use sdk::{
 //!      instruction::Instruction,
 //!      message::Message,
@@ -149,7 +149,7 @@ pub type Result<T> = result::Result<T, TransactionError>;
 
 /// An atomically-commited sequence of instructions.
 ///
-/// While [`Instruction`]s are the basic unit of computation in Solana,
+/// While [`Instruction`]s are the basic unit of computation in Sino,
 /// they are submitted by clients in [`Transaction`]s containing one or
 /// more instructions, and signed by one or more [`Signer`]s.
 ///
@@ -206,16 +206,16 @@ impl Transaction {
     ///
     /// # Examples
     ///
-    /// This example uses the [`solana_client`] and [`anyhow`] crates.
+    /// This example uses the [`sino_client`] and [`anyhow`] crates.
     ///
-    /// [`solana_client`]: https://docs.rs/solana-client
+    /// [`sino_client`]: https://docs.rs/sino-client
     /// [`anyhow`]: https://docs.rs/anyhow
     ///
     /// ```
-    /// # use sdk::example_mocks::solana_client;
+    /// # use sdk::example_mocks::sino_client;
     /// use anyhow::Result;
     /// use borsh::{BorshSerialize, BorshDeserialize};
-    /// use solana_client::rpc_client::RpcClient;
+    /// use sino_client::rpc_client::RpcClient;
     /// use sdk::{
     ///      instruction::Instruction,
     ///      message::Message,
@@ -285,16 +285,16 @@ impl Transaction {
     ///
     /// # Examples
     ///
-    /// This example uses the [`solana_client`] and [`anyhow`] crates.
+    /// This example uses the [`sino_client`] and [`anyhow`] crates.
     ///
-    /// [`solana_client`]: https://docs.rs/solana-client
+    /// [`sino_client`]: https://docs.rs/sino-client
     /// [`anyhow`]: https://docs.rs/anyhow
     ///
     /// ```
-    /// # use sdk::example_mocks::solana_client;
+    /// # use sdk::example_mocks::sino_client;
     /// use anyhow::Result;
     /// use borsh::{BorshSerialize, BorshDeserialize};
-    /// use solana_client::rpc_client::RpcClient;
+    /// use sino_client::rpc_client::RpcClient;
     /// use sdk::{
     ///      instruction::Instruction,
     ///      message::Message,
@@ -364,16 +364,16 @@ impl Transaction {
     ///
     /// # Examples
     ///
-    /// This example uses the [`solana_client`] and [`anyhow`] crates.
+    /// This example uses the [`sino_client`] and [`anyhow`] crates.
     ///
-    /// [`solana_client`]: https://docs.rs/solana-client
+    /// [`sino_client`]: https://docs.rs/sino-client
     /// [`anyhow`]: https://docs.rs/anyhow
     ///
     /// ```
-    /// # use sdk::example_mocks::solana_client;
+    /// # use sdk::example_mocks::sino_client;
     /// use anyhow::Result;
     /// use borsh::{BorshSerialize, BorshDeserialize};
-    /// use solana_client::rpc_client::RpcClient;
+    /// use sino_client::rpc_client::RpcClient;
     /// use sdk::{
     ///      instruction::Instruction,
     ///      message::Message,
@@ -440,16 +440,16 @@ impl Transaction {
     ///
     /// # Examples
     ///
-    /// This example uses the [`solana_client`] and [`anyhow`] crates.
+    /// This example uses the [`sino_client`] and [`anyhow`] crates.
     ///
-    /// [`solana_client`]: https://docs.rs/solana-client
+    /// [`sino_client`]: https://docs.rs/sino-client
     /// [`anyhow`]: https://docs.rs/anyhow
     ///
     /// ```
-    /// # use sdk::example_mocks::solana_client;
+    /// # use sdk::example_mocks::sino_client;
     /// use anyhow::Result;
     /// use borsh::{BorshSerialize, BorshDeserialize};
-    /// use solana_client::rpc_client::RpcClient;
+    /// use sino_client::rpc_client::RpcClient;
     /// use sdk::{
     ///      instruction::Instruction,
     ///      message::Message,
@@ -648,16 +648,16 @@ impl Transaction {
     ///
     /// # Examples
     ///
-    /// This example uses the [`solana_client`] and [`anyhow`] crates.
+    /// This example uses the [`sino_client`] and [`anyhow`] crates.
     ///
-    /// [`solana_client`]: https://docs.rs/solana-client
+    /// [`sino_client`]: https://docs.rs/sino-client
     /// [`anyhow`]: https://docs.rs/anyhow
     ///
     /// ```
-    /// # use sdk::example_mocks::solana_client;
+    /// # use sdk::example_mocks::sino_client;
     /// use anyhow::Result;
     /// use borsh::{BorshSerialize, BorshDeserialize};
-    /// use solana_client::rpc_client::RpcClient;
+    /// use sino_client::rpc_client::RpcClient;
     /// use sdk::{
     ///      instruction::Instruction,
     ///      message::Message,
@@ -789,16 +789,16 @@ impl Transaction {
     ///
     /// # Examples
     ///
-    /// This example uses the [`solana_client`] and [`anyhow`] crates.
+    /// This example uses the [`sino_client`] and [`anyhow`] crates.
     ///
-    /// [`solana_client`]: https://docs.rs/solana-client
+    /// [`sino_client`]: https://docs.rs/sino-client
     /// [`anyhow`]: https://docs.rs/anyhow
     ///
     /// ```
-    /// # use sdk::example_mocks::solana_client;
+    /// # use sdk::example_mocks::sino_client;
     /// use anyhow::Result;
     /// use borsh::{BorshSerialize, BorshDeserialize};
-    /// use solana_client::rpc_client::RpcClient;
+    /// use sino_client::rpc_client::RpcClient;
     /// use sdk::{
     ///      instruction::Instruction,
     ///      message::Message,
@@ -899,7 +899,7 @@ impl Transaction {
     ///   - Some device-specific protocol error occurs ([`SignerError::Protocol`]).
     ///   - Some other error occurs ([`SignerError::Custom`]).
     ///
-    /// See the documentation for the [`solana-remote-wallet`] crate for details
+    /// See the documentation for the [`sino-remote-wallet`] crate for details
     /// on the operation of [`RemoteKeypair`] signers.
     ///
     /// [`num_required_signatures`]: crate::message::MessageHeader::num_required_signatures
@@ -907,8 +907,8 @@ impl Transaction {
     /// [`Presigner`]: crate::signer::presigner::Presigner
     /// [`PresignerError`]: crate::signer::presigner::PresignerError
     /// [`PresignerError::VerificationFailure`]: crate::signer::presigner::PresignerError::VerificationFailure
-    /// [`solana-remote-wallet`]: https://docs.rs/solana-remote-wallet/latest/
-    /// [`RemoteKeypair`]: https://docs.rs/solana-remote-wallet/latest/solana_remote_wallet/remote_keypair/struct.RemoteKeypair.html
+    /// [`sino-remote-wallet`]: https://docs.rs/sino-remote-wallet/latest/
+    /// [`RemoteKeypair`]: https://docs.rs/sino-remote-wallet/latest/sino_remote_wallet/remote_keypair/struct.RemoteKeypair.html
     pub fn try_partial_sign<T: Signers>(
         &mut self,
         keypairs: &T,

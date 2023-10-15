@@ -21,7 +21,7 @@ pub struct RpcTransportStats {
 /// A transport for RPC calls.
 ///
 /// `RpcSender` implements the underlying transport of requests to, and
-/// responses from, a Solana node, and is used primarily by [`RpcClient`].
+/// responses from, a Sino node, and is used primarily by [`RpcClient`].
 ///
 /// It is typically implemented by [`HttpSender`] in production, and
 /// [`MockSender`] in unit tests.

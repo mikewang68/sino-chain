@@ -1,4 +1,4 @@
-//! Solana builtin helper macros
+//! Sino builtin helper macros
 
 #[rustversion::since(1.46.0)]
 #[macro_export]
@@ -30,7 +30,7 @@ macro_rules! declare_builtin_name {
                 // See the `respan!` macro for more details.
                 // This should use `crate::respan!` once
                 // https://github.com/rust-lang/rust/pull/72121 is merged:
-                // see https://github.com/solana-labs/solana/issues/10933.
+                // see https://github.com/sino-labs/sino/issues/10933.
                 // For now, we need to use `::sdk`
                 //
                 // `respan!` respans the path `$crate::id`, which we then call (hence the extra
@@ -89,7 +89,7 @@ macro_rules! declare_builtin_name {
 ///
 /// declare_builtin!(
 ///     "My11111111111111111111111111111111111111111",
-///     solana_my_program,
+///     sino_my_program,
 ///     my_process_instruction
 /// );
 ///
@@ -120,7 +120,7 @@ macro_rules! declare_builtin_name {
 ///
 /// declare_builtin!(
 ///     sdk::system_program::ID,
-///     solana_my_program,
+///     sino_my_program,
 ///     my_process_instruction
 /// );
 /// }

@@ -1019,7 +1019,7 @@ pub struct BpfExecutor {
     executable: Pin<Box<Executable<BpfError, ThisInstructionMeter>>>,
 }
 
-// Well, implement Debug for solana_rbpf::vm::Executable in solana-rbpf...
+// Well, implement Debug for sino_rbpf::vm::Executable in sino-rbpf...
 impl Debug for BpfExecutor {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         write!(f, "BpfExecutor({:p})", self)
@@ -1729,7 +1729,7 @@ mod tests {
         let mut bank = Bank::new_for_tests(&genesis_config);
         bank.feature_set = Arc::new(FeatureSet::all_enabled());
         bank.add_builtin(
-            "solana_bpf_loader_upgradeable_program",
+            "sino_bpf_loader_upgradeable_program",
             &bpf_loader_upgradeable::id(),
             super::process_instruction,
         );

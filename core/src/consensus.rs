@@ -603,7 +603,7 @@ impl Tower {
                     // So, don't re-vote on it by returning pseudo FailedSwitchThreshold, otherwise
                     // there would be slashing because of double vote on one of last_vote_ancestors.
                     // (Well, needless to say, re-creating the duplicate block must be handled properly
-                    // at the banking stage: https://github.com/solana-labs/solana/issues/8232)
+                    // at the banking stage: https://github.com/sino-labs/sino/issues/8232)
                     //
                     // To be specific, the replay stage is tricked into a false perception where
                     // last_vote_ancestors is AVAILABLE for descendant-of-`switch_slot`,  stale, and

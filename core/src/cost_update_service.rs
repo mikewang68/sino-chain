@@ -77,7 +77,7 @@ impl CostUpdateService {
         cost_update_receiver: CostUpdateReceiver,
     ) -> Self {
         let thread_hdl = Builder::new()
-            .name("solana-cost-update-service".to_string())
+            .name("sino-cost-update-service".to_string())
             .spawn(move || {
                 Self::service_loop(exit, blockstore, cost_model, cost_update_receiver);
             })

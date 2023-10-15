@@ -31,7 +31,7 @@ impl CacheBlockMetaService {
     ) -> Self {
         let exit = exit.clone();
         let thread_hdl = Builder::new()
-            .name("solana-cache-block-time".to_string())
+            .name("sino-cache-block-time".to_string())
             .spawn(move || loop {
                 if exit.load(Ordering::Relaxed) {
                     break;

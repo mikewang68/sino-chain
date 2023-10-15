@@ -515,7 +515,7 @@ pub fn process_airdrop(
 
         if current_balance < pre_balance.saturating_add(wens) {
             println!("Balance unchanged");
-            println!("Run `solana confirm -v {:?}` for more info", signature);
+            println!("Run `sino confirm -v {:?}` for more info", signature);
             Ok("".to_string())
         } else {
             Ok(build_balance_message(current_balance, false, true))

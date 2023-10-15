@@ -40,7 +40,7 @@ mod tests {
     use sino_program::{
         account_info::IntoAccountInfo, program_error::ProgramError, pubkey::Pubkey,
     };
-    use solana_sdk::account::Account;
+    use sino_sdk::account::Account;
 
     #[test]
     fn test_utf8_memo() {

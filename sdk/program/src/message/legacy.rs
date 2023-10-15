@@ -1,13 +1,13 @@
-//! The original and current Solana message format.
+//! The original and current Sino message format.
 //!
 //! This crate defines two versions of `Message` in their own modules:
-//! [`legacy`] and [`v0`]. `legacy` is the current version as of Solana 1.10.0.
+//! [`legacy`] and [`v0`]. `legacy` is the current version as of Sino 1.10.0.
 //! `v0` is a [future message format] that encodes more account keys into a
 //! transaction than the legacy format.
 //!
 //! [`legacy`]: crate::message::legacy
 //! [`v0`]: crate::message::v0
-//! [future message format]: https://docs.solana.com/proposals/transactions-v2
+//! [future message format]: https://docs.sino.com/proposals/transactions-v2
 
 #![allow(clippy::integer_arithmetic)]
 
@@ -173,7 +173,7 @@ fn get_program_ids(instructions: &[Instruction]) -> Vec<Pubkey> {
         .collect()
 }
 
-/// A Solana transaction message (legacy).
+/// A Sino transaction message (legacy).
 ///
 /// See the [`message`] module documentation for further description.
 ///
@@ -255,18 +255,18 @@ impl Message {
     ///
     /// # Examples
     ///
-    /// This example uses the [`sdk`], [`solana_client`] and [`anyhow`] crates.
+    /// This example uses the [`sdk`], [`sino_client`] and [`anyhow`] crates.
     ///
     /// [`sdk`]: https://docs.rs/sdk
-    /// [`solana_client`]: https://docs.rs/solana-client
+    /// [`sino_client`]: https://docs.rs/sino-client
     /// [`anyhow`]: https://docs.rs/anyhow
     ///
     /// ```
     /// # use sino_program::example_mocks::sdk;
-    /// # use sino_program::example_mocks::solana_client;
+    /// # use sino_program::example_mocks::sino_client;
     /// use anyhow::Result;
     /// use borsh::{BorshSerialize, BorshDeserialize};
-    /// use solana_client::rpc_client::RpcClient;
+    /// use sino_client::rpc_client::RpcClient;
     /// use sdk::{
     ///      instruction::Instruction,
     ///      message::Message,
@@ -326,18 +326,18 @@ impl Message {
     ///
     /// # Examples
     ///
-    /// This example uses the [`sdk`], [`solana_client`] and [`anyhow`] crates.
+    /// This example uses the [`sdk`], [`sino_client`] and [`anyhow`] crates.
     ///
     /// [`sdk`]: https://docs.rs/sdk
-    /// [`solana_client`]: https://docs.rs/solana-client
+    /// [`sino_client`]: https://docs.rs/sino-client
     /// [`anyhow`]: https://docs.rs/anyhow
     ///
     /// ```
     /// # use sino_program::example_mocks::sdk;
-    /// # use sino_program::example_mocks::solana_client;
+    /// # use sino_program::example_mocks::sino_client;
     /// use anyhow::Result;
     /// use borsh::{BorshSerialize, BorshDeserialize};
-    /// use solana_client::rpc_client::RpcClient;
+    /// use sino_client::rpc_client::RpcClient;
     /// use sdk::{
     ///      instruction::Instruction,
     ///      message::Message,
@@ -418,7 +418,7 @@ impl Message {
 
     /// Create a new message for a [nonced transaction].
     ///
-    /// [nonced transaction]: https://docs.solana.com/implemented-proposals/durable-tx-nonces
+    /// [nonced transaction]: https://docs.sino.com/implemented-proposals/durable-tx-nonces
     ///
     /// In this type of transaction, the blockhash is replaced with a _durable
     /// transaction nonce_, allowing for extended time to pass between the
@@ -426,18 +426,18 @@ impl Message {
     ///
     /// # Examples
     ///
-    /// This example uses the [`sdk`], [`solana_client`] and [`anyhow`] crates.
+    /// This example uses the [`sdk`], [`sino_client`] and [`anyhow`] crates.
     ///
     /// [`sdk`]: https://docs.rs/sdk
-    /// [`solana_client`]: https://docs.rs/solana-client
+    /// [`sino_client`]: https://docs.rs/sino-client
     /// [`anyhow`]: https://docs.rs/anyhow
     ///
     /// ```
     /// # use sino_program::example_mocks::sdk;
-    /// # use sino_program::example_mocks::solana_client;
+    /// # use sino_program::example_mocks::sino_client;
     /// use anyhow::Result;
     /// use borsh::{BorshSerialize, BorshDeserialize};
-    /// use solana_client::rpc_client::RpcClient;
+    /// use sino_client::rpc_client::RpcClient;
     /// use sdk::{
     ///      hash::Hash,
     ///      instruction::Instruction,
@@ -566,7 +566,7 @@ impl Message {
     pub fn hash_raw_message(message_bytes: &[u8]) -> Hash {
         use blake3::traits::digest::Digest;
         let mut hasher = blake3::Hasher::new();
-        hasher.update(b"solana-tx-message-v1");
+        hasher.update(b"sino-tx-message-v1");
         hasher.update(message_bytes);
         Hash(<[u8; crate::hash::HASH_BYTES]>::try_from(hasher.finalize().as_slice()).unwrap())
     }
@@ -1183,7 +1183,7 @@ mod tests {
     #[test]
     fn test_message_hash() {
         // when this test fails, it's most likely due to a new serialized format of a message.
-        // in this case, the domain prefix `solana-tx-message-v1` should be updated.
+        // in this case, the domain prefix `sino-tx-message-v1` should be updated.
         let program_id0 = Pubkey::from_str("4uQeVj5tqViQh7yWWGStvkEG1Zmhx6uasJtWCJziofM").unwrap();
         let program_id1 = Pubkey::from_str("8opHzTAnfzRpPEx21XtnrVTX28YQuCpAjcn1PczScKh").unwrap();
         let id0 = Pubkey::from_str("CiDwVBFgWV9E5MvXWoLgnEgn2hK7rJikbvfWavzAQz3").unwrap();

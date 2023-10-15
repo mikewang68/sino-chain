@@ -1,4 +1,4 @@
-//! Solana Rust-based BPF program entry point supported by the latest
+//! Sino Rust-based BPF program entry point supported by the latest
 //! BPFLoader.  For more information see './bpf_loader.rs'
 
 extern crate alloc;
@@ -59,7 +59,7 @@ pub const HEAP_LENGTH: usize = 32 * 1024;
 ///
 /// This macro emits symbols and definitions that may only be defined once
 /// globally. As such, if linked to other Rust crates it will cause compiler
-/// errors. To avoid this, it is common for Solana programs to define an
+/// errors. To avoid this, it is common for Sino programs to define an
 /// optional [Cargo feature] called `no-entrypoint`, and use it to conditionally
 /// disable the `entrypoint` macro invocation, as well as the
 /// `process_instruction` function. See a typical pattern for this in the
@@ -137,7 +137,7 @@ macro_rules! entrypoint {
 /// for [BPF] targets.
 ///
 /// [Cargo features]: https://doc.rust-lang.org/cargo/reference/features.html
-/// [BPF]: https://docs.solana.com/developing/on-chain-programs/overview#berkeley-packet-filter-bpf
+/// [BPF]: https://docs.sino.com/developing/on-chain-programs/overview#berkeley-packet-filter-bpf
 ///
 /// # Cargo features
 ///
@@ -172,7 +172,7 @@ macro_rules! custom_heap_default {
 /// for [BPF] targets.
 ///
 /// [Cargo features]: https://doc.rust-lang.org/cargo/reference/features.html
-/// [BPF]: https://docs.solana.com/developing/on-chain-programs/overview#berkeley-packet-filter-bpf
+/// [BPF]: https://docs.sino.com/developing/on-chain-programs/overview#berkeley-packet-filter-bpf
 ///
 /// # Cargo features
 ///
@@ -186,9 +186,9 @@ macro_rules! custom_heap_default {
 /// from a noop program. That number goes down the more the programs pulls in
 /// Rust's standard library for other purposes.
 ///
-/// # Defining a panic handler for Solana
+/// # Defining a panic handler for Sino
 ///
-/// _The mechanism for defining a Solana panic handler is different [from most
+/// _The mechanism for defining a Sino panic handler is different [from most
 /// Rust programs][rpanic]._
 ///
 /// [rpanic]: https://doc.rust-lang.org/nomicon/panic-handler.html
@@ -204,7 +204,7 @@ macro_rules! custom_heap_default {
 /// }
 /// ```
 ///
-/// The above is how Solana defines the default panic handler.
+/// The above is how Sino defines the default panic handler.
 #[macro_export]
 macro_rules! custom_panic_default {
     () => {

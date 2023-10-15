@@ -227,7 +227,7 @@ impl LedgerCleanupService {
             let first_purged_evm_block_cloned = first_purged_evm_block.clone();
             let last_purged_evm_block_cloned = last_purged_evm_block.clone();
             let _t_purge = Builder::new()
-                .name("solana-ledger-purge".to_string())
+                .name("sino-ledger-purge".to_string())
                 .spawn(move || {
                     let mut slot_update_time = Measure::start("slot_update");
                     *blockstore.lowest_cleanup_slot.write() = lowest_cleanup_slot;

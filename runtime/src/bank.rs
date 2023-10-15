@@ -7070,7 +7070,7 @@ impl Bank {
             });
 
             // As a workaround for
-            // https://github.com/solana-labs/solana-program-library/issues/374, ensure that the
+            // https://github.com/sino-labs/sino-program-library/issues/374, ensure that the
             // spl-token 2 native mint account is owned by the spl-token 2 program.
             let store = if let Some(existing_native_mint_account) =
                 self.get_account_with_fixed_root(&inline_spl_token::native_mint::id())
@@ -10660,7 +10660,7 @@ pub(crate) mod tests {
             bank.activate_feature(&feature_set::sino::evm_instruction_borsh_serialization::id());
             let sleep_program_id = sdk::pubkey::new_rand();
             bank.add_builtin(
-                "solana_sleep_program",
+                "sino_sleep_program",
                 &sleep_program_id,
                 process_sleep_instruction,
             );

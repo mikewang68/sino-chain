@@ -42,7 +42,7 @@ use {
 // TODO: The benchmark is ignored as it currently may indefinitely block.
 // The code incorrectly expects that the node receiving the shred on tvu socket
 // retransmits that to other nodes in its neighborhood. But that is no longer
-// the case since https://github.com/solana-labs/solana/pull/17716.
+// the case since https://github.com/sino-labs/sino/pull/17716.
 // So depending on shred seed, peers may not receive packets and the receive
 // threads loop indefinitely.
 #[ignore]

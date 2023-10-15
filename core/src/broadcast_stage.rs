@@ -264,7 +264,7 @@ impl BroadcastStage {
         let thread_hdl = {
             let cluster_info = cluster_info.clone();
             Builder::new()
-                .name("solana-broadcaster".to_string())
+                .name("sino-broadcaster".to_string())
                 .spawn(move || {
                     let _finalizer = Finalizer::new(exit);
                     Self::run(
@@ -286,11 +286,11 @@ impl BroadcastStage {
             let cluster_info = cluster_info.clone();
             let bank_forks = bank_forks.clone();
             let t = Builder::new()
-                .name("solana-broadcaster-transmit".to_string())
+                .name("sino-broadcaster-transmit".to_string())
                 .spawn(move || loop {
                     let res =
                         bs_transmit.transmit(&socket_receiver, &cluster_info, &sock, &bank_forks);
-                    let res = Self::handle_error(res, "solana-broadcaster-transmit");
+                    let res = Self::handle_error(res, "sino-broadcaster-transmit");
                     if let Some(res) = res {
                         return res;
                     }
@@ -304,10 +304,10 @@ impl BroadcastStage {
             let mut bs_record = broadcast_stage_run.clone();
             let btree = blockstore.clone();
             let t = Builder::new()
-                .name("solana-broadcaster-record".to_string())
+                .name("sino-broadcaster-record".to_string())
                 .spawn(move || loop {
                     let res = bs_record.record(&blockstore_receiver, &btree);
-                    let res = Self::handle_error(res, "solana-broadcaster-record");
+                    let res = Self::handle_error(res, "sino-broadcaster-record");
                     if let Some(res) = res {
                         return res;
                     }
@@ -318,7 +318,7 @@ impl BroadcastStage {
 
         let blockstore = blockstore.clone();
         let retransmit_thread = Builder::new()
-            .name("solana-broadcaster-retransmit".to_string())
+            .name("sino-broadcaster-retransmit".to_string())
             .spawn(move || loop {
                 if let Some(res) = Self::handle_error(
                     Self::check_retransmit_signals(
@@ -326,7 +326,7 @@ impl BroadcastStage {
                         &retransmit_slots_receiver,
                         &socket_sender,
                     ),
-                    "solana-broadcaster-retransmit-check_retransmit_signals",
+                    "sino-broadcaster-retransmit-check_retransmit_signals",
                 ) {
                     return res;
                 }

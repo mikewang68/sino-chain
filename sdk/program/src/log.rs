@@ -1,4 +1,4 @@
-//! Solana Rust-based BPF program logging
+//! Sino Rust-based BPF program logging
 
 use crate::account_info::AccountInfo;
 

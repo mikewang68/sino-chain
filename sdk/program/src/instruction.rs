@@ -1,9 +1,9 @@
-//! Types for directing the execution of Solana programs.
+//! Types for directing the execution of Sino programs.
 //!
-//! Every invocation of a Solana program executes a single instruction, as
+//! Every invocation of a Sino program executes a single instruction, as
 //! defined by the [`Instruction`] type. An instruction is primarily a vector of
 //! bytes, the contents of which are program-specific, and not interpreted by
-//! the Solana runtime. This allows flexibility in how programs behave, how they
+//! the Sino runtime. This allows flexibility in how programs behave, how they
 //! are controlled by client software, and what data encodings they use.
 //!
 //! Besides the instruction data, every account a program may read or write
@@ -139,7 +139,7 @@ pub enum InstructionError {
     DuplicateAccountOutOfSync,
 
     /// Allows on-chain programs to implement program-specific error types and see them returned
-    /// by the Solana runtime. A program-specific error may be any type that is represented as
+    /// by the Sino runtime. A program-specific error may be any type that is represented as
     /// or serialized to a u32 integer.
     #[error("custom program error: {0:#x}")]
     Custom(u32),
@@ -224,7 +224,7 @@ pub enum InstructionError {
     /// This error includes strings from the underlying 3rd party Borsh crate
     /// which can be dangerous because the error strings could change across
     /// Borsh versions. Only programs can use this error because they are
-    /// consistent across Solana software versions.
+    /// consistent across Sino software versions.
     ///
     #[error("Failed to serialize or deserialize account data: {0}")]
     BorshIoError(String),
@@ -260,21 +260,21 @@ pub enum InstructionError {
     // conversions must also be added
 }
 
-/// A directive for a single invocation of a Solana program.
+/// A directive for a single invocation of a Sino program.
 ///
 /// An instruction specifies which program it is calling, which accounts it may
 /// read or modify, and additional data that serves as input to the program. One
-/// or more instructions are included in transactions submitted by Solana
+/// or more instructions are included in transactions submitted by Sino
 /// clients. Instructions are also used to describe [cross-program
 /// invocations][cpi].
 ///
-/// [cpi]: https://docs.solana.com/developing/programming-model/calling-between-programs
+/// [cpi]: https://docs.sino.com/developing/programming-model/calling-between-programs
 ///
 /// During execution, a program will receive a list of account data as one of
 /// its arguments, in the same order as specified during `Instruction`
 /// construction.
 ///
-/// While Solana is agnostic to the format of the instruction data, it has
+/// While Sino is agnostic to the format of the instruction data, it has
 /// built-in support for serialization via [`borsh`] and [`bincode`].
 ///
 /// [`borsh`]: https://docs.rs/borsh/latest/borsh/
@@ -302,7 +302,7 @@ pub enum InstructionError {
 /// in an `Instruction`'s account list. These will affect scheduling of program
 /// execution by the runtime, but will otherwise be ignored.
 ///
-/// When building a transaction, the Solana runtime coalesces all accounts used
+/// When building a transaction, the Sino runtime coalesces all accounts used
 /// by all instructions in that transaction, along with accounts and permissions
 /// required by the runtime, into a single account list. Some accounts and
 /// account permissions required by the runtime to process a transaction are
@@ -522,7 +522,7 @@ pub fn checked_add(a: u64, b: u64) -> Result<u64, InstructionError> {
 /// Any account that may be mutated by the program during execution, either its
 /// data or metadata such as held wens, must be writable.
 ///
-/// Note that because the Solana runtime schedules parallel transaction
+/// Note that because the Sino runtime schedules parallel transaction
 /// execution around which accounts are writable, care should be taken that only
 /// accounts which actually may be mutated are specified as writable. As the
 /// default [`AccountMeta::new`] constructor creates writable accounts, this is
@@ -616,7 +616,7 @@ impl AccountMeta {
 /// A compact encoding of an instruction.
 ///
 /// A `CompiledInstruction` is a component of a multi-instruction [`Message`],
-/// which is the core of a Solana transaction. It is created during the
+/// which is the core of a Sino transaction. It is created during the
 /// construction of `Message`. Most users will not interact with it directly.
 ///
 /// [`Message`]: crate::message::Message

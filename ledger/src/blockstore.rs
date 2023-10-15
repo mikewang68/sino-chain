@@ -3879,7 +3879,7 @@ fn find_slot_meta_in_cached_state<'a>(
     }
 }
 
-// Chaining based on latest discussion here: https://github.com/solana-labs/solana/pull/2253
+// Chaining based on latest discussion here: https://github.com/sino-labs/sino/pull/2253
 fn handle_chaining(
     db: &Database,
     write_batch: &mut WriteBatch,

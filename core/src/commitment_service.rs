@@ -69,7 +69,7 @@ impl AggregateCommitmentService {
             sender,
             Self {
                 t_commitment: Builder::new()
-                    .name("solana-aggregate-stake-lockouts".to_string())
+                    .name("sino-aggregate-stake-lockouts".to_string())
                     .spawn(move || loop {
                         if exit_.load(Ordering::Relaxed) {
                             break;

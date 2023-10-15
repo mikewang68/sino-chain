@@ -268,7 +268,7 @@ pub fn run(ledger_path: &Path, metadata: AdminRpcRequestMetadata) {
         .unwrap();
 
     Builder::new()
-        .name("solana-adminrpc".to_string())
+        .name("sino-adminrpc".to_string())
         .spawn(move || {
             let mut io = MetaIoHandler::default();
             io.extend_with(AdminRpcImpl.to_delegate());

@@ -482,7 +482,7 @@ fn check_os_network_limits() {
 
     if check_failed {
         datapoint_warn!("os-config", ("network_limit_test_failed", 1, i64));
-        warn!("OS network limit test failed. solana-sys-tuner may be used to configure OS network limits. Bypass check with --no-os-network-limits-test.");
+        warn!("OS network limit test failed. sino-sys-tuner may be used to configure OS network limits. Bypass check with --no-os-network-limits-test.");
     } else {
         info!("OS network limits test passed.");
     }
@@ -613,7 +613,7 @@ pub fn main() {
                 .long("evm-height-index-source")
                 .value_name("STRING")
                 .takes_value(true)
-                .possible_values(&["bigtable", "solana_blockstore"])
+                .possible_values(&["bigtable", "sino_blockstore"])
                 .required(false)
                 .help("source of evm height index data"),
         )
@@ -1487,7 +1487,7 @@ pub fn main() {
         .arg(
             Arg::with_name("snapshot_archive_format")
                 .long("snapshot-archive-format")
-                .alias("snapshot-compression") // Legacy name used by Solana v1.5.x and older
+                .alias("snapshot-compression") // Legacy name used by Sino v1.5.x and older
                 .possible_values(&["bz2", "gzip", "zstd", "tar", "none"])
                 .default_value("zstd")
                 .value_name("ARCHIVE_TYPE")
@@ -2432,7 +2432,7 @@ pub fn main() {
                 SocketAddr::new(rpc_bind_address, rpc_port + 1),
                 // If additional ports are added, +2 needs to be skipped to avoid a conflict with
                 // the websocket port (which is +2) in web3.js This odd port shifting is tracked at
-                // https://github.com/solana-labs/solana/issues/12250
+                // https://github.com/sino-labs/sino/issues/12250
             )
         }),
         evm_state_rpc_addr,

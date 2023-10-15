@@ -488,7 +488,7 @@ impl Rocks {
                 match DB::open_cf_descriptors(&db_options, path, cfs.into_iter().map(|c| c.1)) {
                     Ok(db) => Rocks(db, ActualAccessType::Primary, oldest_slot, oldest_block_num),
                     Err(err) => {
-                        let secondary_path = path.join("solana-secondary");
+                        let secondary_path = path.join("sino-secondary");
 
                         warn!("Error when opening as primary: {}", err);
                         warn!("Trying as secondary at : {:?}", secondary_path);

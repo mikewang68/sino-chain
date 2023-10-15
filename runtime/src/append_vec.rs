@@ -2,7 +2,7 @@
 //!
 //! For more information, see:
 //!
-//! <https://docs.solana.com/implemented-proposals/persistent-account-storage>
+//! <https://docs.sino.com/implemented-proposals/persistent-account-storage>
 
 use {
     log::*,

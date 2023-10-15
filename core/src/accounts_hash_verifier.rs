@@ -51,7 +51,7 @@ impl AccountsHashVerifier {
         let exit = exit.clone();
         let cluster_info = cluster_info.clone();
         let t_accounts_hash_verifier = Builder::new()
-            .name("solana-hash-accounts".to_string())
+            .name("sino-hash-accounts".to_string())
             .spawn(move || {
                 let mut hashes = vec![];
                 let mut thread_pool = None;

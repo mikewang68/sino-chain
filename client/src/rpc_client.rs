@@ -1,7 +1,7 @@
-//! Communication with a Solana node over RPC.
+//! Communication with a Sino node over RPC.
 //!
-//! Software that interacts with the Solana blockchain, whether querying its
-//! state or submitting transactions, communicates with a Solana node over
+//! Software that interacts with the Sino blockchain, whether querying its
+//! state or submitting transactions, communicates with a Sino node over
 //! [JSON-RPC], using the [`RpcClient`] type.
 //!
 //! [JSON-RPC]: https://www.jsonrpc.org/specification
@@ -74,10 +74,10 @@ impl RpcClientConfig {
     }
 }
 
-/// A client of a remote Solana node.
+/// A client of a remote Sino node.
 ///
-/// `RpcClient` communicates with a Solana node over [JSON-RPC], with the
-/// [Solana JSON-RPC protocol][jsonprot]. It is the primary Rust interface for
+/// `RpcClient` communicates with a Sino node over [JSON-RPC], with the
+/// [Sino JSON-RPC protocol][jsonprot]. It is the primary Rust interface for
 /// querying and transacting with the network from external programs.
 ///
 /// This type builds on the underlying RPC protocol, adding extra features such
@@ -112,10 +112,10 @@ impl RpcClientConfig {
 ///
 /// [`Finalized`]: CommitmentLevel::Finalized
 /// [`Processed`]: CommitmentLevel::Processed
-/// [jsonprot]: https://docs.solana.com/developing/clients/jsonrpc-api
+/// [jsonprot]: https://docs.sino.com/developing/clients/jsonrpc-api
 /// [JSON-RPC]: https://www.jsonrpc.org/specification
-/// [slots]: https://docs.solana.com/terminology#slot
-/// [cl]: https://docs.solana.com/developing/clients/jsonrpc-api#configuring-state-commitment
+/// [slots]: https://docs.sino.com/terminology#slot
+/// [cl]: https://docs.sino.com/developing/clients/jsonrpc-api#configuring-state-commitment
 ///
 /// # Errors
 ///
@@ -131,8 +131,8 @@ impl RpcClientConfig {
 ///
 /// ```
 /// # use sdk::system_transaction;
-/// # use solana_client::rpc_client::RpcClient;
-/// # use solana_client::client_error::ClientError;
+/// # use sino_client::rpc_client::RpcClient;
+/// # use sino_client::client_error::ClientError;
 /// # use sdk::signature::{Keypair, Signer};
 /// # use sdk::hash::Hash;
 /// # let rpc_client = RpcClient::new_mock("succeeds".to_string());
@@ -184,12 +184,12 @@ impl RpcClient {
     /// The client has a default timeout of 30 seconds, and a default [commitment
     /// level][cl] of [`Finalized`](CommitmentLevel::Finalized).
     ///
-    /// [cl]: https://docs.solana.com/developing/clients/jsonrpc-api#configuring-state-commitment
+    /// [cl]: https://docs.sino.com/developing/clients/jsonrpc-api#configuring-state-commitment
     ///
     /// # Examples
     ///
     /// ```
-    /// # use solana_client::rpc_client::RpcClient;
+    /// # use sino_client::rpc_client::RpcClient;
     /// let url = "http://localhost:8899".to_string();
     /// let client = RpcClient::new(url);
     /// ```
@@ -199,7 +199,7 @@ impl RpcClient {
 
     /// Create an HTTP `RpcClient` with specified [commitment level][cl].
     ///
-    /// [cl]: https://docs.solana.com/developing/clients/jsonrpc-api#configuring-state-commitment
+    /// [cl]: https://docs.sino.com/developing/clients/jsonrpc-api#configuring-state-commitment
     ///
     /// The URL is an HTTP URL, usually for port 8899, as in
     /// "http://localhost:8899".
@@ -211,7 +211,7 @@ impl RpcClient {
     ///
     /// ```
     /// # use sdk::commitment_config::CommitmentConfig;
-    /// # use solana_client::rpc_client::RpcClient;
+    /// # use sino_client::rpc_client::RpcClient;
     /// let url = "http://localhost:8899".to_string();
     /// let commitment_config = CommitmentConfig::processed();
     /// let client = RpcClient::new_with_commitment(url, commitment_config);
@@ -231,13 +231,13 @@ impl RpcClient {
     /// The client has and a default [commitment level][cl] of
     /// [`Finalized`](CommitmentLevel::Finalized).
     ///
-    /// [cl]: https://docs.solana.com/developing/clients/jsonrpc-api#configuring-state-commitment
+    /// [cl]: https://docs.sino.com/developing/clients/jsonrpc-api#configuring-state-commitment
     ///
     /// # Examples
     ///
     /// ```
     /// # use std::time::Duration;
-    /// # use solana_client::rpc_client::RpcClient;
+    /// # use sino_client::rpc_client::RpcClient;
     /// let url = "http://localhost::8899".to_string();
     /// let timeout = Duration::from_secs(1);
     /// let client = RpcClient::new_with_timeout(url, timeout);
@@ -251,7 +251,7 @@ impl RpcClient {
 
     /// Create an HTTP `RpcClient` with specified timeout and [commitment level][cl].
     ///
-    /// [cl]: https://docs.solana.com/developing/clients/jsonrpc-api#configuring-state-commitment
+    /// [cl]: https://docs.sino.com/developing/clients/jsonrpc-api#configuring-state-commitment
     ///
     /// The URL is an HTTP URL, usually for port 8899, as in
     /// "http://localhost:8899".
@@ -260,7 +260,7 @@ impl RpcClient {
     ///
     /// ```
     /// # use std::time::Duration;
-    /// # use solana_client::rpc_client::RpcClient;
+    /// # use sino_client::rpc_client::RpcClient;
     /// # use sdk::commitment_config::CommitmentConfig;
     /// let url = "http://localhost::8899".to_string();
     /// let timeout = Duration::from_secs(1);
@@ -284,7 +284,7 @@ impl RpcClient {
 
     /// Create an HTTP `RpcClient` with specified timeout and [commitment level][cl].
     ///
-    /// [cl]: https://docs.solana.com/developing/clients/jsonrpc-api#configuring-state-commitment
+    /// [cl]: https://docs.sino.com/developing/clients/jsonrpc-api#configuring-state-commitment
     ///
     /// The URL is an HTTP URL, usually for port 8899, as in
     /// "http://localhost:8899".
@@ -301,7 +301,7 @@ impl RpcClient {
     ///
     /// ```
     /// # use std::time::Duration;
-    /// # use solana_client::rpc_client::RpcClient;
+    /// # use sino_client::rpc_client::RpcClient;
     /// # use sdk::commitment_config::CommitmentConfig;
     /// let url = "http://localhost::8899".to_string();
     /// let timeout = Duration::from_secs(1);
@@ -337,14 +337,14 @@ impl RpcClient {
     /// # Examples
     ///
     /// ```
-    /// # use solana_client::rpc_client::RpcClient;
+    /// # use sino_client::rpc_client::RpcClient;
     /// // Create an `RpcClient` that always succeeds
     /// let url = "succeeds".to_string();
     /// let successful_client = RpcClient::new_mock(url);
     /// ```
     ///
     /// ```
-    /// # use solana_client::rpc_client::RpcClient;
+    /// # use sino_client::rpc_client::RpcClient;
     /// // Create an `RpcClient` that always fails
     /// let url = "fails".to_string();
     /// let successful_client = RpcClient::new_mock(url);
@@ -364,7 +364,7 @@ impl RpcClient {
     /// # Examples
     ///
     /// ```
-    /// # use solana_client::{
+    /// # use sino_client::{
     /// #     rpc_client::RpcClient,
     /// #     rpc_request::RpcRequest,
     /// #     rpc_response::{Response, RpcResponseContext},
@@ -395,13 +395,13 @@ impl RpcClient {
     /// The client has a default timeout of 30 seconds, and a default [commitment
     /// level][cl] of [`Finalized`](CommitmentLevel::Finalized).
     ///
-    /// [cl]: https://docs.solana.com/developing/clients/jsonrpc-api#configuring-state-commitment
+    /// [cl]: https://docs.sino.com/developing/clients/jsonrpc-api#configuring-state-commitment
     ///
     /// # Examples
     ///
     /// ```
     /// # use std::net::SocketAddr;
-    /// # use solana_client::rpc_client::RpcClient;
+    /// # use sino_client::rpc_client::RpcClient;
     /// let addr = SocketAddr::from(([127, 0, 0, 1], 8899));
     /// let client = RpcClient::new_socket(addr);
     /// ```
@@ -411,7 +411,7 @@ impl RpcClient {
 
     /// Create an HTTP `RpcClient` from a [`SocketAddr`] with specified [commitment level][cl].
     ///
-    /// [cl]: https://docs.solana.com/developing/clients/jsonrpc-api#configuring-state-commitment
+    /// [cl]: https://docs.sino.com/developing/clients/jsonrpc-api#configuring-state-commitment
     ///
     /// The client has a default timeout of 30 seconds, and a user-specified
     /// [`CommitmentLevel`] via [`CommitmentConfig`].
@@ -420,7 +420,7 @@ impl RpcClient {
     ///
     /// ```
     /// # use std::net::SocketAddr;
-    /// # use solana_client::rpc_client::RpcClient;
+    /// # use sino_client::rpc_client::RpcClient;
     /// # use sdk::commitment_config::CommitmentConfig;
     /// let addr = SocketAddr::from(([127, 0, 0, 1], 8899));
     /// let commitment_config = CommitmentConfig::processed();
@@ -440,14 +440,14 @@ impl RpcClient {
     ///
     /// The client has a default [commitment level][cl] of [`Finalized`](CommitmentLevel::Finalized).
     ///
-    /// [cl]: https://docs.solana.com/developing/clients/jsonrpc-api#configuring-state-commitment
+    /// [cl]: https://docs.sino.com/developing/clients/jsonrpc-api#configuring-state-commitment
     ///
     /// # Examples
     ///
     /// ```
     /// # use std::net::SocketAddr;
     /// # use std::time::Duration;
-    /// # use solana_client::rpc_client::RpcClient;
+    /// # use sino_client::rpc_client::RpcClient;
     /// let addr = SocketAddr::from(([127, 0, 0, 1], 8899));
     /// let timeout = Duration::from_secs(1);
     /// let client = RpcClient::new_socket_with_timeout(addr, timeout);
@@ -477,7 +477,7 @@ impl RpcClient {
 
     /// Get the configured default [commitment level][cl].
     ///
-    /// [cl]: https://docs.solana.com/developing/clients/jsonrpc-api#configuring-state-commitment
+    /// [cl]: https://docs.sino.com/developing/clients/jsonrpc-api#configuring-state-commitment
     ///
     /// The commitment config may be specified during construction, and
     /// determines how thoroughly committed a transaction must be when waiting
@@ -492,7 +492,7 @@ impl RpcClient {
         self.config.commitment_config
     }
 
-    // to keep interface compatible with solana
+    // to keep interface compatible with sino
     #[allow(clippy::unnecessary_wraps)]
     fn use_deprecated_commitment(&self) -> Result<bool, RpcError> {
         Ok(false)
@@ -536,7 +536,7 @@ impl RpcClient {
     /// Once this function returns successfully, the given transaction is
     /// guaranteed to be processed with the configured [commitment level][cl].
     ///
-    /// [cl]: https://docs.solana.com/developing/clients/jsonrpc-api#configuring-state-commitment
+    /// [cl]: https://docs.sino.com/developing/clients/jsonrpc-api#configuring-state-commitment
     ///
     /// After sending the transaction, this method polls in a loop for the
     /// status of the transaction until it has ben confirmed.
@@ -566,13 +566,13 @@ impl RpcClient {
     /// This method is built on the [`sendTransaction`] RPC method, and the
     /// [`getLatestBlockhash`] RPC method.
     ///
-    /// [`sendTransaction`]: https://docs.solana.com/developing/clients/jsonrpc-api#sendtransaction
-    /// [`getLatestBlockhash`]: https://docs.solana.com/developing/clients/jsonrpc-api#getlatestblockhash
+    /// [`sendTransaction`]: https://docs.sino.com/developing/clients/jsonrpc-api#sendtransaction
+    /// [`getLatestBlockhash`]: https://docs.sino.com/developing/clients/jsonrpc-api#getlatestblockhash
     ///
     /// # Examples
     ///
     /// ```
-    /// # use solana_client::{
+    /// # use sino_client::{
     /// #     rpc_client::RpcClient,
     /// #     client_error::ClientError,
     /// # };
@@ -740,12 +740,12 @@ impl RpcClient {
     ///
     /// This method is built on the [`sendTransaction`] RPC method.
     ///
-    /// [`sendTransaction`]: https://docs.solana.com/developing/clients/jsonrpc-api#sendtransaction
+    /// [`sendTransaction`]: https://docs.sino.com/developing/clients/jsonrpc-api#sendtransaction
     ///
     /// # Examples
     ///
     /// ```
-    /// # use solana_client::{
+    /// # use sino_client::{
     /// #     client_error::ClientError,
     /// #     rpc_client::RpcClient,
     /// # };
@@ -822,12 +822,12 @@ impl RpcClient {
     ///
     /// This method is built on the [`sendTransaction`] RPC method.
     ///
-    /// [`sendTransaction`]: https://docs.solana.com/developing/clients/jsonrpc-api#sendtransaction
+    /// [`sendTransaction`]: https://docs.sino.com/developing/clients/jsonrpc-api#sendtransaction
     ///
     /// # Examples
     ///
     /// ```
-    /// # use solana_client::{
+    /// # use sino_client::{
     /// #     client_error::ClientError,
     /// #     rpc_client::RpcClient,
     /// #     rpc_config::RpcSendTransactionConfig,
@@ -944,7 +944,7 @@ impl RpcClient {
     /// with the configured [commitment level][cl], which can be retrieved with
     /// the [`commitment`](RpcClient::commitment) method.
     ///
-    /// [cl]: https://docs.solana.com/developing/clients/jsonrpc-api#configuring-state-commitment
+    /// [cl]: https://docs.sino.com/developing/clients/jsonrpc-api#configuring-state-commitment
     ///
     /// Note that this method does not wait for a transaction to be confirmed
     /// &mdash; it only checks whether a transaction has been confirmed. To
@@ -958,12 +958,12 @@ impl RpcClient {
     ///
     /// This method is built on the [`getSignatureStatuses`] RPC method.
     ///
-    /// [`getSignatureStatuses`]: https://docs.solana.com/developing/clients/jsonrpc-api#getsignaturestatuses
+    /// [`getSignatureStatuses`]: https://docs.sino.com/developing/clients/jsonrpc-api#getsignaturestatuses
     ///
     /// # Examples
     ///
     /// ```
-    /// # use solana_client::{
+    /// # use sino_client::{
     /// #     client_error::ClientError,
     /// #     rpc_client::RpcClient,
     /// # };
@@ -1001,7 +1001,7 @@ impl RpcClient {
     /// Returns an [`RpcResult`] with value `true` if the given transaction
     /// succeeded and has been committed with the given [commitment level][cl].
     ///
-    /// [cl]: https://docs.solana.com/developing/clients/jsonrpc-api#configuring-state-commitment
+    /// [cl]: https://docs.sino.com/developing/clients/jsonrpc-api#configuring-state-commitment
     ///
     /// Note that this method does not wait for a transaction to be confirmed
     /// &mdash; it only checks whether a transaction has been confirmed. To
@@ -1015,12 +1015,12 @@ impl RpcClient {
     ///
     /// This method is built on the [`getSignatureStatuses`] RPC method.
     ///
-    /// [`getSignatureStatuses`]: https://docs.solana.com/developing/clients/jsonrpc-api#getsignaturestatuses
+    /// [`getSignatureStatuses`]: https://docs.sino.com/developing/clients/jsonrpc-api#getsignaturestatuses
     ///
     /// # Examples
     ///
     /// ```
-    /// # use solana_client::{
+    /// # use sino_client::{
     /// #     client_error::ClientError,
     /// #     rpc_client::RpcClient,
     /// # };
@@ -1176,7 +1176,7 @@ impl RpcClient {
     /// Simulating a transaction is similar to the ["preflight check"] that is
     /// run by default when sending a transaction.
     ///
-    /// ["preflight check"]: https://docs.solana.com/developing/clients/jsonrpc-api#sendtransaction
+    /// ["preflight check"]: https://docs.sino.com/developing/clients/jsonrpc-api#sendtransaction
     ///
     /// By default, signatures are not verified during simulation. To verify
     /// signatures, call the [`simulate_transaction_with_config`] method, with
@@ -1190,12 +1190,12 @@ impl RpcClient {
     ///
     /// This method is built on the [`simulateTransaction`] RPC method.
     ///
-    /// [`simulateTransaction`]: https://docs.solana.com/developing/clients/jsonrpc-api#simulatetransaction
+    /// [`simulateTransaction`]: https://docs.sino.com/developing/clients/jsonrpc-api#simulatetransaction
     ///
     /// # Examples
     ///
     /// ```
-    /// # use solana_client::{
+    /// # use sino_client::{
     /// #     client_error::ClientError,
     /// #     rpc_client::RpcClient,
     /// #     rpc_response::RpcSimulateTransactionResult,
@@ -1243,7 +1243,7 @@ impl RpcClient {
     /// Simulating a transaction is similar to the ["preflight check"] that is
     /// run by default when sending a transaction.
     ///
-    /// ["preflight check"]: https://docs.solana.com/developing/clients/jsonrpc-api#sendtransaction
+    /// ["preflight check"]: https://docs.sino.com/developing/clients/jsonrpc-api#sendtransaction
     ///
     /// By default, signatures are not verified during simulation. To verify
     /// signatures, call the [`simulate_transaction_with_config`] method, with
@@ -1266,12 +1266,12 @@ impl RpcClient {
     ///
     /// This method is built on the [`simulateTransaction`] RPC method.
     ///
-    /// [`simulateTransaction`]: https://docs.solana.com/developing/clients/jsonrpc-api#simulatetransaction
+    /// [`simulateTransaction`]: https://docs.sino.com/developing/clients/jsonrpc-api#simulatetransaction
     ///
     /// # Examples
     ///
     /// ```
-    /// # use solana_client::{
+    /// # use sino_client::{
     /// #     client_error::ClientError,
     /// #     rpc_client::RpcClient,
     /// #     rpc_config::RpcSimulateTransactionConfig,
@@ -1334,12 +1334,12 @@ impl RpcClient {
     ///
     /// This method corresponds directly to the [`getHighestSnapshotSlot`] RPC method.
     ///
-    /// [`getHighestSnapshotSlot`]: https://docs.solana.com/developing/clients/jsonrpc-api#gethighestsnapshotslot
+    /// [`getHighestSnapshotSlot`]: https://docs.sino.com/developing/clients/jsonrpc-api#gethighestsnapshotslot
     ///
     /// # Examples
     ///
     /// ```
-    /// # use solana_client::{
+    /// # use sino_client::{
     /// #     rpc_client::RpcClient,
     /// #     client_error::ClientError,
     /// # };
@@ -1370,7 +1370,7 @@ impl RpcClient {
 
     /// Check if a transaction has been processed with the default [commitment level][cl].
     ///
-    /// [cl]: https://docs.solana.com/developing/clients/jsonrpc-api#configuring-state-commitment
+    /// [cl]: https://docs.sino.com/developing/clients/jsonrpc-api#configuring-state-commitment
     ///
     /// If the transaction has been processed with the default commitment level,
     /// then this method returns `Ok` of `Some`. If the transaction has not yet
@@ -1396,12 +1396,12 @@ impl RpcClient {
     ///
     /// This method is built on the [`getSignatureStatuses`] RPC method.
     ///
-    /// [`getSignatureStatuses`]: https://docs.solana.com/developing/clients/jsonrpc-api#gitsignaturestatuses
+    /// [`getSignatureStatuses`]: https://docs.sino.com/developing/clients/jsonrpc-api#gitsignaturestatuses
     ///
     /// # Examples
     ///
     /// ```
-    /// # use solana_client::{
+    /// # use sino_client::{
     /// #     rpc_client::RpcClient,
     /// #     client_error::ClientError,
     /// # };
@@ -1463,12 +1463,12 @@ impl RpcClient {
     ///
     /// This method corresponds directly to the [`getSignatureStatuses`] RPC method.
     ///
-    /// [`getSignatureStatuses`]: https://docs.solana.com/developing/clients/jsonrpc-api#getsignaturestatuses
+    /// [`getSignatureStatuses`]: https://docs.sino.com/developing/clients/jsonrpc-api#getsignaturestatuses
     ///
     /// # Examples
     ///
     /// ```
-    /// # use solana_client::{
+    /// # use sino_client::{
     /// #     rpc_client::RpcClient,
     /// #     client_error::ClientError,
     /// # };
@@ -1541,12 +1541,12 @@ impl RpcClient {
     /// method, with the `searchTransactionHistory` configuration option set to
     /// `true`.
     ///
-    /// [`getSignatureStatuses`]: https://docs.solana.com/developing/clients/jsonrpc-api#getsignaturestatuses
+    /// [`getSignatureStatuses`]: https://docs.sino.com/developing/clients/jsonrpc-api#getsignaturestatuses
     ///
     /// # Examples
     ///
     /// ```
-    /// # use solana_client::{
+    /// # use sino_client::{
     /// #     rpc_client::RpcClient,
     /// #     client_error::ClientError,
     /// # };
@@ -1584,7 +1584,7 @@ impl RpcClient {
 
     /// Check if a transaction has been processed with the given [commitment level][cl].
     ///
-    /// [cl]: https://docs.solana.com/developing/clients/jsonrpc-api#configuring-state-commitment
+    /// [cl]: https://docs.sino.com/developing/clients/jsonrpc-api#configuring-state-commitment
     ///
     /// If the transaction has been processed with the given commitment level,
     /// then this method returns `Ok` of `Some`. If the transaction has not yet
@@ -1610,12 +1610,12 @@ impl RpcClient {
     ///
     /// This method is built on the [`getSignatureStatuses`] RPC method.
     ///
-    /// [`getSignatureStatuses`]: https://docs.solana.com/developing/clients/jsonrpc-api#getsignaturestatuses
+    /// [`getSignatureStatuses`]: https://docs.sino.com/developing/clients/jsonrpc-api#getsignaturestatuses
     ///
     /// # Examples
     ///
     /// ```
-    /// # use solana_client::{
+    /// # use sino_client::{
     /// #     rpc_client::RpcClient,
     /// #     client_error::ClientError,
     /// # };
@@ -1657,7 +1657,7 @@ impl RpcClient {
 
     /// Check if a transaction has been processed with the given [commitment level][cl].
     ///
-    /// [cl]: https://docs.solana.com/developing/clients/jsonrpc-api#configuring-state-commitment
+    /// [cl]: https://docs.sino.com/developing/clients/jsonrpc-api#configuring-state-commitment
     ///
     /// If the transaction has been processed with the given commitment level,
     /// then this method returns `Ok` of `Some`. If the transaction has not yet
@@ -1679,12 +1679,12 @@ impl RpcClient {
     ///
     /// This method is built on the [`getSignatureStatuses`] RPC method.
     ///
-    /// [`getSignatureStatuses`]: https://docs.solana.com/developing/clients/jsonrpc-api#getsignaturestatuses
+    /// [`getSignatureStatuses`]: https://docs.sino.com/developing/clients/jsonrpc-api#getsignaturestatuses
     ///
     /// # Examples
     ///
     /// ```
-    /// # use solana_client::{
+    /// # use sino_client::{
     /// #     rpc_client::RpcClient,
     /// #     client_error::ClientError,
     /// # };
@@ -1731,18 +1731,18 @@ impl RpcClient {
 
     /// Returns the slot that has reached the configured [commitment level][cl].
     ///
-    /// [cl]: https://docs.solana.com/developing/clients/jsonrpc-api#configuring-state-commitment
+    /// [cl]: https://docs.sino.com/developing/clients/jsonrpc-api#configuring-state-commitment
     ///
     /// # RPC Reference
     ///
     /// This method corresponds directly to the [`getSlot`] RPC method.
     ///
-    /// [`getSlot`]: https://docs.solana.com/developing/clients/jsonrpc-api#getslot
+    /// [`getSlot`]: https://docs.sino.com/developing/clients/jsonrpc-api#getslot
     ///
     /// # Examples
     ///
     /// ```
-    /// # use solana_client::{
+    /// # use sino_client::{
     /// #     rpc_client::RpcClient,
     /// #     client_error::ClientError,
     /// # };
@@ -1756,18 +1756,18 @@ impl RpcClient {
 
     /// Returns the slot that has reached the given [commitment level][cl].
     ///
-    /// [cl]: https://docs.solana.com/developing/clients/jsonrpc-api#configuring-state-commitment
+    /// [cl]: https://docs.sino.com/developing/clients/jsonrpc-api#configuring-state-commitment
     ///
     /// # RPC Reference
     ///
     /// This method corresponds directly to the [`getSlot`] RPC method.
     ///
-    /// [`getSlot`]: https://docs.solana.com/developing/clients/jsonrpc-api#getslot
+    /// [`getSlot`]: https://docs.sino.com/developing/clients/jsonrpc-api#getslot
     ///
     /// # Examples
     ///
     /// ```
-    /// # use solana_client::{
+    /// # use sino_client::{
     /// #     rpc_client::RpcClient,
     /// #     client_error::ClientError,
     /// # };
@@ -1789,18 +1789,18 @@ impl RpcClient {
 
     /// Returns the block height that has reached the configured [commitment level][cl].
     ///
-    /// [cl]: https://docs.solana.com/developing/clients/jsonrpc-api#configuring-state-commitment
+    /// [cl]: https://docs.sino.com/developing/clients/jsonrpc-api#configuring-state-commitment
     ///
     /// # RPC Reference
     ///
     /// This method is corresponds directly to the [`getBlockHeight`] RPC method.
     ///
-    /// [`getBlockHeight`]: https://docs.solana.com/developing/clients/jsonrpc-api#getblockheight
+    /// [`getBlockHeight`]: https://docs.sino.com/developing/clients/jsonrpc-api#getblockheight
     ///
     /// # Examples
     ///
     /// ```
-    /// # use solana_client::{
+    /// # use sino_client::{
     /// #     rpc_client::RpcClient,
     /// #     client_error::ClientError,
     /// # };
@@ -1814,18 +1814,18 @@ impl RpcClient {
 
     /// Returns the block height that has reached the given [commitment level][cl].
     ///
-    /// [cl]: https://docs.solana.com/developing/clients/jsonrpc-api#configuring-state-commitment
+    /// [cl]: https://docs.sino.com/developing/clients/jsonrpc-api#configuring-state-commitment
     ///
     /// # RPC Reference
     ///
     /// This method is corresponds directly to the [`getBlockHeight`] RPC method.
     ///
-    /// [`getBlockHeight`]: https://docs.solana.com/developing/clients/jsonrpc-api#getblockheight
+    /// [`getBlockHeight`]: https://docs.sino.com/developing/clients/jsonrpc-api#getblockheight
     ///
     /// # Examples
     ///
     /// ```
-    /// # use solana_client::{
+    /// # use sino_client::{
     /// #     rpc_client::RpcClient,
     /// #     client_error::ClientError,
     /// # };
@@ -1853,12 +1853,12 @@ impl RpcClient {
     ///
     /// This method corresponds directly to the [`getSlotLeaders`] RPC method.
     ///
-    /// [`getSlotLeaders`]: https://docs.solana.com/developing/clients/jsonrpc-api#getslotleaders
+    /// [`getSlotLeaders`]: https://docs.sino.com/developing/clients/jsonrpc-api#getslotleaders
     ///
     /// # Examples
     ///
     /// ```
-    /// # use solana_client::{
+    /// # use sino_client::{
     /// #     rpc_client::RpcClient,
     /// #     client_error::ClientError,
     /// # };
@@ -1893,12 +1893,12 @@ impl RpcClient {
     ///
     /// This method corresponds directly to the [`getBlockProduction`] RPC method.
     ///
-    /// [`getBlockProduction`]: https://docs.solana.com/developing/clients/jsonrpc-api#getblockproduction
+    /// [`getBlockProduction`]: https://docs.sino.com/developing/clients/jsonrpc-api#getblockproduction
     ///
     /// # Examples
     ///
     /// ```
-    /// # use solana_client::{
+    /// # use sino_client::{
     /// #     rpc_client::RpcClient,
     /// #     client_error::ClientError,
     /// # };
@@ -1916,12 +1916,12 @@ impl RpcClient {
     ///
     /// This method corresponds directly to the [`getBlockProduction`] RPC method.
     ///
-    /// [`getBlockProduction`]: https://docs.solana.com/developing/clients/jsonrpc-api#getblockproduction
+    /// [`getBlockProduction`]: https://docs.sino.com/developing/clients/jsonrpc-api#getblockproduction
     ///
     /// # Examples
     ///
     /// ```
-    /// # use solana_client::{
+    /// # use sino_client::{
     /// #     rpc_client::RpcClient,
     /// #     client_error::ClientError,
     /// #     rpc_config::RpcBlockProductionConfig,
@@ -1962,18 +1962,18 @@ impl RpcClient {
     ///
     /// This method uses the configured [commitment level].
     ///
-    /// [cl]: https://docs.solana.com/developing/clients/jsonrpc-api#configuring-state-commitment
+    /// [cl]: https://docs.sino.com/developing/clients/jsonrpc-api#configuring-state-commitment
     ///
     /// # RPC Reference
     ///
     /// This method corresponds directly to the [`getStakeActivation`] RPC method.
     ///
-    /// [`getStakeActivation`]: https://docs.solana.com/developing/clients/jsonrpc-api#getstakeactivation
+    /// [`getStakeActivation`]: https://docs.sino.com/developing/clients/jsonrpc-api#getstakeactivation
     ///
     /// # Examples
     ///
     /// ```
-    /// # use solana_client::{
+    /// # use sino_client::{
     /// #     rpc_client::RpcClient,
     /// #     client_error::ClientError,
     /// #     rpc_response::StakeActivationState,
@@ -2050,18 +2050,18 @@ impl RpcClient {
     ///
     /// This method uses the configured [commitment level][cl].
     ///
-    /// [cl]: https://docs.solana.com/developing/clients/jsonrpc-api#configuring-state-commitment
+    /// [cl]: https://docs.sino.com/developing/clients/jsonrpc-api#configuring-state-commitment
     ///
     /// # RPC Reference
     ///
     /// This method corresponds directly to the [`getSupply`] RPC method.
     ///
-    /// [`getSupply`]: https://docs.solana.com/developing/clients/jsonrpc-api#getsupply
+    /// [`getSupply`]: https://docs.sino.com/developing/clients/jsonrpc-api#getsupply
     ///
     /// # Examples
     ///
     /// ```
-    /// # use solana_client::{
+    /// # use sino_client::{
     /// #     rpc_client::RpcClient,
     /// #     client_error::ClientError,
     /// # };
@@ -2079,12 +2079,12 @@ impl RpcClient {
     ///
     /// This method corresponds directly to the [`getSupply`] RPC method.
     ///
-    /// [`getSupply`]: https://docs.solana.com/developing/clients/jsonrpc-api#getsupply
+    /// [`getSupply`]: https://docs.sino.com/developing/clients/jsonrpc-api#getsupply
     ///
     /// # Examples
     ///
     /// ```
-    /// # use solana_client::{
+    /// # use sino_client::{
     /// #     rpc_client::RpcClient,
     /// #     client_error::ClientError,
     /// # };
@@ -2113,12 +2113,12 @@ impl RpcClient {
     /// This method corresponds directly to the [`getLargestAccounts`] RPC
     /// method.
     ///
-    /// [`getLargestAccounts`]: https://docs.solana.com/developing/clients/jsonrpc-api#getlargestaccounts
+    /// [`getLargestAccounts`]: https://docs.sino.com/developing/clients/jsonrpc-api#getlargestaccounts
     ///
     /// # Examples
     ///
     /// ```
-    /// # use solana_client::{
+    /// # use sino_client::{
     /// #     rpc_client::RpcClient,
     /// #     client_error::ClientError,
     /// #     rpc_config::RpcLargestAccountsConfig,
@@ -2152,19 +2152,19 @@ impl RpcClient {
     /// Returns the account info and associated stake for all the voting accounts
     /// that have reached the configured [commitment level][cl].
     ///
-    /// [cl]: https://docs.solana.com/developing/clients/jsonrpc-api#configuring-state-commitment
+    /// [cl]: https://docs.sino.com/developing/clients/jsonrpc-api#configuring-state-commitment
     ///
     /// # RPC Reference
     ///
     /// This method corresponds directly to the [`getVoteAccounts`]
     /// RPC method.
     ///
-    /// [`getVoteAccounts`]: https://docs.solana.com/developing/clients/jsonrpc-api#getvoteaccounts
+    /// [`getVoteAccounts`]: https://docs.sino.com/developing/clients/jsonrpc-api#getvoteaccounts
     ///
     /// # Examples
     ///
     /// ```
-    /// # use solana_client::{
+    /// # use sino_client::{
     /// #     rpc_client::RpcClient,
     /// #     client_error::ClientError,
     /// # };
@@ -2179,19 +2179,19 @@ impl RpcClient {
     /// Returns the account info and associated stake for all the voting accounts
     /// that have reached the given [commitment level][cl].
     ///
-    /// [cl]: https://docs.solana.com/developing/clients/jsonrpc-api#configuring-state-commitment
+    /// [cl]: https://docs.sino.com/developing/clients/jsonrpc-api#configuring-state-commitment
     ///
     /// # RPC Reference
     ///
     /// This method corresponds directly to the [`getVoteAccounts`] RPC method.
     ///
-    /// [`getVoteAccounts`]: https://docs.solana.com/developing/clients/jsonrpc-api#getvoteaccounts
+    /// [`getVoteAccounts`]: https://docs.sino.com/developing/clients/jsonrpc-api#getvoteaccounts
     ///
     /// # Examples
     ///
     /// ```
     /// # use sdk::commitment_config::CommitmentConfig;
-    /// # use solana_client::{
+    /// # use sino_client::{
     /// #     rpc_client::RpcClient,
     /// #     client_error::ClientError,
     /// # };
@@ -2215,18 +2215,18 @@ impl RpcClient {
     /// Returns the account info and associated stake for all the voting accounts
     /// that have reached the given [commitment level][cl].
     ///
-    /// [cl]: https://docs.solana.com/developing/clients/jsonrpc-api#configuring-state-commitment
+    /// [cl]: https://docs.sino.com/developing/clients/jsonrpc-api#configuring-state-commitment
     ///
     /// # RPC Reference
     ///
     /// This method corresponds directly to the [`getVoteAccounts`] RPC method.
     ///
-    /// [`getVoteAccounts`]: https://docs.solana.com/developing/clients/jsonrpc-api#getvoteaccounts
+    /// [`getVoteAccounts`]: https://docs.sino.com/developing/clients/jsonrpc-api#getvoteaccounts
     ///
     /// # Examples
     ///
     /// ```
-    /// # use solana_client::{
+    /// # use sino_client::{
     /// #     rpc_client::RpcClient,
     /// #     client_error::ClientError,
     /// #     rpc_config::RpcGetVoteAccountsConfig,
@@ -2297,12 +2297,12 @@ impl RpcClient {
     /// This method corresponds directly to the [`getClusterNodes`]
     /// RPC method.
     ///
-    /// [`getClusterNodes`]: https://docs.solana.com/developing/clients/jsonrpc-api#getclusternodes
+    /// [`getClusterNodes`]: https://docs.sino.com/developing/clients/jsonrpc-api#getclusternodes
     ///
     /// # Examples
     ///
     /// ```
-    /// # use solana_client::{
+    /// # use sino_client::{
     /// #     rpc_client::RpcClient,
     /// #     client_error::ClientError,
     /// # };
@@ -2328,12 +2328,12 @@ impl RpcClient {
     /// This method corresponds directly to the [`getBlock`] RPC
     /// method.
     ///
-    /// [`getBlock`]: https://docs.solana.com/developing/clients/jsonrpc-api#getblock
+    /// [`getBlock`]: https://docs.sino.com/developing/clients/jsonrpc-api#getblock
     ///
     /// # Examples
     ///
     /// ```
-    /// # use solana_client::{
+    /// # use sino_client::{
     /// #     rpc_client::RpcClient,
     /// #     client_error::ClientError,
     /// # };
@@ -2352,13 +2352,13 @@ impl RpcClient {
     ///
     /// This method corresponds directly to the [`getBlock`] RPC method.
     ///
-    /// [`getBlock`]: https://docs.solana.com/developing/clients/jsonrpc-api#getblock
+    /// [`getBlock`]: https://docs.sino.com/developing/clients/jsonrpc-api#getblock
     ///
     /// # Examples
     ///
     /// ```
-    /// # use solana_transaction_status::UiTransactionEncoding;
-    /// # use solana_client::{
+    /// # use sino_transaction_status::UiTransactionEncoding;
+    /// # use sino_client::{
     /// #     rpc_client::RpcClient,
     /// #     client_error::ClientError,
     /// # };
@@ -2388,16 +2388,16 @@ impl RpcClient {
     ///
     /// This method corresponds directly to the [`getBlock`] RPC method.
     ///
-    /// [`getBlock`]: https://docs.solana.com/developing/clients/jsonrpc-api#getblock
+    /// [`getBlock`]: https://docs.sino.com/developing/clients/jsonrpc-api#getblock
     ///
     /// # Examples
     ///
     /// ```
-    /// # use solana_transaction_status::{
+    /// # use sino_transaction_status::{
     /// #     TransactionDetails,
     /// #     UiTransactionEncoding,
     /// # };
-    /// # use solana_client::{
+    /// # use sino_client::{
     /// #     rpc_client::RpcClient,
     /// #     rpc_config::RpcBlockConfig,
     /// #     client_error::ClientError,
@@ -2475,7 +2475,7 @@ impl RpcClient {
     ///
     /// [`Finalized`]: CommitmentLevel::Finalized
     /// [`get_blocks_with_limit`]: RpcClient::get_blocks_with_limit.
-    /// [cl]: https://docs.solana.com/developing/clients/jsonrpc-api#configuring-state-commitment
+    /// [cl]: https://docs.sino.com/developing/clients/jsonrpc-api#configuring-state-commitment
     ///
     /// # Errors
     ///
@@ -2487,13 +2487,13 @@ impl RpcClient {
     /// the remote node version is less than 1.7, in which case it maps to the
     /// [`getConfirmedBlocks`] RPC method.
     ///
-    /// [`getBlocks`]: https://docs.solana.com/developing/clients/jsonrpc-api#getblocks
-    /// [`getConfirmedBlocks`]: https://docs.solana.com/developing/clients/jsonrpc-api#getConfirmedblocks
+    /// [`getBlocks`]: https://docs.sino.com/developing/clients/jsonrpc-api#getblocks
+    /// [`getConfirmedBlocks`]: https://docs.sino.com/developing/clients/jsonrpc-api#getConfirmedblocks
     ///
     /// # Examples
     ///
     /// ```
-    /// # use solana_client::{
+    /// # use sino_client::{
     /// #     rpc_client::RpcClient,
     /// #     client_error::ClientError,
     /// # };
@@ -2519,7 +2519,7 @@ impl RpcClient {
     /// If `end_slot` is not provided, then the end slot is for the latest
     /// block with the given [commitment level][cl].
     ///
-    /// [cl]: https://docs.solana.com/developing/clients/jsonrpc-api#configuring-state-commitment
+    /// [cl]: https://docs.sino.com/developing/clients/jsonrpc-api#configuring-state-commitment
     ///
     /// This method may not return blocks for the full range of slots if some
     /// slots do not have corresponding blocks. To simply get a specific number
@@ -2543,14 +2543,14 @@ impl RpcClient {
     /// the remote node version is less than 1.7, in which case it maps to the
     /// [`getConfirmedBlocks`] RPC method.
     ///
-    /// [`getBlocks`]: https://docs.solana.com/developing/clients/jsonrpc-api#getblocks
-    /// [`getConfirmedBlocks`]: https://docs.solana.com/developing/clients/jsonrpc-api#getConfirmedblocks
+    /// [`getBlocks`]: https://docs.sino.com/developing/clients/jsonrpc-api#getblocks
+    /// [`getConfirmedBlocks`]: https://docs.sino.com/developing/clients/jsonrpc-api#getConfirmedblocks
     ///
     /// # Examples
     ///
     /// ```
     /// # use sdk::commitment_config::CommitmentConfig;
-    /// # use solana_client::{
+    /// # use sino_client::{
     /// #     rpc_client::RpcClient,
     /// #     client_error::ClientError,
     /// # };
@@ -2590,7 +2590,7 @@ impl RpcClient {
     /// This method uses the [`Finalized`] [commitment level][cl].
     ///
     /// [`Finalized`]: CommitmentLevel::Finalized.
-    /// [cl]: https://docs.solana.com/developing/clients/jsonrpc-api#configuring-state-commitment
+    /// [cl]: https://docs.sino.com/developing/clients/jsonrpc-api#configuring-state-commitment
     ///
     /// # Errors
     ///
@@ -2602,13 +2602,13 @@ impl RpcClient {
     /// method, unless the remote node version is less than 1.7, in which case
     /// it maps to the [`getConfirmedBlocksWithLimit`] RPC method.
     ///
-    /// [`getBlocksWithLimit`]: https://docs.solana.com/developing/clients/jsonrpc-api#getblockswithlimit
-    /// [`getConfirmedBlocksWithLimit`]: https://docs.solana.com/developing/clients/jsonrpc-api#getconfirmedblockswithlimit
+    /// [`getBlocksWithLimit`]: https://docs.sino.com/developing/clients/jsonrpc-api#getblockswithlimit
+    /// [`getConfirmedBlocksWithLimit`]: https://docs.sino.com/developing/clients/jsonrpc-api#getconfirmedblockswithlimit
     ///
     /// # Examples
     ///
     /// ```
-    /// # use solana_client::{
+    /// # use sino_client::{
     /// #     rpc_client::RpcClient,
     /// #     client_error::ClientError,
     /// # };
@@ -2635,7 +2635,7 @@ impl RpcClient {
     /// This method returns an error if the given [commitment level][cl] is below
     /// [`Confirmed`].
     ///
-    /// [cl]: https://docs.solana.com/developing/clients/jsonrpc-api#configuring-state-commitment
+    /// [cl]: https://docs.sino.com/developing/clients/jsonrpc-api#configuring-state-commitment
     /// [`Confirmed`]: CommitmentLevel::Confirmed
     ///
     /// # RPC Reference
@@ -2644,14 +2644,14 @@ impl RpcClient {
     /// method, unless the remote node version is less than 1.7, in which case
     /// it maps to the `getConfirmedBlocksWithLimit` RPC method.
     ///
-    /// [`getBlocksWithLimit`]: https://docs.solana.com/developing/clients/jsonrpc-api#getblockswithlimit
-    /// [`getConfirmedBlocksWithLimit`]: https://docs.solana.com/developing/clients/jsonrpc-api#getconfirmedblockswithlimit
+    /// [`getBlocksWithLimit`]: https://docs.sino.com/developing/clients/jsonrpc-api#getblockswithlimit
+    /// [`getConfirmedBlocksWithLimit`]: https://docs.sino.com/developing/clients/jsonrpc-api#getconfirmedblockswithlimit
     ///
     /// # Examples
     ///
     /// ```
     /// # use sdk::commitment_config::CommitmentConfig;
-    /// # use solana_client::{
+    /// # use sino_client::{
     /// #     rpc_client::RpcClient,
     /// #     client_error::ClientError,
     /// # };
@@ -2763,7 +2763,7 @@ impl RpcClient {
     /// This method uses the [`Finalized`] [commitment level][cl].
     ///
     /// [`Finalized`]: CommitmentLevel::Finalized.
-    /// [cl]: https://docs.solana.com/developing/clients/jsonrpc-api#configuring-state-commitment
+    /// [cl]: https://docs.sino.com/developing/clients/jsonrpc-api#configuring-state-commitment
     ///
     /// # RPC Reference
     ///
@@ -2771,13 +2771,13 @@ impl RpcClient {
     /// method, unless the remote node version is less than 1.7, in which case
     /// it maps to the [`getSignaturesForAddress2`] RPC method.
     ///
-    /// [`getSignaturesForAddress`]: https://docs.solana.com/developing/clients/jsonrpc-api#getsignaturesforaddress
-    /// [`getSignaturesForAddress2`]: https://docs.solana.com/developing/clients/jsonrpc-api#getsignaturesforaddress2
+    /// [`getSignaturesForAddress`]: https://docs.sino.com/developing/clients/jsonrpc-api#getsignaturesforaddress
+    /// [`getSignaturesForAddress2`]: https://docs.sino.com/developing/clients/jsonrpc-api#getsignaturesforaddress2
     ///
     /// # Examples
     ///
     /// ```
-    /// # use solana_client::{
+    /// # use sino_client::{
     /// #     client_error::ClientError,
     /// #     rpc_client::RpcClient,
     /// # };
@@ -2810,7 +2810,7 @@ impl RpcClient {
     /// This method returns an error if the given [commitment level][cl] is below
     /// [`Confirmed`].
     ///
-    /// [cl]: https://docs.solana.com/developing/clients/jsonrpc-api#configuring-state-commitment
+    /// [cl]: https://docs.sino.com/developing/clients/jsonrpc-api#configuring-state-commitment
     /// [`Confirmed`]: CommitmentLevel::Confirmed
     ///
     /// # RPC Reference
@@ -2819,13 +2819,13 @@ impl RpcClient {
     /// method, unless the remote node version is less than 1.7, in which case
     /// it maps to the [`getSignaturesForAddress2`] RPC method.
     ///
-    /// [`getSignaturesForAddress`]: https://docs.solana.com/developing/clients/jsonrpc-api#getsignaturesforaddress
-    /// [`getSignaturesForAddress2`]: https://docs.solana.com/developing/clients/jsonrpc-api#getsignaturesforaddress2
+    /// [`getSignaturesForAddress`]: https://docs.sino.com/developing/clients/jsonrpc-api#getsignaturesforaddress
+    /// [`getSignaturesForAddress2`]: https://docs.sino.com/developing/clients/jsonrpc-api#getsignaturesforaddress2
     ///
     /// # Examples
     ///
     /// ```
-    /// # use solana_client::{
+    /// # use sino_client::{
     /// #     client_error::ClientError,
     /// #     rpc_client::RpcClient,
     /// #     rpc_client::GetConfirmedSignaturesForAddress2Config,
@@ -2920,7 +2920,7 @@ impl RpcClient {
     /// This method uses the [`Finalized`] [commitment level][cl].
     ///
     /// [`Finalized`]: CommitmentLevel::Finalized
-    /// [cl]: https://docs.solana.com/developing/clients/jsonrpc-api#configuring-state-commitment
+    /// [cl]: https://docs.sino.com/developing/clients/jsonrpc-api#configuring-state-commitment
     ///
     /// # RPC Reference
     ///
@@ -2928,13 +2928,13 @@ impl RpcClient {
     /// unless the remote node version is less than 1.7, in which case it maps
     /// to the [`getConfirmedTransaction`] RPC method.
     ///
-    /// [`getTransaction`]: https://docs.solana.com/developing/clients/jsonrpc-api#gettransaction
-    /// [`getConfirmedTransaction`]: https://docs.solana.com/developing/clients/jsonrpc-api#getconfirmedtransaction
+    /// [`getTransaction`]: https://docs.sino.com/developing/clients/jsonrpc-api#gettransaction
+    /// [`getConfirmedTransaction`]: https://docs.sino.com/developing/clients/jsonrpc-api#getconfirmedtransaction
     ///
     /// # Examples
     ///
     /// ```
-    /// # use solana_client::{
+    /// # use sino_client::{
     /// #     client_error::ClientError,
     /// #     rpc_client::RpcClient,
     /// # };
@@ -2944,7 +2944,7 @@ impl RpcClient {
     /// #     signer::keypair::Keypair,
     /// #     system_transaction,
     /// # };
-    /// # use solana_transaction_status::UiTransactionEncoding;
+    /// # use sino_transaction_status::UiTransactionEncoding;
     /// # let rpc_client = RpcClient::new_mock("succeeds".to_string());
     /// # let alice = Keypair::new();
     /// # let bob = Keypair::new();
@@ -2976,7 +2976,7 @@ impl RpcClient {
     /// This method returns an error if the given [commitment level][cl] is below
     /// [`Confirmed`].
     ///
-    /// [cl]: https://docs.solana.com/developing/clients/jsonrpc-api#configuring-state-commitment
+    /// [cl]: https://docs.sino.com/developing/clients/jsonrpc-api#configuring-state-commitment
     /// [`Confirmed`]: CommitmentLevel::Confirmed
     ///
     /// # RPC Reference
@@ -2985,13 +2985,13 @@ impl RpcClient {
     /// unless the remote node version is less than 1.7, in which case it maps
     /// to the [`getConfirmedTransaction`] RPC method.
     ///
-    /// [`getTransaction`]: https://docs.solana.com/developing/clients/jsonrpc-api#gettransaction
-    /// [`getConfirmedTransaction`]: https://docs.solana.com/developing/clients/jsonrpc-api#getconfirmedtransaction
+    /// [`getTransaction`]: https://docs.sino.com/developing/clients/jsonrpc-api#gettransaction
+    /// [`getConfirmedTransaction`]: https://docs.sino.com/developing/clients/jsonrpc-api#getconfirmedtransaction
     ///
     /// # Examples
     ///
     /// ```
-    /// # use solana_client::{
+    /// # use sino_client::{
     /// #     client_error::ClientError,
     /// #     rpc_client::RpcClient,
     /// #     rpc_config::RpcTransactionConfig,
@@ -3003,7 +3003,7 @@ impl RpcClient {
     /// #     system_transaction,
     /// #     commitment_config::CommitmentConfig,
     /// # };
-    /// # use solana_transaction_status::UiTransactionEncoding;
+    /// # use sino_transaction_status::UiTransactionEncoding;
     /// # let rpc_client = RpcClient::new_mock("succeeds".to_string());
     /// # let alice = Keypair::new();
     /// # let bob = Keypair::new();
@@ -3070,12 +3070,12 @@ impl RpcClient {
     ///
     /// This method corresponds directly to the [`getBlockTime`] RPC method.
     ///
-    /// [`getBlockTime`]: https://docs.solana.com/developing/clients/jsonrpc-api#getblocktime
+    /// [`getBlockTime`]: https://docs.sino.com/developing/clients/jsonrpc-api#getblocktime
     ///
     /// # Examples
     ///
     /// ```
-    /// # use solana_client::{
+    /// # use sino_client::{
     /// #     client_error::ClientError,
     /// #     rpc_client::RpcClient,
     /// # };
@@ -3106,18 +3106,18 @@ impl RpcClient {
     ///
     /// This method uses the configured default [commitment level][cl].
     ///
-    /// [cl]: https://docs.solana.com/developing/clients/jsonrpc-api#configuring-state-commitment
+    /// [cl]: https://docs.sino.com/developing/clients/jsonrpc-api#configuring-state-commitment
     ///
     /// # RPC Reference
     ///
     /// This method corresponds directly to the [`getEpochInfo`] RPC method.
     ///
-    /// [`getEpochInfo`]: https://docs.solana.com/developing/clients/jsonrpc-api#getepochinfo
+    /// [`getEpochInfo`]: https://docs.sino.com/developing/clients/jsonrpc-api#getepochinfo
     ///
     /// # Examples
     ///
     /// ```
-    /// # use solana_client::{
+    /// # use sino_client::{
     /// #     client_error::ClientError,
     /// #     rpc_client::RpcClient,
     /// # };
@@ -3135,12 +3135,12 @@ impl RpcClient {
     ///
     /// This method corresponds directly to the [`getEpochInfo`] RPC method.
     ///
-    /// [`getEpochInfo`]: https://docs.solana.com/developing/clients/jsonrpc-api#getepochinfo
+    /// [`getEpochInfo`]: https://docs.sino.com/developing/clients/jsonrpc-api#getepochinfo
     ///
     /// # Examples
     ///
     /// ```
-    /// # use solana_client::{
+    /// # use sino_client::{
     /// #     client_error::ClientError,
     /// #     rpc_client::RpcClient,
     /// # };
@@ -3166,18 +3166,18 @@ impl RpcClient {
     ///
     /// This method uses the configured default [commitment level][cl].
     ///
-    /// [cl]: https://docs.solana.com/developing/clients/jsonrpc-api#configuring-state-commitment
+    /// [cl]: https://docs.sino.com/developing/clients/jsonrpc-api#configuring-state-commitment
     ///
     /// # RPC Reference
     ///
     /// This method corresponds directly to the [`getLeaderSchedule`] RPC method.
     ///
-    /// [`getLeaderSchedule`]: https://docs.solana.com/developing/clients/jsonrpc-api#getleaderschedule
+    /// [`getLeaderSchedule`]: https://docs.sino.com/developing/clients/jsonrpc-api#getleaderschedule
     ///
     /// # Examples
     ///
     /// ```
-    /// # use solana_client::{
+    /// # use sino_client::{
     /// #     client_error::ClientError,
     /// #     rpc_client::RpcClient,
     /// # };
@@ -3202,12 +3202,12 @@ impl RpcClient {
     ///
     /// This method corresponds directly to the [`getLeaderSchedule`] RPC method.
     ///
-    /// [`getLeaderSchedule`]: https://docs.solana.com/developing/clients/jsonrpc-api#getleaderschedule
+    /// [`getLeaderSchedule`]: https://docs.sino.com/developing/clients/jsonrpc-api#getleaderschedule
     ///
     /// # Examples
     ///
     /// ```
-    /// # use solana_client::{
+    /// # use sino_client::{
     /// #     client_error::ClientError,
     /// #     rpc_client::RpcClient,
     /// # };
@@ -3241,16 +3241,16 @@ impl RpcClient {
     ///
     /// This method corresponds directly to the [`getLeaderSchedule`] RPC method.
     ///
-    /// [`getLeaderSchedule`]: https://docs.solana.com/developing/clients/jsonrpc-api#getleaderschedule
+    /// [`getLeaderSchedule`]: https://docs.sino.com/developing/clients/jsonrpc-api#getleaderschedule
     ///
     /// # Examples
     ///
     /// ```
-    /// # use solana_client::{
+    /// # use sino_client::{
     /// #     client_error::ClientError,
     /// #     rpc_client::RpcClient,
     /// # };
-    /// # use solana_client::rpc_config::RpcLeaderScheduleConfig;
+    /// # use sino_client::rpc_config::RpcLeaderScheduleConfig;
     /// # use sdk::commitment_config::CommitmentConfig;
     /// # let rpc_client = RpcClient::new_mock("succeeds".to_string());
     /// # let slot = rpc_client.get_slot()?;
@@ -3279,12 +3279,12 @@ impl RpcClient {
     ///
     /// This method corresponds directly to the [`getEpochSchedule`] RPC method.
     ///
-    /// [`getEpochSchedule`]: https://docs.solana.com/developing/clients/jsonrpc-api#getepochschedule
+    /// [`getEpochSchedule`]: https://docs.sino.com/developing/clients/jsonrpc-api#getepochschedule
     ///
     /// # Examples
     ///
     /// ```
-    /// # use solana_client::{
+    /// # use sino_client::{
     /// #     client_error::ClientError,
     /// #     rpc_client::RpcClient,
     /// # };
@@ -3305,12 +3305,12 @@ impl RpcClient {
     ///
     /// This method corresponds directly to the [`getRecentPerformanceSamples`] RPC method.
     ///
-    /// [`getRecentPerformanceSamples`]: https://docs.solana.com/developing/clients/jsonrpc-api#getrecentperformancesamples
+    /// [`getRecentPerformanceSamples`]: https://docs.sino.com/developing/clients/jsonrpc-api#getrecentperformancesamples
     ///
     /// # Examples
     ///
     /// ```
-    /// # use solana_client::{
+    /// # use sino_client::{
     /// #     client_error::ClientError,
     /// #     rpc_client::RpcClient,
     /// # };
@@ -3334,12 +3334,12 @@ impl RpcClient {
     ///
     /// This method corresponds directly to the [`getIdentity`] RPC method.
     ///
-    /// [`getIdentity`]: https://docs.solana.com/developing/clients/jsonrpc-api#getidentity
+    /// [`getIdentity`]: https://docs.sino.com/developing/clients/jsonrpc-api#getidentity
     ///
     /// # Examples
     ///
     /// ```
-    /// # use solana_client::{
+    /// # use sino_client::{
     /// #     client_error::ClientError,
     /// #     rpc_client::RpcClient,
     /// # };
@@ -3363,19 +3363,19 @@ impl RpcClient {
     /// This method uses the [`Finalized`] [commitment level][cl].
     ///
     /// [`Finalized`]: CommitmentLevel::Finalized
-    /// [cl]: https://docs.solana.com/developing/clients/jsonrpc-api#configuring-state-commitment
+    /// [cl]: https://docs.sino.com/developing/clients/jsonrpc-api#configuring-state-commitment
     ///
     /// # RPC Reference
     ///
     /// This method corresponds directly to the [`getInflationGovernor`] RPC
     /// method.
     ///
-    /// [`getInflationGovernor`]: https://docs.solana.com/developing/clients/jsonrpc-api#getinflationgovernor
+    /// [`getInflationGovernor`]: https://docs.sino.com/developing/clients/jsonrpc-api#getinflationgovernor
     ///
     /// # Examples
     ///
     /// ```
-    /// # use solana_client::{
+    /// # use sino_client::{
     /// #     client_error::ClientError,
     /// #     rpc_client::RpcClient,
     /// # };
@@ -3393,12 +3393,12 @@ impl RpcClient {
     ///
     /// This method corresponds directly to the [`getInflationRate`] RPC method.
     ///
-    /// [`getInflationRate`]: https://docs.solana.com/developing/clients/jsonrpc-api#getinflationrate
+    /// [`getInflationRate`]: https://docs.sino.com/developing/clients/jsonrpc-api#getinflationrate
     ///
     /// # Examples
     ///
     /// ```
-    /// # use solana_client::{
+    /// # use sino_client::{
     /// #     client_error::ClientError,
     /// #     rpc_client::RpcClient,
     /// # };
@@ -3414,18 +3414,18 @@ impl RpcClient {
     ///
     /// This method uses the configured [commitment level][cl].
     ///
-    /// [cl]: https://docs.solana.com/developing/clients/jsonrpc-api#configuring-state-commitment
+    /// [cl]: https://docs.sino.com/developing/clients/jsonrpc-api#configuring-state-commitment
     ///
     /// # RPC Reference
     ///
     /// This method corresponds directly to the [`getInflationReward`] RPC method.
     ///
-    /// [`getInflationReward`]: https://docs.solana.com/developing/clients/jsonrpc-api#getinflationreward
+    /// [`getInflationReward`]: https://docs.sino.com/developing/clients/jsonrpc-api#getinflationreward
     ///
     /// # Examples
     ///
     /// ```
-    /// # use solana_client::{
+    /// # use sino_client::{
     /// #     client_error::ClientError,
     /// #     rpc_client::RpcClient,
     /// # };
@@ -3463,18 +3463,18 @@ impl RpcClient {
         )
     }
 
-    /// Returns the current solana version running on the node.
+    /// Returns the current sino version running on the node.
     ///
     /// # RPC Reference
     ///
     /// This method corresponds directly to the [`getVersion`] RPC method.
     ///
-    /// [`getVersion`]: https://docs.solana.com/developing/clients/jsonrpc-api#getversion
+    /// [`getVersion`]: https://docs.sino.com/developing/clients/jsonrpc-api#getversion
     ///
     /// # Examples
     ///
     /// ```
-    /// # use solana_client::{
+    /// # use sino_client::{
     /// #     client_error::ClientError,
     /// #     rpc_client::RpcClient,
     /// # };
@@ -3482,7 +3482,7 @@ impl RpcClient {
     /// # let rpc_client = RpcClient::new_mock("succeeds".to_string());
     /// let expected_version = semver::Version::new(0, 6, 0);
     /// let version = rpc_client.get_version()?;
-    /// let version = semver::Version::parse(&version.solana_core)?;
+    /// let version = semver::Version::parse(&version.sino_core)?;
     /// assert!(version >= expected_version);
     /// # Ok::<(), Box<dyn std::error::Error>>(())
     /// ```
@@ -3500,12 +3500,12 @@ impl RpcClient {
     /// This method corresponds directly to the [`minimumLedgerSlot`] RPC
     /// method.
     ///
-    /// [`minimumLedgerSlot`]: https://docs.solana.com/developing/clients/jsonrpc-api#minimumledgerslot
+    /// [`minimumLedgerSlot`]: https://docs.sino.com/developing/clients/jsonrpc-api#minimumledgerslot
     ///
     /// # Examples
     ///
     /// ```
-    /// # use solana_client::{
+    /// # use sino_client::{
     /// #     client_error::ClientError,
     /// #     rpc_client::RpcClient,
     /// # };
@@ -3521,7 +3521,7 @@ impl RpcClient {
     ///
     /// This method uses the configured [commitment level][cl].
     ///
-    /// [cl]: https://docs.solana.com/developing/clients/jsonrpc-api#configuring-state-commitment
+    /// [cl]: https://docs.sino.com/developing/clients/jsonrpc-api#configuring-state-commitment
     ///
     /// To get multiple accounts at once, use the [`get_multiple_accounts`] method.
     ///
@@ -3539,12 +3539,12 @@ impl RpcClient {
     ///
     /// This method is built on the [`getAccountInfo`] RPC method.
     ///
-    /// [`getAccountInfo`]: https://docs.solana.com/developing/clients/jsonrpc-api#getaccountinfo
+    /// [`getAccountInfo`]: https://docs.sino.com/developing/clients/jsonrpc-api#getaccountinfo
     ///
     /// # Examples
     ///
     /// ```
-    /// # use solana_client::{
+    /// # use sino_client::{
     /// #     rpc_client::{self, RpcClient},
     /// #     client_error::ClientError,
     /// # };
@@ -3578,12 +3578,12 @@ impl RpcClient {
     ///
     /// This method is built on the [`getAccountInfo`] RPC method.
     ///
-    /// [`getAccountInfo`]: https://docs.solana.com/developing/clients/jsonrpc-api#getaccountinfo
+    /// [`getAccountInfo`]: https://docs.sino.com/developing/clients/jsonrpc-api#getaccountinfo
     ///
     /// # Examples
     ///
     /// ```
-    /// # use solana_client::{
+    /// # use sino_client::{
     /// #     rpc_client::{self, RpcClient},
     /// #     client_error::ClientError,
     /// # };
@@ -3654,12 +3654,12 @@ impl RpcClient {
     /// This method corresponds directly to the [`getMaxRetransmitSlot`] RPC
     /// method.
     ///
-    /// [`getMaxRetransmitSlot`]: https://docs.solana.com/developing/clients/jsonrpc-api#getmaxretransmitslot
+    /// [`getMaxRetransmitSlot`]: https://docs.sino.com/developing/clients/jsonrpc-api#getmaxretransmitslot
     ///
     /// # Examples
     ///
     /// ```
-    /// # use solana_client::{
+    /// # use sino_client::{
     /// #     rpc_client::RpcClient,
     /// #     client_error::ClientError,
     /// # };
@@ -3670,19 +3670,19 @@ impl RpcClient {
         self.send(RpcRequest::GetMaxRetransmitSlot, Value::Null)
     }
 
-    /// Get the max slot seen from after [shred](https://docs.solana.com/terminology#shred) insert.
+    /// Get the max slot seen from after [shred](https://docs.sino.com/terminology#shred) insert.
     ///
     /// # RPC Reference
     ///
     /// This method corresponds directly to the
     /// [`getMaxShredInsertSlot`] RPC method.
     ///
-    /// [`getMaxShredInsertSlot`]: https://docs.solana.com/developing/clients/jsonrpc-api#getmaxshredinsertslot
+    /// [`getMaxShredInsertSlot`]: https://docs.sino.com/developing/clients/jsonrpc-api#getmaxshredinsertslot
     ///
     /// # Examples
     ///
     /// ```
-    /// # use solana_client::{
+    /// # use sino_client::{
     /// #     rpc_client::RpcClient,
     /// #     client_error::ClientError,
     /// # };
@@ -3697,18 +3697,18 @@ impl RpcClient {
     ///
     /// This method uses the configured [commitment level][cl].
     ///
-    /// [cl]: https://docs.solana.com/developing/clients/jsonrpc-api#configuring-state-commitment
+    /// [cl]: https://docs.sino.com/developing/clients/jsonrpc-api#configuring-state-commitment
     ///
     /// # RPC Reference
     ///
     /// This method is built on the [`getMultipleAccounts`] RPC method.
     ///
-    /// [`getMultipleAccounts`]: https://docs.solana.com/developing/clients/jsonrpc-api#getmultipleaccounts
+    /// [`getMultipleAccounts`]: https://docs.sino.com/developing/clients/jsonrpc-api#getmultipleaccounts
     ///
     /// # Examples
     ///
     /// ```
-    /// # use solana_client::{
+    /// # use sino_client::{
     /// #     rpc_client::RpcClient,
     /// #     client_error::ClientError,
     /// # };
@@ -3735,12 +3735,12 @@ impl RpcClient {
     ///
     /// This method is built on the [`getMultipleAccounts`] RPC method.
     ///
-    /// [`getMultipleAccounts`]: https://docs.solana.com/developing/clients/jsonrpc-api#getmultipleaccounts
+    /// [`getMultipleAccounts`]: https://docs.sino.com/developing/clients/jsonrpc-api#getmultipleaccounts
     ///
     /// # Examples
     ///
     /// ```
-    /// # use solana_client::{
+    /// # use sino_client::{
     /// #     rpc_client::RpcClient,
     /// #     client_error::ClientError,
     /// # };
@@ -3781,12 +3781,12 @@ impl RpcClient {
     ///
     /// This method is built on the [`getMultipleAccounts`] RPC method.
     ///
-    /// [`getMultipleAccounts`]: https://docs.solana.com/developing/clients/jsonrpc-api#getmultipleaccounts
+    /// [`getMultipleAccounts`]: https://docs.sino.com/developing/clients/jsonrpc-api#getmultipleaccounts
     ///
     /// # Examples
     ///
     /// ```
-    /// # use solana_client::{
+    /// # use sino_client::{
     /// #     rpc_client::RpcClient,
     /// #     rpc_config::RpcAccountInfoConfig,
     /// #     client_error::ClientError,
@@ -3796,7 +3796,7 @@ impl RpcClient {
     /// #     signer::keypair::Keypair,
     /// #     commitment_config::CommitmentConfig,
     /// # };
-    /// # use solana_account_decoder::UiAccountEncoding;
+    /// # use sino_account_decoder::UiAccountEncoding;
     /// # let rpc_client = RpcClient::new_mock("succeeds".to_string());
     /// # let alice = Keypair::new();
     /// # let bob = Keypair::new();
@@ -3850,12 +3850,12 @@ impl RpcClient {
     ///
     /// This method is built on the [`getAccountInfo`] RPC method.
     ///
-    /// [`getAccountInfo`]: https://docs.solana.com/developing/clients/jsonrpc-api#getaccountinfo
+    /// [`getAccountInfo`]: https://docs.sino.com/developing/clients/jsonrpc-api#getaccountinfo
     ///
     /// # Examples
     ///
     /// ```
-    /// # use solana_client::{
+    /// # use sino_client::{
     /// #     rpc_client::{self, RpcClient},
     /// #     client_error::ClientError,
     /// # };
@@ -3882,12 +3882,12 @@ impl RpcClient {
     /// This method corresponds directly to the
     /// [`getMinimumBalanceForRentExemption`] RPC method.
     ///
-    /// [`getMinimumBalanceForRentExemption`]: https://docs.solana.com/developing/clients/jsonrpc-api#getminimumbalanceforrentexemption
+    /// [`getMinimumBalanceForRentExemption`]: https://docs.sino.com/developing/clients/jsonrpc-api#getminimumbalanceforrentexemption
     ///
     /// # Examples
     ///
     /// ```
-    /// # use solana_client::{
+    /// # use sino_client::{
     /// #     rpc_client::RpcClient,
     /// #     client_error::ClientError,
     /// # };
@@ -3917,18 +3917,18 @@ impl RpcClient {
     ///
     /// This method uses the configured [commitment level][cl].
     ///
-    /// [cl]: https://docs.solana.com/developing/clients/jsonrpc-api#configuring-state-commitment
+    /// [cl]: https://docs.sino.com/developing/clients/jsonrpc-api#configuring-state-commitment
     ///
     /// # RPC Reference
     ///
     /// This method corresponds directly to the [`getBalance`] RPC method.
     ///
-    /// [`getBalance`]: https://docs.solana.com/developing/clients/jsonrpc-api#getbalance
+    /// [`getBalance`]: https://docs.sino.com/developing/clients/jsonrpc-api#getbalance
     ///
     /// # Examples
     ///
     /// ```
-    /// # use solana_client::{
+    /// # use sino_client::{
     /// #     rpc_client::RpcClient,
     /// #     client_error::ClientError,
     /// # };
@@ -3953,12 +3953,12 @@ impl RpcClient {
     ///
     /// This method corresponds directly to the [`getBalance`] RPC method.
     ///
-    /// [`getBalance`]: https://docs.solana.com/developing/clients/jsonrpc-api#getbalance
+    /// [`getBalance`]: https://docs.sino.com/developing/clients/jsonrpc-api#getbalance
     ///
     /// # Examples
     ///
     /// ```
-    /// # use solana_client::{
+    /// # use sino_client::{
     /// #     rpc_client::RpcClient,
     /// #     client_error::ClientError,
     /// # };
@@ -3994,19 +3994,19 @@ impl RpcClient {
     ///
     /// This method uses the configured [commitment level][cl].
     ///
-    /// [cl]: https://docs.solana.com/developing/clients/jsonrpc-api#configuring-state-commitment
+    /// [cl]: https://docs.sino.com/developing/clients/jsonrpc-api#configuring-state-commitment
     ///
     /// # RPC Reference
     ///
     /// This method corresponds directly to the [`getProgramAccounts`] RPC
     /// method.
     ///
-    /// [`getProgramAccounts`]: https://docs.solana.com/developing/clients/jsonrpc-api#getprogramaccounts
+    /// [`getProgramAccounts`]: https://docs.sino.com/developing/clients/jsonrpc-api#getprogramaccounts
     ///
     /// # Examples
     ///
     /// ```
-    /// # use solana_client::{
+    /// # use sino_client::{
     /// #     rpc_client::RpcClient,
     /// #     client_error::ClientError,
     /// # };
@@ -4038,12 +4038,12 @@ impl RpcClient {
     ///
     /// This method is built on the [`getProgramAccounts`] RPC method.
     ///
-    /// [`getProgramAccounts`]: https://docs.solana.com/developing/clients/jsonrpc-api#getprogramaccounts
+    /// [`getProgramAccounts`]: https://docs.sino.com/developing/clients/jsonrpc-api#getprogramaccounts
     ///
     /// # Examples
     ///
     /// ```
-    /// # use solana_client::{
+    /// # use sino_client::{
     /// #     rpc_client::RpcClient,
     /// #     client_error::ClientError,
     /// #     rpc_config::{RpcAccountInfoConfig, RpcProgramAccountsConfig},
@@ -4054,7 +4054,7 @@ impl RpcClient {
     /// #     signer::keypair::Keypair,
     /// #     commitment_config::CommitmentConfig,
     /// # };
-    /// # use solana_account_decoder::{UiDataSliceConfig, UiAccountEncoding};
+    /// # use sino_account_decoder::{UiDataSliceConfig, UiAccountEncoding};
     /// # let rpc_client = RpcClient::new_mock("succeeds".to_string());
     /// # let alice = Keypair::new();
     /// # let base64_bytes = "\

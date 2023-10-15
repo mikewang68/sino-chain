@@ -1,4 +1,4 @@
-//! Solana precompiled programs
+//! Sino precompiled programs
 
 #![cfg(feature = "full")]
 

@@ -62,7 +62,7 @@ impl QosService {
         let metrics_clone = metrics.clone();
         let reporting_thread = Some(
             Builder::new()
-                .name("solana-qos-service-metrics-repoting".to_string())
+                .name("sino-qos-service-metrics-repoting".to_string())
                 .spawn(move || {
                     Self::reporting_loop(running_flag_clone, metrics_clone, reporting_duration_ms);
                 })
@@ -489,7 +489,7 @@ mod tests {
     #[test]
     fn test_async_report_metrics() {
         sino_logger::setup();
-        //sino_logger::setup_with_default("solana=info");
+        //sino_logger::setup_with_default("sino=info");
 
         // make a vec of txs
         let txs_count = 128usize;

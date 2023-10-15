@@ -536,10 +536,10 @@ impl WindowService {
         duplicate_slot_sender: DuplicateSlotSender,
     ) -> JoinHandle<()> {
         let handle_error = || {
-            inc_new_counter_error!("solana-check-duplicate-error", 1, 1);
+            inc_new_counter_error!("sino-check-duplicate-error", 1, 1);
         };
         Builder::new()
-            .name("solana-check-duplicate".to_string())
+            .name("sino-check-duplicate".to_string())
             .spawn(move || loop {
                 if exit.load(Ordering::Relaxed) {
                     break;
@@ -572,11 +572,11 @@ impl WindowService {
     ) -> JoinHandle<()> {
         let mut handle_timeout = || {};
         let handle_error = || {
-            inc_new_counter_error!("solana-window-insert-error", 1, 1);
+            inc_new_counter_error!("sino-window-insert-error", 1, 1);
         };
 
         Builder::new()
-            .name("solana-window-insert".to_string())
+            .name("sino-window-insert".to_string())
             .spawn(move || {
                 let handle_duplicate = |shred| {
                     let _ = check_duplicate_sender.send(shred);
@@ -637,7 +637,7 @@ impl WindowService {
     {
         let mut stats = ReceiveWindowStats::default();
         Builder::new()
-            .name("solana-window".to_string())
+            .name("sino-window".to_string())
             .spawn(move || {
                 let _exit = Finalizer::new(exit.clone());
                 trace!("{}: RECV_WINDOW started", id);
@@ -647,7 +647,7 @@ impl WindowService {
                     .unwrap();
                 let mut now = Instant::now();
                 let handle_error = || {
-                    inc_new_counter_error!("solana-window-error", 1, 1);
+                    inc_new_counter_error!("sino-window-error", 1, 1);
                 };
 
                 while !exit.load(Ordering::Relaxed) {

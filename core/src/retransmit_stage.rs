@@ -388,7 +388,7 @@ pub fn retransmitter(
         .build()
         .unwrap();
     Builder::new()
-        .name("solana-retransmitter".to_string())
+        .name("sino-retransmitter".to_string())
         .spawn(move || {
             trace!("retransmitter started");
             loop {

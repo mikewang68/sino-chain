@@ -1,11 +1,11 @@
 // use std::str::FromStr;
 
 // use sha3::{Digest, Keccak256};
-// use solana_evm_loader_program::processor::BURN_ADDR;
-// use solana_sdk::account::{AccountSharedData, ReadableAccount};
-// use solana_sdk::commitment_config::CommitmentConfig;
-// use solana_sdk::keyed_account::KeyedAccount;
-// use solana_sdk::pubkey::Pubkey;
+// use sino_evm_loader_program::processor::BURN_ADDR;
+// use sino_sdk::account::{AccountSharedData, ReadableAccount};
+// use sino_sdk::commitment_config::CommitmentConfig;
+// use sino_sdk::keyed_account::KeyedAccount;
+// use sino_sdk::pubkey::Pubkey;
 
 // use crate::rpc::JsonRpcRequestProcessor;
 // use crate::rpc_health::RpcHealthStatus;
@@ -26,7 +26,7 @@
 // use jsonrpc_core::BoxFuture;
 // use snafu::ensure;
 // use snafu::ResultExt;
-// use solana_runtime::bank::Bank;
+// use sino_runtime::bank::Bank;
 // use std::{cell::RefCell, future::ready, sync::Arc};
 
 // const GAS_PRICE: u64 = 3;
@@ -220,7 +220,7 @@
 //     }
 
 //     fn protocol_version(&self, _meta: Self::Metadata) -> Result<String, Error> {
-//         Ok(solana_version::semver!().into())
+//         Ok(sino_version::semver!().into())
 //     }
 
 //     fn is_syncing(&self, meta: Self::Metadata) -> Result<bool, Error> {
@@ -241,7 +241,7 @@
 
 //     fn gas_price(&self, _meta: Self::Metadata) -> Result<Hex<Gas>, Error> {
 //         Ok(Hex(
-//             solana_evm_loader_program::scope::evm::wens_to_gwei(GAS_PRICE),
+//             sino_evm_loader_program::scope::evm::wens_to_gwei(GAS_PRICE),
 //         ))
 //     }
 // }
@@ -501,7 +501,7 @@
 //         let meta_keys = match meta_keys
 //             .into_iter()
 //             .flatten()
-//             .map(|s| solana_sdk::pubkey::Pubkey::from_str(&s))
+//             .map(|s| sino_sdk::pubkey::Pubkey::from_str(&s))
 //             .collect::<Result<Vec<_>, _>>()
 //             .map_err(|e| into_native_error(e, false))
 //         {
@@ -528,7 +528,7 @@
 //             let meta_keys = meta_keys
 //                 .into_iter()
 //                 .flatten()
-//                 .map(|s| solana_sdk::pubkey::Pubkey::from_str(&s))
+//                 .map(|s| sino_sdk::pubkey::Pubkey::from_str(&s))
 //                 .collect::<Result<Vec<_>, _>>()
 //                 .map_err(|e| into_native_error(e, false))?;
 //             let saved_state = block_to_state_root(block, &meta).await;
@@ -769,9 +769,9 @@
 //         fn simulate_transaction(
 //             executor: &mut evm_state::Executor,
 //             tx: RPCTransaction,
-//             meta_keys: Vec<solana_sdk::pubkey::Pubkey>,
+//             meta_keys: Vec<sino_sdk::pubkey::Pubkey>,
 //         ) -> Result<ExecutionResult, Error> {
-//             use solana_evm_loader_program::precompiles::*;
+//             use sino_evm_loader_program::precompiles::*;
 //             macro_rules! unwrap_or_default {
 //                 ($tx:ident . $name: ident) => {
 //                     $tx.$name.map(|a| a.0).unwrap_or_else(|| {
@@ -806,13 +806,13 @@
 //                         let user_account = RefCell::new(AccountSharedData::new(
 //                             u64::MAX,
 //                             0,
-//                             &solana_sdk::system_program::id(),
+//                             &sino_sdk::system_program::id(),
 //                         ));
 //                         (user_account, pk)
 //                     })
 //                     .collect();
 
-//                 // Shortcut for swap tokens to native, will add solana account to transaction.
+//                 // Shortcut for swap tokens to native, will add sino account to transaction.
 //                 if address == *ETH_TO_SOR_ADDR {
 //                     debug!("Found transferToNative transaction");
 //                     match ETH_TO_SOR_CODE.parse_abi(&input) {
@@ -822,7 +822,7 @@
 //                             let user_account = RefCell::new(AccountSharedData::new(
 //                                 u64::MAX,
 //                                 0,
-//                                 &solana_sdk::system_program::id(),
+//                                 &sino_sdk::system_program::id(),
 //                             ));
 //                             meta_keys.push((user_account, pk))
 //                         }
@@ -852,11 +852,11 @@
 //                 .iter()
 //                 .map(|(user_account, pk)| KeyedAccount::new(pk, false, user_account))
 //                 .collect();
-//             let evm_account = RefCell::new(solana_evm_loader_program::create_state_account(
+//             let evm_account = RefCell::new(sino_evm_loader_program::create_state_account(
 //                 evm_state_balance,
 //             ));
 //             let evm_keyed_account =
-//                 KeyedAccount::new(&solana_sdk::evm_state::ID, false, &evm_account);
+//                 KeyedAccount::new(&sino_sdk::evm_state::ID, false, &evm_account);
 
 //             let result = executor
 //                 .transaction_execute_raw(
@@ -983,7 +983,7 @@
 //                 debug!("running on executor = {:?}", executor);
 //                 let meta_keys = meta_keys
 //                     .iter()
-//                     .map(|s| solana_sdk::pubkey::Pubkey::from_str(s))
+//                     .map(|s| sino_sdk::pubkey::Pubkey::from_str(s))
 //                     .collect::<Result<Vec<Pubkey>, _>>()
 //                     .map_err(|_| Error::InvalidParams {})?;
 //                 match simulate_transaction(&mut executor, tx.clone(), meta_keys) {
@@ -1032,7 +1032,7 @@
 //     meta: Arc<JsonRpcRequestProcessor>,
 //     tx: RPCTransaction,
 //     saved_state: StateRootWithBank,
-//     meta_keys: Vec<solana_sdk::pubkey::Pubkey>,
+//     meta_keys: Vec<sino_sdk::pubkey::Pubkey>,
 // ) -> Result<TxOutput, Error> {
 //     let outputs = call_many(meta, &[(tx, meta_keys)], saved_state, true)?;
 
@@ -1059,7 +1059,7 @@
 // #[instrument(skip(meta))]
 // fn call_many(
 //     meta: Arc<JsonRpcRequestProcessor>,
-//     txs: &[(RPCTransaction, Vec<solana_sdk::pubkey::Pubkey>)],
+//     txs: &[(RPCTransaction, Vec<sino_sdk::pubkey::Pubkey>)],
 //     saved_state: StateRootWithBank,
 //     estimate: bool,
 // ) -> Result<Vec<TxOutput>, Error> {
@@ -1101,11 +1101,11 @@
 //         estimate_config,
 //         evm_state::executor::FeatureSet::new(
 //             bank.feature_set
-//                 .is_active(&solana_sdk::feature_set::sino::unsigned_tx_fix::id()),
+//                 .is_active(&sino_sdk::feature_set::sino::unsigned_tx_fix::id()),
 //             bank.feature_set
-//                 .is_active(&solana_sdk::feature_set::sino::clear_logs_on_error::id()),
+//                 .is_active(&sino_sdk::feature_set::sino::clear_logs_on_error::id()),
 //             bank.feature_set.is_active(
-//                 &solana_sdk::feature_set::sino::accept_zero_gas_price_with_native_fee::id(),
+//                 &sino_sdk::feature_set::sino::accept_zero_gas_price_with_native_fee::id(),
 //             ),
 //         ),
 //     );
@@ -1127,10 +1127,10 @@
 // fn call_inner(
 //     executor: &mut evm_state::Executor,
 //     tx: RPCTransaction,
-//     meta_keys: Vec<solana_sdk::pubkey::Pubkey>,
+//     meta_keys: Vec<sino_sdk::pubkey::Pubkey>,
 //     bank: &Bank,
 // ) -> Result<TxOutput, Error> {
-//     use solana_evm_loader_program::precompiles::*;
+//     use sino_evm_loader_program::precompiles::*;
 //     let caller = tx.from.map(|a| a.0).unwrap_or_default();
 
 //     let value = tx.value.map(|a| a.0).unwrap_or_else(|| 0.into());
@@ -1147,7 +1147,7 @@
 //     let tx_hash = tx.hash.map(|a| a.0).unwrap_or_else(H256::random);
 
 //     let evm_state_balance = bank
-//         .get_account(&solana_sdk::evm_state::id())
+//         .get_account(&sino_sdk::evm_state::id())
 //         .unwrap_or_default()
 //         .wens();
 
@@ -1166,7 +1166,7 @@
 //             })
 //             .collect();
 
-//         // Shortcut for swap tokens to native, will add solana account to transaction.
+//         // Shortcut for swap tokens to native, will add sino account to transaction.
 //         if address == *ETH_TO_SOR_ADDR {
 //             debug!("Found transferToNative transaction");
 //             match ETH_TO_SOR_CODE.parse_abi(&input) {
@@ -1202,10 +1202,10 @@
 //         .collect();
 
 //     // Simulation does not have access to real account structure, so only process immutable entrypoints
-//     let evm_account = RefCell::new(solana_evm_loader_program::create_state_account(
+//     let evm_account = RefCell::new(sino_evm_loader_program::create_state_account(
 //         evm_state_balance,
 //     ));
-//     let evm_keyed_account = KeyedAccount::new(&solana_sdk::evm_state::ID, false, &evm_account);
+//     let evm_keyed_account = KeyedAccount::new(&sino_sdk::evm_state::ID, false, &evm_account);
 
 //     let evm_state::executor::ExecutionResult {
 //         exit_reason,
@@ -1252,7 +1252,7 @@
 //         Some(block_num) => meta.get_evm_block_by_id(block_num).await,
 //         None => None,
 //     };
-//     // TODO: Inline evm_state lookups, and request only solana headers.
+//     // TODO: Inline evm_state lookups, and request only sino headers.
 //     let (block, confirmed) = match evm_block {
 //         None => {
 //             error!("Error requesting block:{:?} ({:?}) not found", block, num);
@@ -1335,7 +1335,7 @@
 //             .meta_keys
 //             .iter()
 //             .flatten()
-//             .map(|s| solana_sdk::pubkey::Pubkey::from_str(s))
+//             .map(|s| sino_sdk::pubkey::Pubkey::from_str(s))
 //             .collect::<Result<Vec<_>, _>>()
 //             .map_err(|e| into_native_error(e, false))?;
 

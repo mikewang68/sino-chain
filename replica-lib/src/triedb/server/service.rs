@@ -164,8 +164,8 @@ pub enum DispatchSourcesError {
     RangeInit(#[from] RangeJsonInitError),
     #[error("bigtable blockstore not initialized")]
     BigtableNonInit,
-    #[error("solana blockstore not initialized")]
-    SolanaBlockstoreNonInit,
+    #[error("sino blockstore not initialized")]
+    SinoBlockstoreNonInit,
 }
 
 #[derive(Debug, Error)]
@@ -186,14 +186,14 @@ impl RunningService {
         config: Config,
         used_storage: server::UsedStorage,
         runtime: tokio::runtime::Runtime,
-        solana_blockstore: Option<Arc<Blockstore>>,
+        sino_blockstore: Option<Arc<Blockstore>>,
     ) -> Result<Self, StartError> {
         log::info!("starting triedb replica server, {:#?}", config);
 
         let bigtable_blockstore = maybe_init_bigtable(config.clone(), &runtime)?;
 
         let max_diff_gap = config.max_diff_height_gap;
-        let (range, blockstore) = dispatch_sources(config, bigtable_blockstore, solana_blockstore)?;
+        let (range, blockstore) = dispatch_sources(config, bigtable_blockstore, sino_blockstore)?;
 
         let service =
             RunningService::start_internal(bind_address, range, used_storage, runtime, blockstore, max_diff_gap)?;

@@ -235,7 +235,7 @@ impl SyncClient for BankClient {
         signature: &Signature,
         min_confirmed_blocks: usize,
     ) -> Result<usize> {
-        // https://github.com/solana-labs/solana/issues/7199
+        // https://github.com/sino-labs/sino/issues/7199
         assert_eq!(min_confirmed_blocks, 1, "BankClient cannot observe the passage of multiple blocks, so min_confirmed_blocks must be 1");
         let now = Instant::now();
         let confirmed_blocks;
@@ -369,7 +369,7 @@ impl BankClient {
         let bank = bank.clone();
         let join_bg_thread = Some(
             Builder::new()
-                .name("solana-bank-client".to_string())
+                .name("sino-bank-client".to_string())
                 .spawn(move || Self::run(&thread_bank, transaction_receiver))
                 .unwrap(),
         );

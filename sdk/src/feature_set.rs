@@ -1,11 +1,11 @@
 //! Collection of all runtime features.
 //!
 //! Steps to add a new feature are outlined below. Note that these steps only cover
-//! the process of getting a feature into the core Solana code.
+//! the process of getting a feature into the core Sino code.
 //! - For features that are unambiguously good (ie bug fixes), these steps are sufficient.
 //! - For features that should go up for community vote (ie fee structure changes), more
 //!   information on the additional steps to follow can be found at:
-//!   <https://spl.solana.com/feature-proposal#feature-proposal-life-cycle>
+//!   <https://spl.sino.com/feature-proposal#feature-proposal-life-cycle>
 //!
 //! 1. Generate a new keypair with `sino-keygen new --outfile feature.json --no-passphrase`
 //!    - Keypairs should be held by core contributors only. If you're a non-core contirbutor going
@@ -446,7 +446,7 @@ lazy_static! {
         (spl_token_v2_multisig_fix::id(), "spl-token multisig fix"),
         (no_overflow_rent_distribution::id(), "no overflow rent distribution"),
         (filter_stake_delegation_accounts::id(), "filter stake_delegation_accounts #14062"),
-        (stake_program_v3::id(), "solana_stake_program v3"),
+        (stake_program_v3::id(), "sino_stake_program v3"),
         (require_custodian_for_locked_stake_authorize::id(), "require custodian to authorize withdrawer change for locked stake"),
         (spl_token_v2_self_transfer_fix::id(), "spl-token self-transfer fix"),
         (warp_timestamp_again::id(), "warp timestamp again, adjust bounding to 25% fast 80% slow #15204"),
@@ -459,7 +459,7 @@ lazy_static! {
 
     pub static ref FEATURE_NAMES: HashMap<Pubkey, &'static str> = FEATURE_NAMES_BEFORE_MAINNET.iter().map(|(k, v)| (*k, *v)).chain(
         [
-            // Solana new features
+            // Sino new features
             (require_stake_for_gossip::id(), "require stakes for propagating crds values through gossip #15561"),
             (cpi_data_cost::id(), "charge the compute budget for data passed via CPI"),
             (upgradeable_close_instruction::id(), "close upgradeable buffer accounts"),
@@ -470,7 +470,7 @@ lazy_static! {
             (update_data_on_realloc::id(), "Retain updated data values modified after realloc via CPI"),
             (set_upgrade_authority_via_cpi_enabled::id(), "set upgrade authority instruction via cpi calls for upgradable programs"),
             (keccak256_syscall_enabled::id(), "keccak256 syscall"),
-            (stake_program_v4::id(), "solana_stake_program v4"),
+            (stake_program_v4::id(), "sino_stake_program v4"),
             (system_transfer_zero_check::id(), "perform all checks for transfers of 0 wens"),
             (full_inflation::mainnet::certusone::enable::id(), "full inflation enabled by Certus One"),
             (secp256k1_recover_syscall_enabled::id(), "secp256k1_recover syscall"),

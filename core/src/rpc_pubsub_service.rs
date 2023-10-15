@@ -62,7 +62,7 @@ impl PubSubService {
         let exit_ = exit.clone();
 
         let thread_hdl = Builder::new()
-            .name("solana-pubsub".to_string())
+            .name("sino-pubsub".to_string())
             .spawn(move || {
                 let mut io = PubSubHandler::default();
                 io.extend_with(rpc.to_delegate());
@@ -141,6 +141,6 @@ mod tests {
         let pubsub_service =
             PubSubService::new(PubSubConfig::default(), &subscriptions, pubsub_addr, &exit);
         let thread = pubsub_service.thread_hdl.thread();
-        assert_eq!(thread.name().unwrap(), "solana-pubsub");
+        assert_eq!(thread.name().unwrap(), "sino-pubsub");
     }
 }

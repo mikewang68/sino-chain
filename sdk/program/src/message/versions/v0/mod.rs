@@ -1,13 +1,13 @@
-//! A future Solana message format.
+//! A future Sino message format.
 //!
 //! This crate defines two versions of `Message` in their own modules:
-//! [`legacy`] and [`v0`]. `legacy` is the current version as of Solana 1.10.0.
+//! [`legacy`] and [`v0`]. `legacy` is the current version as of Sino 1.10.0.
 //! `v0` is a [future message format] that encodes more account keys into a
 //! transaction than the legacy format.
 //!
 //! [`legacy`]: crate::message::legacy
 //! [`v0`]: crate::message::v0
-//! [future message format]: https://docs.solana.com/proposals/transactions-v2
+//! [future message format]: https://docs.sino.com/proposals/transactions-v2
 
 use crate::{
     hash::Hash,
@@ -37,7 +37,7 @@ pub struct MessageAddressTableLookup {
     pub readonly_indexes: Vec<u8>,
 }
 
-/// A Solana transaction message (v0).
+/// A Sino transaction message (v0).
 ///
 /// This message format supports succinct account loading with
 /// on-chain address lookup tables.

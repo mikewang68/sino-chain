@@ -390,7 +390,7 @@ impl AccountsBackgroundService {
         let mut total_remove_slots_time = 0;
         let mut last_expiration_check_time = Instant::now();
         let t_background = Builder::new()
-            .name("solana-bg-accounts".to_string())
+            .name("sino-bg-accounts".to_string())
             .spawn(move || {
                 let mut last_snapshot_end_time = None;
                 loop {

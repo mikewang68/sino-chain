@@ -605,7 +605,7 @@ impl RpcSubscriptions {
         };
         let notification_threads = config.notification_threads;
         let t_cleanup = Builder::new()
-            .name("solana-rpc-notifications".to_string())
+            .name("sino-rpc-notifications".to_string())
             .spawn(move || {
                 let pool = rayon::ThreadPoolBuilder::new()
                     .num_threads(notification_threads.unwrap_or_else(get_thread_count))

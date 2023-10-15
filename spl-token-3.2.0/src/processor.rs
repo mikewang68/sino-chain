@@ -852,12 +852,12 @@ impl PrintProgramError for TokenError {
 //         account_info::IntoAccountInfo, clock::Epoch, instruction::Instruction, sysvar::rent,
 //     };
 //     use sino_program::account::{
-//         create_account_for_test, create_is_signer_account_infos, Account as SolanaAccount,
+//         create_account_for_test, create_is_signer_account_infos, Account as SinoAccount,
 //     };
 
 //     fn do_process_instruction(
 //         instruction: Instruction,
-//         accounts: Vec<&mut SolanaAccount>,
+//         accounts: Vec<&mut SinoAccount>,
 //     ) -> ProgramResult {
 //         let mut meta = instruction
 //             .accounts
@@ -881,7 +881,7 @@ impl PrintProgramError for TokenError {
 //         TokenError::MintMismatch.into()
 //     }
 
-//     fn rent_sysvar() -> SolanaAccount {
+//     fn rent_sysvar() -> SinoAccount {
 //         create_account_for_test(&Rent::default())
 //     }
 
@@ -1029,10 +1029,10 @@ impl PrintProgramError for TokenError {
 //         let program_id = crate::id();
 //         let owner_key = Pubkey::new_unique();
 //         let mint_key = Pubkey::new_unique();
-//         let mut mint_account = SolanaAccount::new(42, Mint::get_packed_len(), &program_id);
+//         let mut mint_account = SinoAccount::new(42, Mint::get_packed_len(), &program_id);
 //         let mint2_key = Pubkey::new_unique();
 //         let mut mint2_account =
-//             SolanaAccount::new(mint_minimum_balance(), Mint::get_packed_len(), &program_id);
+//             SinoAccount::new(mint_minimum_balance(), Mint::get_packed_len(), &program_id);
 //         let mut rent_sysvar = rent_sysvar();
 
 //         // mint is not rent exempt
@@ -1076,12 +1076,12 @@ impl PrintProgramError for TokenError {
 //     fn test_initialize_mint_account() {
 //         let program_id = crate::id();
 //         let account_key = Pubkey::new_unique();
-//         let mut account_account = SolanaAccount::new(42, Account::get_packed_len(), &program_id);
+//         let mut account_account = SinoAccount::new(42, Account::get_packed_len(), &program_id);
 //         let owner_key = Pubkey::new_unique();
-//         let mut owner_account = SolanaAccount::default();
+//         let mut owner_account = SinoAccount::default();
 //         let mint_key = Pubkey::new_unique();
 //         let mut mint_account =
-//             SolanaAccount::new(mint_minimum_balance(), Mint::get_packed_len(), &program_id);
+//             SinoAccount::new(mint_minimum_balance(), Mint::get_packed_len(), &program_id);
 //         let mut rent_sysvar = rent_sysvar();
 
 //         // account is not rent exempt
@@ -1152,46 +1152,46 @@ impl PrintProgramError for TokenError {
 //     fn test_transfer_dups() {
 //         let program_id = crate::id();
 //         let account1_key = Pubkey::new_unique();
-//         let mut account1_account = SolanaAccount::new(
+//         let mut account1_account = SinoAccount::new(
 //             account_minimum_balance(),
 //             Account::get_packed_len(),
 //             &program_id,
 //         );
 //         let mut account1_info: AccountInfo = (&account1_key, true, &mut account1_account).into();
 //         let account2_key = Pubkey::new_unique();
-//         let mut account2_account = SolanaAccount::new(
+//         let mut account2_account = SinoAccount::new(
 //             account_minimum_balance(),
 //             Account::get_packed_len(),
 //             &program_id,
 //         );
 //         let mut account2_info: AccountInfo = (&account2_key, false, &mut account2_account).into();
 //         let account3_key = Pubkey::new_unique();
-//         let mut account3_account = SolanaAccount::new(
+//         let mut account3_account = SinoAccount::new(
 //             account_minimum_balance(),
 //             Account::get_packed_len(),
 //             &program_id,
 //         );
 //         let account3_info: AccountInfo = (&account3_key, false, &mut account3_account).into();
 //         let account4_key = Pubkey::new_unique();
-//         let mut account4_account = SolanaAccount::new(
+//         let mut account4_account = SinoAccount::new(
 //             account_minimum_balance(),
 //             Account::get_packed_len(),
 //             &program_id,
 //         );
 //         let account4_info: AccountInfo = (&account4_key, true, &mut account4_account).into();
 //         let multisig_key = Pubkey::new_unique();
-//         let mut multisig_account = SolanaAccount::new(
+//         let mut multisig_account = SinoAccount::new(
 //             multisig_minimum_balance(),
 //             Multisig::get_packed_len(),
 //             &program_id,
 //         );
 //         let multisig_info: AccountInfo = (&multisig_key, true, &mut multisig_account).into();
 //         let owner_key = Pubkey::new_unique();
-//         let mut owner_account = SolanaAccount::default();
+//         let mut owner_account = SinoAccount::default();
 //         let owner_info: AccountInfo = (&owner_key, true, &mut owner_account).into();
 //         let mint_key = Pubkey::new_unique();
 //         let mut mint_account =
-//             SolanaAccount::new(mint_minimum_balance(), Mint::get_packed_len(), &program_id);
+//             SinoAccount::new(mint_minimum_balance(), Mint::get_packed_len(), &program_id);
 //         let mint_info: AccountInfo = (&mint_key, false, &mut mint_account).into();
 //         let rent_key = rent::id();
 //         let mut rent_sysvar = rent_sysvar();
@@ -1459,38 +1459,38 @@ impl PrintProgramError for TokenError {
 //     fn test_transfer() {
 //         let program_id = crate::id();
 //         let account_key = Pubkey::new_unique();
-//         let mut account_account = SolanaAccount::new(
+//         let mut account_account = SinoAccount::new(
 //             account_minimum_balance(),
 //             Account::get_packed_len(),
 //             &program_id,
 //         );
 //         let account2_key = Pubkey::new_unique();
-//         let mut account2_account = SolanaAccount::new(
+//         let mut account2_account = SinoAccount::new(
 //             account_minimum_balance(),
 //             Account::get_packed_len(),
 //             &program_id,
 //         );
 //         let account3_key = Pubkey::new_unique();
-//         let mut account3_account = SolanaAccount::new(
+//         let mut account3_account = SinoAccount::new(
 //             account_minimum_balance(),
 //             Account::get_packed_len(),
 //             &program_id,
 //         );
 //         let delegate_key = Pubkey::new_unique();
-//         let mut delegate_account = SolanaAccount::default();
+//         let mut delegate_account = SinoAccount::default();
 //         let mismatch_key = Pubkey::new_unique();
-//         let mut mismatch_account = SolanaAccount::new(
+//         let mut mismatch_account = SinoAccount::new(
 //             account_minimum_balance(),
 //             Account::get_packed_len(),
 //             &program_id,
 //         );
 //         let owner_key = Pubkey::new_unique();
-//         let mut owner_account = SolanaAccount::default();
+//         let mut owner_account = SinoAccount::default();
 //         let owner2_key = Pubkey::new_unique();
-//         let mut owner2_account = SolanaAccount::default();
+//         let mut owner2_account = SinoAccount::default();
 //         let mint_key = Pubkey::new_unique();
 //         let mut mint_account =
-//             SolanaAccount::new(mint_minimum_balance(), Mint::get_packed_len(), &program_id);
+//             SinoAccount::new(mint_minimum_balance(), Mint::get_packed_len(), &program_id);
 //         let mint2_key = Pubkey::new_unique();
 //         let mut rent_sysvar = rent_sysvar();
 
@@ -1880,32 +1880,32 @@ impl PrintProgramError for TokenError {
 //     fn test_self_transfer() {
 //         let program_id = crate::id();
 //         let account_key = Pubkey::new_unique();
-//         let mut account_account = SolanaAccount::new(
+//         let mut account_account = SinoAccount::new(
 //             account_minimum_balance(),
 //             Account::get_packed_len(),
 //             &program_id,
 //         );
 //         let account2_key = Pubkey::new_unique();
-//         let mut account2_account = SolanaAccount::new(
+//         let mut account2_account = SinoAccount::new(
 //             account_minimum_balance(),
 //             Account::get_packed_len(),
 //             &program_id,
 //         );
 //         let account3_key = Pubkey::new_unique();
-//         let mut account3_account = SolanaAccount::new(
+//         let mut account3_account = SinoAccount::new(
 //             account_minimum_balance(),
 //             Account::get_packed_len(),
 //             &program_id,
 //         );
 //         let delegate_key = Pubkey::new_unique();
-//         let mut delegate_account = SolanaAccount::default();
+//         let mut delegate_account = SinoAccount::default();
 //         let owner_key = Pubkey::new_unique();
-//         let mut owner_account = SolanaAccount::default();
+//         let mut owner_account = SinoAccount::default();
 //         let owner2_key = Pubkey::new_unique();
-//         let mut owner2_account = SolanaAccount::default();
+//         let mut owner2_account = SinoAccount::default();
 //         let mint_key = Pubkey::new_unique();
 //         let mut mint_account =
-//             SolanaAccount::new(mint_minimum_balance(), Mint::get_packed_len(), &program_id);
+//             SinoAccount::new(mint_minimum_balance(), Mint::get_packed_len(), &program_id);
 //         let mut rent_sysvar = rent_sysvar();
 
 //         // create mint
@@ -2410,16 +2410,16 @@ impl PrintProgramError for TokenError {
 //     fn test_mintable_token_with_zero_supply() {
 //         let program_id = crate::id();
 //         let account_key = Pubkey::new_unique();
-//         let mut account_account = SolanaAccount::new(
+//         let mut account_account = SinoAccount::new(
 //             account_minimum_balance(),
 //             Account::get_packed_len(),
 //             &program_id,
 //         );
 //         let owner_key = Pubkey::new_unique();
-//         let mut owner_account = SolanaAccount::default();
+//         let mut owner_account = SinoAccount::default();
 //         let mint_key = Pubkey::new_unique();
 //         let mut mint_account =
-//             SolanaAccount::new(mint_minimum_balance(), Mint::get_packed_len(), &program_id);
+//             SinoAccount::new(mint_minimum_balance(), Mint::get_packed_len(), &program_id);
 //         let mut rent_sysvar = rent_sysvar();
 
 //         // create mint-able token with zero supply
@@ -2509,39 +2509,39 @@ impl PrintProgramError for TokenError {
 //     fn test_approve_dups() {
 //         let program_id = crate::id();
 //         let account1_key = Pubkey::new_unique();
-//         let mut account1_account = SolanaAccount::new(
+//         let mut account1_account = SinoAccount::new(
 //             account_minimum_balance(),
 //             Account::get_packed_len(),
 //             &program_id,
 //         );
 //         let account1_info: AccountInfo = (&account1_key, true, &mut account1_account).into();
 //         let account2_key = Pubkey::new_unique();
-//         let mut account2_account = SolanaAccount::new(
+//         let mut account2_account = SinoAccount::new(
 //             account_minimum_balance(),
 //             Account::get_packed_len(),
 //             &program_id,
 //         );
 //         let account2_info: AccountInfo = (&account2_key, false, &mut account2_account).into();
 //         let account3_key = Pubkey::new_unique();
-//         let mut account3_account = SolanaAccount::new(
+//         let mut account3_account = SinoAccount::new(
 //             account_minimum_balance(),
 //             Account::get_packed_len(),
 //             &program_id,
 //         );
 //         let account3_info: AccountInfo = (&account3_key, true, &mut account3_account).into();
 //         let multisig_key = Pubkey::new_unique();
-//         let mut multisig_account = SolanaAccount::new(
+//         let mut multisig_account = SinoAccount::new(
 //             multisig_minimum_balance(),
 //             Multisig::get_packed_len(),
 //             &program_id,
 //         );
 //         let multisig_info: AccountInfo = (&multisig_key, true, &mut multisig_account).into();
 //         let owner_key = Pubkey::new_unique();
-//         let mut owner_account = SolanaAccount::default();
+//         let mut owner_account = SinoAccount::default();
 //         let owner_info: AccountInfo = (&owner_key, true, &mut owner_account).into();
 //         let mint_key = Pubkey::new_unique();
 //         let mut mint_account =
-//             SolanaAccount::new(mint_minimum_balance(), Mint::get_packed_len(), &program_id);
+//             SinoAccount::new(mint_minimum_balance(), Mint::get_packed_len(), &program_id);
 //         let mint_info: AccountInfo = (&mint_key, false, &mut mint_account).into();
 //         let rent_key = rent::id();
 //         let mut rent_sysvar = rent_sysvar();
@@ -2720,26 +2720,26 @@ impl PrintProgramError for TokenError {
 //     fn test_approve() {
 //         let program_id = crate::id();
 //         let account_key = Pubkey::new_unique();
-//         let mut account_account = SolanaAccount::new(
+//         let mut account_account = SinoAccount::new(
 //             account_minimum_balance(),
 //             Account::get_packed_len(),
 //             &program_id,
 //         );
 //         let account2_key = Pubkey::new_unique();
-//         let mut account2_account = SolanaAccount::new(
+//         let mut account2_account = SinoAccount::new(
 //             account_minimum_balance(),
 //             Account::get_packed_len(),
 //             &program_id,
 //         );
 //         let delegate_key = Pubkey::new_unique();
-//         let mut delegate_account = SolanaAccount::default();
+//         let mut delegate_account = SinoAccount::default();
 //         let owner_key = Pubkey::new_unique();
-//         let mut owner_account = SolanaAccount::default();
+//         let mut owner_account = SinoAccount::default();
 //         let owner2_key = Pubkey::new_unique();
-//         let mut owner2_account = SolanaAccount::default();
+//         let mut owner2_account = SinoAccount::default();
 //         let mint_key = Pubkey::new_unique();
 //         let mut mint_account =
-//             SolanaAccount::new(mint_minimum_balance(), Mint::get_packed_len(), &program_id);
+//             SinoAccount::new(mint_minimum_balance(), Mint::get_packed_len(), &program_id);
 //         let mut rent_sysvar = rent_sysvar();
 
 //         // create mint
@@ -2925,7 +2925,7 @@ impl PrintProgramError for TokenError {
 //     fn test_set_authority_dups() {
 //         let program_id = crate::id();
 //         let account1_key = Pubkey::new_unique();
-//         let mut account1_account = SolanaAccount::new(
+//         let mut account1_account = SinoAccount::new(
 //             account_minimum_balance(),
 //             Account::get_packed_len(),
 //             &program_id,
@@ -2934,7 +2934,7 @@ impl PrintProgramError for TokenError {
 //         let owner_key = Pubkey::new_unique();
 //         let mint_key = Pubkey::new_unique();
 //         let mut mint_account =
-//             SolanaAccount::new(mint_minimum_balance(), Mint::get_packed_len(), &program_id);
+//             SinoAccount::new(mint_minimum_balance(), Mint::get_packed_len(), &program_id);
 //         let mint_info: AccountInfo = (&mint_key, true, &mut mint_account).into();
 //         let rent_key = rent::id();
 //         let mut rent_sysvar = rent_sysvar();
@@ -3028,29 +3028,29 @@ impl PrintProgramError for TokenError {
 //     fn test_set_authority() {
 //         let program_id = crate::id();
 //         let account_key = Pubkey::new_unique();
-//         let mut account_account = SolanaAccount::new(
+//         let mut account_account = SinoAccount::new(
 //             account_minimum_balance(),
 //             Account::get_packed_len(),
 //             &program_id,
 //         );
 //         let account2_key = Pubkey::new_unique();
-//         let mut account2_account = SolanaAccount::new(
+//         let mut account2_account = SinoAccount::new(
 //             account_minimum_balance(),
 //             Account::get_packed_len(),
 //             &program_id,
 //         );
 //         let owner_key = Pubkey::new_unique();
-//         let mut owner_account = SolanaAccount::default();
+//         let mut owner_account = SinoAccount::default();
 //         let owner2_key = Pubkey::new_unique();
-//         let mut owner2_account = SolanaAccount::default();
+//         let mut owner2_account = SinoAccount::default();
 //         let owner3_key = Pubkey::new_unique();
-//         let mut owner3_account = SolanaAccount::default();
+//         let mut owner3_account = SinoAccount::default();
 //         let mint_key = Pubkey::new_unique();
 //         let mut mint_account =
-//             SolanaAccount::new(mint_minimum_balance(), Mint::get_packed_len(), &program_id);
+//             SinoAccount::new(mint_minimum_balance(), Mint::get_packed_len(), &program_id);
 //         let mint2_key = Pubkey::new_unique();
 //         let mut mint2_account =
-//             SolanaAccount::new(mint_minimum_balance(), Mint::get_packed_len(), &program_id);
+//             SinoAccount::new(mint_minimum_balance(), Mint::get_packed_len(), &program_id);
 //         let mut rent_sysvar = rent_sysvar();
 
 //         // create new mint with owner
@@ -3410,18 +3410,18 @@ impl PrintProgramError for TokenError {
 //     fn test_mint_to_dups() {
 //         let program_id = crate::id();
 //         let account1_key = Pubkey::new_unique();
-//         let mut account1_account = SolanaAccount::new(
+//         let mut account1_account = SinoAccount::new(
 //             account_minimum_balance(),
 //             Account::get_packed_len(),
 //             &program_id,
 //         );
 //         let account1_info: AccountInfo = (&account1_key, true, &mut account1_account).into();
 //         let owner_key = Pubkey::new_unique();
-//         let mut owner_account = SolanaAccount::default();
+//         let mut owner_account = SinoAccount::default();
 //         let owner_info: AccountInfo = (&owner_key, true, &mut owner_account).into();
 //         let mint_key = Pubkey::new_unique();
 //         let mut mint_account =
-//             SolanaAccount::new(mint_minimum_balance(), Mint::get_packed_len(), &program_id);
+//             SinoAccount::new(mint_minimum_balance(), Mint::get_packed_len(), &program_id);
 //         let mint_info: AccountInfo = (&mint_key, true, &mut mint_account).into();
 //         let rent_key = rent::id();
 //         let mut rent_sysvar = rent_sysvar();
@@ -3506,39 +3506,39 @@ impl PrintProgramError for TokenError {
 //     fn test_mint_to() {
 //         let program_id = crate::id();
 //         let account_key = Pubkey::new_unique();
-//         let mut account_account = SolanaAccount::new(
+//         let mut account_account = SinoAccount::new(
 //             account_minimum_balance(),
 //             Account::get_packed_len(),
 //             &program_id,
 //         );
 //         let account2_key = Pubkey::new_unique();
-//         let mut account2_account = SolanaAccount::new(
+//         let mut account2_account = SinoAccount::new(
 //             account_minimum_balance(),
 //             Account::get_packed_len(),
 //             &program_id,
 //         );
 //         let account3_key = Pubkey::new_unique();
-//         let mut account3_account = SolanaAccount::new(
+//         let mut account3_account = SinoAccount::new(
 //             account_minimum_balance(),
 //             Account::get_packed_len(),
 //             &program_id,
 //         );
 //         let mismatch_key = Pubkey::new_unique();
-//         let mut mismatch_account = SolanaAccount::new(
+//         let mut mismatch_account = SinoAccount::new(
 //             account_minimum_balance(),
 //             Account::get_packed_len(),
 //             &program_id,
 //         );
 //         let owner_key = Pubkey::new_unique();
-//         let mut owner_account = SolanaAccount::default();
+//         let mut owner_account = SinoAccount::default();
 //         let owner2_key = Pubkey::new_unique();
-//         let mut owner2_account = SolanaAccount::default();
+//         let mut owner2_account = SinoAccount::default();
 //         let mint_key = Pubkey::new_unique();
 //         let mut mint_account =
-//             SolanaAccount::new(mint_minimum_balance(), Mint::get_packed_len(), &program_id);
+//             SinoAccount::new(mint_minimum_balance(), Mint::get_packed_len(), &program_id);
 //         let mint2_key = Pubkey::new_unique();
 //         let uninitialized_key = Pubkey::new_unique();
-//         let mut uninitialized_account = SolanaAccount::new(
+//         let mut uninitialized_account = SinoAccount::new(
 //             account_minimum_balance(),
 //             Account::get_packed_len(),
 //             &program_id,
@@ -3709,18 +3709,18 @@ impl PrintProgramError for TokenError {
 //     fn test_burn_dups() {
 //         let program_id = crate::id();
 //         let account1_key = Pubkey::new_unique();
-//         let mut account1_account = SolanaAccount::new(
+//         let mut account1_account = SinoAccount::new(
 //             account_minimum_balance(),
 //             Account::get_packed_len(),
 //             &program_id,
 //         );
 //         let account1_info: AccountInfo = (&account1_key, true, &mut account1_account).into();
 //         let owner_key = Pubkey::new_unique();
-//         let mut owner_account = SolanaAccount::default();
+//         let mut owner_account = SinoAccount::default();
 //         let owner_info: AccountInfo = (&owner_key, true, &mut owner_account).into();
 //         let mint_key = Pubkey::new_unique();
 //         let mut mint_account =
-//             SolanaAccount::new(mint_minimum_balance(), Mint::get_packed_len(), &program_id);
+//             SinoAccount::new(mint_minimum_balance(), Mint::get_packed_len(), &program_id);
 //         let mint_info: AccountInfo = (&mint_key, true, &mut mint_account).into();
 //         let rent_key = rent::id();
 //         let mut rent_sysvar = rent_sysvar();
@@ -3909,38 +3909,38 @@ impl PrintProgramError for TokenError {
 //     fn test_burn() {
 //         let program_id = crate::id();
 //         let account_key = Pubkey::new_unique();
-//         let mut account_account = SolanaAccount::new(
+//         let mut account_account = SinoAccount::new(
 //             account_minimum_balance(),
 //             Account::get_packed_len(),
 //             &program_id,
 //         );
 //         let account2_key = Pubkey::new_unique();
-//         let mut account2_account = SolanaAccount::new(
+//         let mut account2_account = SinoAccount::new(
 //             account_minimum_balance(),
 //             Account::get_packed_len(),
 //             &program_id,
 //         );
 //         let account3_key = Pubkey::new_unique();
-//         let mut account3_account = SolanaAccount::new(
+//         let mut account3_account = SinoAccount::new(
 //             account_minimum_balance(),
 //             Account::get_packed_len(),
 //             &program_id,
 //         );
 //         let delegate_key = Pubkey::new_unique();
-//         let mut delegate_account = SolanaAccount::default();
+//         let mut delegate_account = SinoAccount::default();
 //         let mismatch_key = Pubkey::new_unique();
-//         let mut mismatch_account = SolanaAccount::new(
+//         let mut mismatch_account = SinoAccount::new(
 //             account_minimum_balance(),
 //             Account::get_packed_len(),
 //             &program_id,
 //         );
 //         let owner_key = Pubkey::new_unique();
-//         let mut owner_account = SolanaAccount::default();
+//         let mut owner_account = SinoAccount::default();
 //         let owner2_key = Pubkey::new_unique();
-//         let mut owner2_account = SolanaAccount::default();
+//         let mut owner2_account = SinoAccount::default();
 //         let mint_key = Pubkey::new_unique();
 //         let mut mint_account =
-//             SolanaAccount::new(mint_minimum_balance(), Mint::get_packed_len(), &program_id);
+//             SinoAccount::new(mint_minimum_balance(), Mint::get_packed_len(), &program_id);
 //         let mint2_key = Pubkey::new_unique();
 //         let mut rent_sysvar = rent_sysvar();
 
@@ -4175,32 +4175,32 @@ impl PrintProgramError for TokenError {
 //         let program_id = crate::id();
 //         let mint_key = Pubkey::new_unique();
 //         let mut mint_account =
-//             SolanaAccount::new(mint_minimum_balance(), Mint::get_packed_len(), &program_id);
+//             SinoAccount::new(mint_minimum_balance(), Mint::get_packed_len(), &program_id);
 //         let account_key = Pubkey::new_unique();
-//         let mut account = SolanaAccount::new(
+//         let mut account = SinoAccount::new(
 //             account_minimum_balance(),
 //             Account::get_packed_len(),
 //             &program_id,
 //         );
 //         let account2_key = Pubkey::new_unique();
-//         let mut account2_account = SolanaAccount::new(
+//         let mut account2_account = SinoAccount::new(
 //             account_minimum_balance(),
 //             Account::get_packed_len(),
 //             &program_id,
 //         );
 //         let owner_key = Pubkey::new_unique();
-//         let mut owner_account = SolanaAccount::default();
+//         let mut owner_account = SinoAccount::default();
 //         let multisig_key = Pubkey::new_unique();
-//         let mut multisig_account = SolanaAccount::new(42, Multisig::get_packed_len(), &program_id);
+//         let mut multisig_account = SinoAccount::new(42, Multisig::get_packed_len(), &program_id);
 //         let multisig_delegate_key = Pubkey::new_unique();
-//         let mut multisig_delegate_account = SolanaAccount::new(
+//         let mut multisig_delegate_account = SinoAccount::new(
 //             multisig_minimum_balance(),
 //             Multisig::get_packed_len(),
 //             &program_id,
 //         );
 //         let signer_keys = vec![Pubkey::new_unique(); MAX_SIGNERS];
 //         let signer_key_refs: Vec<&Pubkey> = signer_keys.iter().collect();
-//         let mut signer_accounts = vec![SolanaAccount::new(0, 0, &program_id); MAX_SIGNERS];
+//         let mut signer_accounts = vec![SinoAccount::new(0, 0, &program_id); MAX_SIGNERS];
 //         let mut rent_sysvar = rent_sysvar();
 
 //         // multisig is not rent exempt
@@ -4465,14 +4465,14 @@ impl PrintProgramError for TokenError {
 
 //         // freeze account
 //         let account3_key = Pubkey::new_unique();
-//         let mut account3_account = SolanaAccount::new(
+//         let mut account3_account = SinoAccount::new(
 //             account_minimum_balance(),
 //             Account::get_packed_len(),
 //             &program_id,
 //         );
 //         let mint2_key = Pubkey::new_unique();
 //         let mut mint2_account =
-//             SolanaAccount::new(mint_minimum_balance(), Mint::get_packed_len(), &program_id);
+//             SinoAccount::new(mint_minimum_balance(), Mint::get_packed_len(), &program_id);
 //         do_process_instruction(
 //             initialize_mint(
 //                 &program_id,
@@ -4738,14 +4738,14 @@ impl PrintProgramError for TokenError {
 //     fn test_close_account_dups() {
 //         let program_id = crate::id();
 //         let account1_key = Pubkey::new_unique();
-//         let mut account1_account = SolanaAccount::new(
+//         let mut account1_account = SinoAccount::new(
 //             account_minimum_balance(),
 //             Account::get_packed_len(),
 //             &program_id,
 //         );
 //         let account1_info: AccountInfo = (&account1_key, true, &mut account1_account).into();
 //         let account2_key = Pubkey::new_unique();
-//         let mut account2_account = SolanaAccount::new(
+//         let mut account2_account = SinoAccount::new(
 //             account_minimum_balance(),
 //             Account::get_packed_len(),
 //             &program_id,
@@ -4754,7 +4754,7 @@ impl PrintProgramError for TokenError {
 //         let owner_key = Pubkey::new_unique();
 //         let mint_key = Pubkey::new_unique();
 //         let mut mint_account =
-//             SolanaAccount::new(mint_minimum_balance(), Mint::get_packed_len(), &program_id);
+//             SinoAccount::new(mint_minimum_balance(), Mint::get_packed_len(), &program_id);
 //         let mint_info: AccountInfo = (&mint_key, false, &mut mint_account).into();
 //         let rent_key = rent::id();
 //         let mut rent_sysvar = rent_sysvar();
@@ -4825,29 +4825,29 @@ impl PrintProgramError for TokenError {
 //         let program_id = crate::id();
 //         let mint_key = Pubkey::new_unique();
 //         let mut mint_account =
-//             SolanaAccount::new(mint_minimum_balance(), Mint::get_packed_len(), &program_id);
+//             SinoAccount::new(mint_minimum_balance(), Mint::get_packed_len(), &program_id);
 //         let account_key = Pubkey::new_unique();
-//         let mut account_account = SolanaAccount::new(
+//         let mut account_account = SinoAccount::new(
 //             account_minimum_balance(),
 //             Account::get_packed_len(),
 //             &program_id,
 //         );
 //         let account2_key = Pubkey::new_unique();
-//         let mut account2_account = SolanaAccount::new(
+//         let mut account2_account = SinoAccount::new(
 //             account_minimum_balance() + 42,
 //             Account::get_packed_len(),
 //             &program_id,
 //         );
 //         let account3_key = Pubkey::new_unique();
-//         let mut account3_account = SolanaAccount::new(
+//         let mut account3_account = SinoAccount::new(
 //             account_minimum_balance(),
 //             Account::get_packed_len(),
 //             &program_id,
 //         );
 //         let owner_key = Pubkey::new_unique();
-//         let mut owner_account = SolanaAccount::default();
+//         let mut owner_account = SinoAccount::default();
 //         let owner2_key = Pubkey::new_unique();
-//         let mut owner2_account = SolanaAccount::default();
+//         let mut owner2_account = SinoAccount::default();
 //         let mut rent_sysvar = rent_sysvar();
 
 //         // uninitialized
@@ -4964,13 +4964,13 @@ impl PrintProgramError for TokenError {
 
 //         // fund and initialize new non-native account to test close authority
 //         let account_key = Pubkey::new_unique();
-//         let mut account_account = SolanaAccount::new(
+//         let mut account_account = SinoAccount::new(
 //             account_minimum_balance(),
 //             Account::get_packed_len(),
 //             &program_id,
 //         );
 //         let owner2_key = Pubkey::new_unique();
-//         let mut owner2_account = SolanaAccount::new(
+//         let mut owner2_account = SinoAccount::new(
 //             account_minimum_balance(),
 //             Account::get_packed_len(),
 //             &program_id,
@@ -5053,25 +5053,25 @@ impl PrintProgramError for TokenError {
 //     fn test_native_token() {
 //         let program_id = crate::id();
 //         let mut mint_account =
-//             SolanaAccount::new(mint_minimum_balance(), Mint::get_packed_len(), &program_id);
+//             SinoAccount::new(mint_minimum_balance(), Mint::get_packed_len(), &program_id);
 //         let account_key = Pubkey::new_unique();
-//         let mut account_account = SolanaAccount::new(
+//         let mut account_account = SinoAccount::new(
 //             account_minimum_balance() + 40,
 //             Account::get_packed_len(),
 //             &program_id,
 //         );
 //         let account2_key = Pubkey::new_unique();
-//         let mut account2_account = SolanaAccount::new(
+//         let mut account2_account = SinoAccount::new(
 //             account_minimum_balance(),
 //             Account::get_packed_len(),
 //             &program_id,
 //         );
 //         let account3_key = Pubkey::new_unique();
-//         let mut account3_account = SolanaAccount::new(account_minimum_balance(), 0, &program_id);
+//         let mut account3_account = SinoAccount::new(account_minimum_balance(), 0, &program_id);
 //         let owner_key = Pubkey::new_unique();
-//         let mut owner_account = SolanaAccount::default();
+//         let mut owner_account = SinoAccount::default();
 //         let owner2_key = Pubkey::new_unique();
-//         let mut owner2_account = SolanaAccount::default();
+//         let mut owner2_account = SinoAccount::default();
 //         let owner3_key = Pubkey::new_unique();
 //         let mut rent_sysvar = rent_sysvar();
 
@@ -5137,7 +5137,7 @@ impl PrintProgramError for TokenError {
 //         // burn unsupported
 //         let bogus_mint_key = Pubkey::new_unique();
 //         let mut bogus_mint_account =
-//             SolanaAccount::new(mint_minimum_balance(), Mint::get_packed_len(), &program_id);
+//             SinoAccount::new(mint_minimum_balance(), Mint::get_packed_len(), &program_id);
 //         do_process_instruction(
 //             initialize_mint(&program_id, &bogus_mint_key, &owner_key, None, 2).unwrap(),
 //             vec![&mut bogus_mint_account, &mut rent_sysvar],
@@ -5269,26 +5269,26 @@ impl PrintProgramError for TokenError {
 //     fn test_overflow() {
 //         let program_id = crate::id();
 //         let account_key = Pubkey::new_unique();
-//         let mut account_account = SolanaAccount::new(
+//         let mut account_account = SinoAccount::new(
 //             account_minimum_balance(),
 //             Account::get_packed_len(),
 //             &program_id,
 //         );
 //         let account2_key = Pubkey::new_unique();
-//         let mut account2_account = SolanaAccount::new(
+//         let mut account2_account = SinoAccount::new(
 //             account_minimum_balance(),
 //             Account::get_packed_len(),
 //             &program_id,
 //         );
 //         let owner_key = Pubkey::new_unique();
-//         let mut owner_account = SolanaAccount::default();
+//         let mut owner_account = SinoAccount::default();
 //         let owner2_key = Pubkey::new_unique();
-//         let mut owner2_account = SolanaAccount::default();
+//         let mut owner2_account = SinoAccount::default();
 //         let mint_owner_key = Pubkey::new_unique();
-//         let mut mint_owner_account = SolanaAccount::default();
+//         let mut mint_owner_account = SinoAccount::default();
 //         let mint_key = Pubkey::new_unique();
 //         let mut mint_account =
-//             SolanaAccount::new(mint_minimum_balance(), Mint::get_packed_len(), &program_id);
+//             SinoAccount::new(mint_minimum_balance(), Mint::get_packed_len(), &program_id);
 //         let mut rent_sysvar = rent_sysvar();
 
 //         // create new mint with owner
@@ -5446,22 +5446,22 @@ impl PrintProgramError for TokenError {
 //     fn test_frozen() {
 //         let program_id = crate::id();
 //         let account_key = Pubkey::new_unique();
-//         let mut account_account = SolanaAccount::new(
+//         let mut account_account = SinoAccount::new(
 //             account_minimum_balance(),
 //             Account::get_packed_len(),
 //             &program_id,
 //         );
 //         let account2_key = Pubkey::new_unique();
-//         let mut account2_account = SolanaAccount::new(
+//         let mut account2_account = SinoAccount::new(
 //             account_minimum_balance(),
 //             Account::get_packed_len(),
 //             &program_id,
 //         );
 //         let owner_key = Pubkey::new_unique();
-//         let mut owner_account = SolanaAccount::default();
+//         let mut owner_account = SinoAccount::default();
 //         let mint_key = Pubkey::new_unique();
 //         let mut mint_account =
-//             SolanaAccount::new(mint_minimum_balance(), Mint::get_packed_len(), &program_id);
+//             SinoAccount::new(mint_minimum_balance(), Mint::get_packed_len(), &program_id);
 //         let mut rent_sysvar = rent_sysvar();
 
 //         // create new mint and fund first account
@@ -5557,7 +5557,7 @@ impl PrintProgramError for TokenError {
 //         account.state = AccountState::Frozen;
 //         Account::pack(account, &mut account_account.data).unwrap();
 //         let delegate_key = Pubkey::new_unique();
-//         let mut delegate_account = SolanaAccount::default();
+//         let mut delegate_account = SinoAccount::default();
 //         assert_eq!(
 //             Err(TokenError::AccountFrozen.into()),
 //             do_process_instruction(
@@ -5632,7 +5632,7 @@ impl PrintProgramError for TokenError {
 //     fn test_freeze_thaw_dups() {
 //         let program_id = crate::id();
 //         let account1_key = Pubkey::new_unique();
-//         let mut account1_account = SolanaAccount::new(
+//         let mut account1_account = SinoAccount::new(
 //             account_minimum_balance(),
 //             Account::get_packed_len(),
 //             &program_id,
@@ -5641,7 +5641,7 @@ impl PrintProgramError for TokenError {
 //         let owner_key = Pubkey::new_unique();
 //         let mint_key = Pubkey::new_unique();
 //         let mut mint_account =
-//             SolanaAccount::new(mint_minimum_balance(), Mint::get_packed_len(), &program_id);
+//             SinoAccount::new(mint_minimum_balance(), Mint::get_packed_len(), &program_id);
 //         let mint_info: AccountInfo = (&mint_key, true, &mut mint_account).into();
 //         let rent_key = rent::id();
 //         let mut rent_sysvar = rent_sysvar();
@@ -5696,20 +5696,20 @@ impl PrintProgramError for TokenError {
 //     fn test_freeze_account() {
 //         let program_id = crate::id();
 //         let account_key = Pubkey::new_unique();
-//         let mut account_account = SolanaAccount::new(
+//         let mut account_account = SinoAccount::new(
 //             account_minimum_balance(),
 //             Account::get_packed_len(),
 //             &program_id,
 //         );
 //         let account_owner_key = Pubkey::new_unique();
-//         let mut account_owner_account = SolanaAccount::default();
+//         let mut account_owner_account = SinoAccount::default();
 //         let owner_key = Pubkey::new_unique();
-//         let mut owner_account = SolanaAccount::default();
+//         let mut owner_account = SinoAccount::default();
 //         let owner2_key = Pubkey::new_unique();
-//         let mut owner2_account = SolanaAccount::default();
+//         let mut owner2_account = SinoAccount::default();
 //         let mint_key = Pubkey::new_unique();
 //         let mut mint_account =
-//             SolanaAccount::new(mint_minimum_balance(), Mint::get_packed_len(), &program_id);
+//             SinoAccount::new(mint_minimum_balance(), Mint::get_packed_len(), &program_id);
 //         let mut rent_sysvar = rent_sysvar();
 
 //         // create new mint with owner different from account owner
@@ -5809,21 +5809,21 @@ impl PrintProgramError for TokenError {
 //     fn test_initialize_account2() {
 //         let program_id = crate::id();
 //         let account_key = Pubkey::new_unique();
-//         let mut account_account = SolanaAccount::new(
+//         let mut account_account = SinoAccount::new(
 //             account_minimum_balance(),
 //             Account::get_packed_len(),
 //             &program_id,
 //         );
-//         let mut account2_account = SolanaAccount::new(
+//         let mut account2_account = SinoAccount::new(
 //             account_minimum_balance(),
 //             Account::get_packed_len(),
 //             &program_id,
 //         );
 //         let owner_key = Pubkey::new_unique();
-//         let mut owner_account = SolanaAccount::default();
+//         let mut owner_account = SinoAccount::default();
 //         let mint_key = Pubkey::new_unique();
 //         let mut mint_account =
-//             SolanaAccount::new(mint_minimum_balance(), Mint::get_packed_len(), &program_id);
+//             SinoAccount::new(mint_minimum_balance(), Mint::get_packed_len(), &program_id);
 //         let mut rent_sysvar = rent_sysvar();
 
 //         // create mint
@@ -5858,23 +5858,23 @@ impl PrintProgramError for TokenError {
 //         let program_id = crate::id();
 //         let mint_key = Pubkey::new_unique();
 //         let mut mint_account =
-//             SolanaAccount::new(mint_minimum_balance(), Mint::get_packed_len(), &program_id);
+//             SinoAccount::new(mint_minimum_balance(), Mint::get_packed_len(), &program_id);
 //         let native_account_key = Pubkey::new_unique();
 //         let wens = 40;
-//         let mut native_account = SolanaAccount::new(
+//         let mut native_account = SinoAccount::new(
 //             account_minimum_balance() + wens,
 //             Account::get_packed_len(),
 //             &program_id,
 //         );
 //         let non_native_account_key = Pubkey::new_unique();
-//         let mut non_native_account = SolanaAccount::new(
+//         let mut non_native_account = SinoAccount::new(
 //             account_minimum_balance() + 50,
 //             Account::get_packed_len(),
 //             &program_id,
 //         );
 
 //         let owner_key = Pubkey::new_unique();
-//         let mut owner_account = SolanaAccount::default();
+//         let mut owner_account = SinoAccount::default();
 //         let mut rent_sysvar = rent_sysvar();
 
 //         // initialize non-native mint

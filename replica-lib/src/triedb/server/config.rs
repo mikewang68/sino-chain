@@ -7,13 +7,13 @@ use thiserror::Error;
 #[derive(Debug, Clone)]
 pub enum RangeSource {
     JSON { file: Option<String> },
-    SolanaBlockstore,
+    SinoBlockstore,
     BigtableBlockstore,
 }
 
 #[derive(Debug, Clone)]
 pub enum HeightIndexSource {
-    SolanaBlockstore,
+    SinoBlockstore,
     BigtableBlockstore,
 }
 
@@ -50,7 +50,7 @@ impl TryFrom<(&str, Option<&str>)> for RangeSource {
                 file: value.1.map(|str| str.to_string()),
             }),
             "bigtable" => Ok(RangeSource::BigtableBlockstore),
-            "solana_blockstore" => Ok(RangeSource::SolanaBlockstore),
+            "sino_blockstore" => Ok(RangeSource::SinoBlockstore),
             _ => Err(ParseError::InvalidOption(
                 value.0.to_string(),
                 "range".to_string(),
@@ -64,7 +64,7 @@ impl TryFrom<&str> for HeightIndexSource {
     fn try_from(value: &str) -> Result<Self, Self::Error> {
         match value {
             "bigtable" => Ok(HeightIndexSource::BigtableBlockstore),
-            "solana_blockstore" => Ok(HeightIndexSource::SolanaBlockstore),
+            "sino_blockstore" => Ok(HeightIndexSource::SinoBlockstore),
             _ => Err(ParseError::InvalidOption(
                 value.to_string(),
                 "height_index".to_string(),
