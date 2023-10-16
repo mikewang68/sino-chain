@@ -58,9 +58,9 @@ args=(
     --account-index program-id
     --account-index spl-token-owner
     --account-index spl-token-mint
-    --account-index velas-accounts-storages
-    --account-index velas-accounts-owners
-    --account-index velas-accounts-operationals
+    --account-index sino-accounts-storages
+    --account-index sino-accounts-owners
+    --account-index sino-accounts-operationals
     # --evm-state-archive "$ledgerDir"/archive-evm
     --gossip-host 127.0.0.1
     --allow-private-addr
