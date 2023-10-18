@@ -429,11 +429,11 @@ pub enum CliError {
     ClientError(#[from] ClientError),
     #[error("Command not recognized: {0}")]
     CommandNotRecognized(String),
-    #[error("Account {1} has insufficient funds for fee ({0} VLX)")]
+    #[error("Account {1} has insufficient funds for fee ({0} SOR)")]
     InsufficientFundsForFee(f64, Pubkey),
-    #[error("Account {1} has insufficient funds for spend ({0} VLX)")]
+    #[error("Account {1} has insufficient funds for spend ({0} SOR)")]
     InsufficientFundsForSpend(f64, Pubkey),
-    #[error("Account {2} has insufficient funds for spend ({0} VLX) + fee ({1} VLX)")]
+    #[error("Account {2} has insufficient funds for spend ({0} SOR) + fee ({1} SOR)")]
     InsufficientFundsForSpendAndFee(f64, f64, Pubkey),
     #[error(transparent)]
     InvalidNonce(nonce_utils::Error),
@@ -2071,7 +2071,7 @@ mod tests {
             pubkey: None,
             use_wens_unit: false,
         };
-        assert_eq!(process_command(&config).unwrap(), "0.0000004 VLX");
+        assert_eq!(process_command(&config).unwrap(), "0.0000004 SOR");
 
         let good_signature = Signature::new(&bs58::decode(SIGNATURE).into_vec().unwrap());
         config.command = CliCommand::Confirm(good_signature);
