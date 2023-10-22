@@ -27,7 +27,9 @@ mkdir -p "$ledgerDir"
 # setup_validator_accounts "$node_sor"
 
 rpc_faucet_address=http://127.0.0.1:8899
-sino airdrop $node_sor $vote_account --url "$rpc_faucet_address"
+sino airdrop $node_sor $identity --url "$rpc_faucet_address"
+sino --keypair "$identity" --url "$rpc_faucet_address" create-vote-account "$vote_account" "$identity" "$authorized_withdrawer"
+
 
 abort() {
     set +e
