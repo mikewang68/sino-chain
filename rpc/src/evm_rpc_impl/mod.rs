@@ -1,11 +1,11 @@
 use std::str::FromStr;
 
 use sha3::{Digest, Keccak256};
-use sino_evm_loader_program::processor::BURN_ADDR;
-use sino_sdk::account::{AccountSharedData, ReadableAccount};
-use sino_sdk::commitment_config::CommitmentConfig;
-use sino_sdk::keyed_account::KeyedAccount;
-use sino_sdk::pubkey::Pubkey;
+use evm_loader_program::processor::BURN_ADDR;
+use sdk::account::{AccountSharedData, ReadableAccount};
+use sdk::commitment_config::CommitmentConfig;
+use sdk::keyed_account::KeyedAccount;
+use sdk::pubkey::Pubkey;
 
 use crate::rpc::JsonRpcRequestProcessor;
 use crate::rpc_health::RpcHealthStatus;
@@ -26,7 +26,7 @@ use evm_state::{
 use jsonrpc_core::BoxFuture;
 use snafu::ensure;
 use snafu::ResultExt;
-use sino_runtime::bank::Bank;
+use runtime::bank::Bank;
 use std::{cell::RefCell, future::ready, sync::Arc};
 
 const GAS_PRICE: u64 = 3;
@@ -241,7 +241,7 @@ impl GeneralERPC for GeneralErpcImpl {
 
     fn gas_price(&self, _meta: Self::Metadata) -> Result<Hex<Gas>, Error> {
         Ok(Hex(
-            sino_evm_loader_program::scope::evm::wens_to_gwei(GAS_PRICE),
+            evm_loader_program::scope::evm::wens_to_gwei(GAS_PRICE),
         ))
     }
 }
@@ -501,7 +501,7 @@ impl ChainERPC for ChainErpcImpl {
         let meta_keys = match meta_keys
             .into_iter()
             .flatten()
-            .map(|s| sino_sdk::pubkey::Pubkey::from_str(&s))
+            .map(|s| sdk::pubkey::Pubkey::from_str(&s))
             .collect::<Result<Vec<_>, _>>()
             .map_err(|e| into_native_error(e, false))
         {
@@ -528,7 +528,7 @@ impl ChainERPC for ChainErpcImpl {
             let meta_keys = meta_keys
                 .into_iter()
                 .flatten()
-                .map(|s| sino_sdk::pubkey::Pubkey::from_str(&s))
+                .map(|s| sdk::pubkey::Pubkey::from_str(&s))
                 .collect::<Result<Vec<_>, _>>()
                 .map_err(|e| into_native_error(e, false))?;
             let saved_state = block_to_state_root(block, &meta).await;
@@ -769,9 +769,9 @@ impl TraceERPC for TraceErpcImpl {
         fn simulate_transaction(
             executor: &mut evm_state::Executor,
             tx: RPCTransaction,
-            meta_keys: Vec<sino_sdk::pubkey::Pubkey>,
+            meta_keys: Vec<sdk::pubkey::Pubkey>,
         ) -> Result<ExecutionResult, Error> {
-            use sino_evm_loader_program::precompiles::*;
+            use evm_loader_program::precompiles::*;
             macro_rules! unwrap_or_default {
                 ($tx:ident . $name: ident) => {
                     $tx.$name.map(|a| a.0).unwrap_or_else(|| {
@@ -806,7 +806,7 @@ impl TraceERPC for TraceErpcImpl {
                         let user_account = RefCell::new(AccountSharedData::new(
                             u64::MAX,
                             0,
-                            &sino_sdk::system_program::id(),
+                            &sdk::system_program::id(),
                         ));
                         (user_account, pk)
                     })
@@ -822,7 +822,7 @@ impl TraceERPC for TraceErpcImpl {
                             let user_account = RefCell::new(AccountSharedData::new(
                                 u64::MAX,
                                 0,
-                                &sino_sdk::system_program::id(),
+                                &sdk::system_program::id(),
                             ));
                             meta_keys.push((user_account, pk))
                         }
@@ -852,11 +852,11 @@ impl TraceERPC for TraceErpcImpl {
                 .iter()
                 .map(|(user_account, pk)| KeyedAccount::new(pk, false, user_account))
                 .collect();
-            let evm_account = RefCell::new(sino_evm_loader_program::create_state_account(
+            let evm_account = RefCell::new(evm_loader_program::create_state_account(
                 evm_state_balance,
             ));
             let evm_keyed_account =
-                KeyedAccount::new(&sino_sdk::evm_state::ID, false, &evm_account);
+                KeyedAccount::new(&sdk::evm_state::ID, false, &evm_account);
 
             let result = executor
                 .transaction_execute_raw(
@@ -983,7 +983,7 @@ impl TraceERPC for TraceErpcImpl {
                 debug!("running on executor = {:?}", executor);
                 let meta_keys = meta_keys
                     .iter()
-                    .map(|s| sino_sdk::pubkey::Pubkey::from_str(s))
+                    .map(|s| sdk::pubkey::Pubkey::from_str(s))
                     .collect::<Result<Vec<Pubkey>, _>>()
                     .map_err(|_| Error::InvalidParams {})?;
                 match simulate_transaction(&mut executor, tx.clone(), meta_keys) {
@@ -1032,7 +1032,7 @@ fn call(
     meta: Arc<JsonRpcRequestProcessor>,
     tx: RPCTransaction,
     saved_state: StateRootWithBank,
-    meta_keys: Vec<sino_sdk::pubkey::Pubkey>,
+    meta_keys: Vec<sdk::pubkey::Pubkey>,
 ) -> Result<TxOutput, Error> {
     let outputs = call_many(meta, &[(tx, meta_keys)], saved_state, true)?;
 
@@ -1059,7 +1059,7 @@ fn call(
 #[instrument(skip(meta))]
 fn call_many(
     meta: Arc<JsonRpcRequestProcessor>,
-    txs: &[(RPCTransaction, Vec<sino_sdk::pubkey::Pubkey>)],
+    txs: &[(RPCTransaction, Vec<sdk::pubkey::Pubkey>)],
     saved_state: StateRootWithBank,
     estimate: bool,
 ) -> Result<Vec<TxOutput>, Error> {
@@ -1101,11 +1101,11 @@ fn call_many(
         estimate_config,
         evm_state::executor::FeatureSet::new(
             bank.feature_set
-                .is_active(&sino_sdk::feature_set::sino::unsigned_tx_fix::id()),
+                .is_active(&sdk::feature_set::sino::unsigned_tx_fix::id()),
             bank.feature_set
-                .is_active(&sino_sdk::feature_set::sino::clear_logs_on_error::id()),
+                .is_active(&sdk::feature_set::sino::clear_logs_on_error::id()),
             bank.feature_set.is_active(
-                &sino_sdk::feature_set::sino::accept_zero_gas_price_with_native_fee::id(),
+                &sdk::feature_set::sino::accept_zero_gas_price_with_native_fee::id(),
             ),
         ),
     );
@@ -1127,10 +1127,10 @@ fn call_many(
 fn call_inner(
     executor: &mut evm_state::Executor,
     tx: RPCTransaction,
-    meta_keys: Vec<sino_sdk::pubkey::Pubkey>,
+    meta_keys: Vec<sdk::pubkey::Pubkey>,
     bank: &Bank,
 ) -> Result<TxOutput, Error> {
-    use sino_evm_loader_program::precompiles::*;
+    use evm_loader_program::precompiles::*;
     let caller = tx.from.map(|a| a.0).unwrap_or_default();
 
     let value = tx.value.map(|a| a.0).unwrap_or_else(|| 0.into());
@@ -1147,7 +1147,7 @@ fn call_inner(
     let tx_hash = tx.hash.map(|a| a.0).unwrap_or_else(H256::random);
 
     let evm_state_balance = bank
-        .get_account(&sino_sdk::evm_state::id())
+        .get_account(&sdk::evm_state::id())
         .unwrap_or_default()
         .wens();
 
@@ -1202,10 +1202,10 @@ fn call_inner(
         .collect();
 
     // Simulation does not have access to real account structure, so only process immutable entrypoints
-    let evm_account = RefCell::new(sino_evm_loader_program::create_state_account(
+    let evm_account = RefCell::new(evm_loader_program::create_state_account(
         evm_state_balance,
     ));
-    let evm_keyed_account = KeyedAccount::new(&sino_sdk::evm_state::ID, false, &evm_account);
+    let evm_keyed_account = KeyedAccount::new(&sdk::evm_state::ID, false, &evm_account);
 
     let evm_state::executor::ExecutionResult {
         exit_reason,
@@ -1335,7 +1335,7 @@ async fn trace_call_many(
             .meta_keys
             .iter()
             .flatten()
-            .map(|s| sino_sdk::pubkey::Pubkey::from_str(s))
+            .map(|s| sdk::pubkey::Pubkey::from_str(s))
             .collect::<Result<Vec<_>, _>>()
             .map_err(|e| into_native_error(e, false))?;
 
