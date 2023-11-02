@@ -662,12 +662,12 @@ impl Executor {
             .balance
     }
 
-    // pub fn nonce(&self, addr: H160) -> U256 {
-    //     self.evm_backend
-    //         .get_account_state(addr)
-    //         .unwrap_or_default()
-    //         .nonce
-    // }
+    pub fn nonce(&self, addr: H160) -> U256 {
+        self.evm_backend
+            .get_account_state(addr)
+            .unwrap_or_default()
+            .nonce
+    }
 
     pub fn deconstruct(self) -> EvmBackend<Incomming> {
         self.evm_backend
