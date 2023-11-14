@@ -21,4 +21,4 @@ pub mod rpc_sender;
 pub mod spinner;
 pub mod thin_client;
 pub mod tpu_client;
-// pub mod transaction_executor;
+pub mod transaction_executor;
