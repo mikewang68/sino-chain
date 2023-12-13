@@ -81,4 +81,70 @@ Start your own Development network locally, instructions are in the [online docs
 
 ## Benchmarking
 
+### Alter the block mining time
+
+To alter the block mining time by changing the `.sh` file at `./scripts/run.sh`.
+
+```shell
+else
+    $script_dir/../fetch-spl.sh
+    if [[ -r spl-genesis-args.sh ]]; then
+        SPL_GENESIS_ARGS=$(cat spl-genesis-args.sh)
+    fi
+
+    # shellcheck disable=SC2086
+    sino-genesis \
+    --hashes-per-tick 30000 \
+    --faucet-wens 500000000000000000 \
+    --bootstrap-validator \
+    "$validator_identity" \
+    "$validator_vote_account" \
+    "$validator_stake_account" \
+    --ledger "$ledgerDir" \
+    --cluster-type "$SOLANA_RUN_SH_CLUSTER_TYPE" \
+    $SPL_GENESIS_ARGS \
+    --max-genesis-archive-unpacked-size=300000000 \
+    $SOLANA_RUN_SH_GENESIS_ARGS 
+    # --evm-root="0x7b343e0165c8f354ac7b1e7e7889389f42927ccb9d0330b3036fb749e12795ba" \
+    # --evm-state-file="../state.json" \
+    # --evm-chain-id 111
+fi
+```
+Change `--hashes-per-tick` to alter the block mining time. 
+
+30000 $\approx$ 3000ms $\approx$ 3s
+
+Also need to add `--no-poh-seed-test` at:
+```shell
+args=(
+    --identity "$dataDir"/validator-identity.json
+    --vote-account "$dataDir"/validator-vote-account.json
+    --ledger "$ledgerDir"
+    --gossip-port 8001
+    --full-rpc-api
+    --rpc-port 8899
+    --rpc-faucet-address 192.168.101.101:9900
+    --log -
+    --enable-rpc-transaction-history
+    --enable-cpi-and-log-storage
+    --init-complete-file "$dataDir"/init-completed
+    --snapshot-compression none
+    --accounts-db-caching-enabled
+    --snapshot-interval-slots 100
+    --require-tower
+    --no-wait-for-vote-to-start-leader
+    --no-os-network-limits-test
+    --account-index program-id
+    --account-index spl-token-owner
+    --account-index spl-token-mint
+    --account-index sino-accounts-storages
+    --account-index sino-accounts-owners
+    --account-index sino-accounts-operationals
+    --evm-state-archive "$ledgerDir"/archive-evm
+    --gossip-host 192.168.101.101
+    --allow-private-addr
+    --no-poh-speed-test
+)
+```
+
 ## Release Process
