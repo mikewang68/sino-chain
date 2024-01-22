@@ -4,8 +4,8 @@ source $HOME/.cargo/env
 rustup component add rustfmt
 
 rustup update
-echo Changing the version of rust to 1.73
-rustup default 1.73
+# echo Changing the version of rust to 1.73
+# rustup default 1.73
 
 type=`uname  -a`
 if [[ $type =~ "Darwin" ]];then
