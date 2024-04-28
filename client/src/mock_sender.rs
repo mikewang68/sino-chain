@@ -15,6 +15,7 @@ use {
         },
         rpc_sender::*,
     },
+    async_trait::async_trait,
     serde_json::{json, Number, Value},
     account_decoder::{UiAccount, UiAccountEncoding},
     sdk::{
@@ -87,12 +88,17 @@ impl MockSender {
     }
 }
 
+#[async_trait]
 impl RpcSender for MockSender {
     fn get_transport_stats(&self) -> RpcTransportStats {
         RpcTransportStats::default()
     }
 
-    fn send(&self, request: RpcRequest, params: serde_json::Value) -> Result<serde_json::Value> {
+    async fn send(
+        &self,
+        request: RpcRequest,
+        params: serde_json::Value,
+    ) -> Result<serde_json::Value> {
         if let Some(value) = self.mocks.write().unwrap().remove(&request) {
             return Ok(value);
         }

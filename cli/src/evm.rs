@@ -320,11 +320,9 @@ fn transfer(
         let signature = if no_wait {
             rpc_client.send_transaction(&create_account_tx)?
         } else {
-            rpc_client.send_and_confirm_transaction_with_spinner_and_config(
+             rpc_client.send_and_confirm_transaction(
                 &create_account_tx,
-                CommitmentConfig::default(),
-                Default::default(),
-            )?
+             )?
         };
         Ok(format!(
             "Transaction signature = {}",
