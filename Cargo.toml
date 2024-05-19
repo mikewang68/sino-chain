@@ -1,6 +1,7 @@
 [workspace]
 members = [
     "account-decoder",
+    "associated-token-account/program",
     "bloom",
     "bucket_map",
     "core",
@@ -31,7 +32,7 @@ members = [
     "program-test",
     "programs/address-lookup-table",
     "programs/bpf_loader",
-    #"programs/bpf_loader/gen-syscall-list",
+    "programs/bpf_loader/gen-syscall-list",
     "programs/compute-budget",
     "programs/config",
     "programs/stake",
@@ -45,6 +46,8 @@ members = [
     "rpc",
     "runtime",
     "sdk",
+    "sdk/cargo-build-bpf",
+    "sdk/cargo-test-bpf",
     "send-transaction-service",
     "spl-token-3.2.0",
     "storage-proto",
