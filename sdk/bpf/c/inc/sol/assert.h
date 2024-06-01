@@ -17,17 +17,17 @@ extern "C" {
  * the BPF VM to immediately halt execution. No accounts' data are updated
  */
 void sol_panic_(const char *, uint64_t, uint64_t, uint64_t);
-#define sol_panic() sol_panic_(__FILE__, sizeof(__FILE__), __LINE__, 0)
+#define sor_panic() sol_panic_(__FILE__, sizeof(__FILE__), __LINE__, 0)
 
 /**
  * Asserts
  */
-#define sol_assert(expr)  \
+#define sor_assert(expr)  \
 if (!(expr)) {          \
-  sol_panic(); \
+  sor_panic(); \
 }
 
-#ifdef SOL_TEST
+#ifdef sor_TEST
 /**
  * Stub functions when building tests
  */

@@ -47,7 +47,7 @@ static bool SolPubkey_same(const SolPubkey *one, const SolPubkey *two) {
 }
 
 /**
- * Seed used to create a program address or passed to sol_invoke_signed
+ * Seed used to create a program address or passed to sor_invoke_signed
  */
 typedef struct {
   const uint8_t *addr; /** Seed bytes */
@@ -56,7 +56,7 @@ typedef struct {
 
 /**
  * Seeds used by a signer to create a program address or passed to
- * sol_invoke_signed
+ * sor_invoke_signed
  */
 typedef struct {
   const SolSignerSeed *addr; /** An arry of a signer's seeds */
@@ -95,7 +95,7 @@ uint64_t sol_try_find_program_address(
     uint8_t *bump_seed
 );
 
-#ifdef SOL_TEST
+#ifdef sor_TEST
 /**
  * Stub functions when building tests
  */

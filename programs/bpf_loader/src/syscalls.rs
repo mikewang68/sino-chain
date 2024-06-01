@@ -126,46 +126,46 @@ pub fn register_syscalls(
     let mut syscall_registry = SyscallRegistry::default();
 
     syscall_registry.register_syscall_by_name(b"abort", SyscallAbort::call)?;
-    syscall_registry.register_syscall_by_name(b"sor_panic_", SyscallPanic::call)?;
-    syscall_registry.register_syscall_by_name(b"sor_log_", SyscallLog::call)?;
-    syscall_registry.register_syscall_by_name(b"sor_log_64_", SyscallLogU64::call)?;
+    syscall_registry.register_syscall_by_name(b"sol_panic_", SyscallPanic::call)?;
+    syscall_registry.register_syscall_by_name(b"sol_log_", SyscallLog::call)?;
+    syscall_registry.register_syscall_by_name(b"sol_log_64_", SyscallLogU64::call)?;
 
     syscall_registry
-        .register_syscall_by_name(b"sor_log_compute_units_", SyscallLogBpfComputeUnits::call)?;
+        .register_syscall_by_name(b"sol_log_compute_units_", SyscallLogBpfComputeUnits::call)?;
 
-    syscall_registry.register_syscall_by_name(b"sor_log_pubkey", SyscallLogPubkey::call)?;
+    syscall_registry.register_syscall_by_name(b"sol_log_pubkey", SyscallLogPubkey::call)?;
 
     syscall_registry.register_syscall_by_name(
-        b"sor_create_program_address",
+        b"sol_create_program_address",
         SyscallCreateProgramAddress::call,
     )?;
     syscall_registry.register_syscall_by_name(
-        b"sor_try_find_program_address",
+        b"sol_try_find_program_address",
         SyscallTryFindProgramAddress::call,
     )?;
 
-    syscall_registry.register_syscall_by_name(b"sor_sha256", SyscallSha256::call)?;
-    syscall_registry.register_syscall_by_name(b"sor_keccak256", SyscallKeccak256::call)?;
+    syscall_registry.register_syscall_by_name(b"sol_sha256", SyscallSha256::call)?;
+    syscall_registry.register_syscall_by_name(b"sol_keccak256", SyscallKeccak256::call)?;
 
     if invoke_context
         .feature_set
         .is_active(&secp256k1_recover_syscall_enabled::id())
     {
         syscall_registry
-            .register_syscall_by_name(b"sor_secp256k1_recover", SyscallSecp256k1Recover::call)?;
+            .register_syscall_by_name(b"sol_secp256k1_recover", SyscallSecp256k1Recover::call)?;
     }
 
     if invoke_context
         .feature_set
         .is_active(&blake3_syscall_enabled::id())
     {
-        syscall_registry.register_syscall_by_name(b"sor_blake3", SyscallBlake3::call)?;
+        syscall_registry.register_syscall_by_name(b"sol_blake3", SyscallBlake3::call)?;
     }
 
     syscall_registry
-        .register_syscall_by_name(b"sor_get_clock_sysvar", SyscallGetClockSysvar::call)?;
+        .register_syscall_by_name(b"sol_get_clock_sysvar", SyscallGetClockSysvar::call)?;
     syscall_registry.register_syscall_by_name(
-        b"sor_get_epoch_schedule_sysvar",
+        b"sol_get_epoch_schedule_sysvar",
         SyscallGetEpochScheduleSysvar::call,
     )?;
     if !invoke_context
@@ -173,24 +173,24 @@ pub fn register_syscalls(
         .is_active(&disable_fees_sysvar::id())
     {
         syscall_registry
-            .register_syscall_by_name(b"sor_get_fees_sysvar", SyscallGetFeesSysvar::call)?;
+            .register_syscall_by_name(b"sol_get_fees_sysvar", SyscallGetFeesSysvar::call)?;
     }
     syscall_registry
-        .register_syscall_by_name(b"sor_get_rent_sysvar", SyscallGetRentSysvar::call)?;
+        .register_syscall_by_name(b"sol_get_rent_sysvar", SyscallGetRentSysvar::call)?;
 
-    syscall_registry.register_syscall_by_name(b"sor_memcpy_", SyscallMemcpy::call)?;
-    syscall_registry.register_syscall_by_name(b"sor_memmove_", SyscallMemmove::call)?;
-    syscall_registry.register_syscall_by_name(b"sor_memcmp_", SyscallMemcmp::call)?;
-    syscall_registry.register_syscall_by_name(b"sor_memset_", SyscallMemset::call)?;
+    syscall_registry.register_syscall_by_name(b"sol_memcpy_", SyscallMemcpy::call)?;
+    syscall_registry.register_syscall_by_name(b"sol_memmove_", SyscallMemmove::call)?;
+    syscall_registry.register_syscall_by_name(b"sol_memcmp_", SyscallMemcmp::call)?;
+    syscall_registry.register_syscall_by_name(b"sol_memset_", SyscallMemset::call)?;
 
     // Cross-program invocation syscalls
     syscall_registry
-        .register_syscall_by_name(b"sor_invoke_signed_c", SyscallInvokeSignedC::call)?;
+        .register_syscall_by_name(b"sol_invoke_signed_c", SyscallInvokeSignedC::call)?;
     syscall_registry
-        .register_syscall_by_name(b"sor_invoke_signed_rust", SyscallInvokeSignedRust::call)?;
+        .register_syscall_by_name(b"sol_invoke_signed_rust", SyscallInvokeSignedRust::call)?;
 
     // Memory allocator
-    syscall_registry.register_syscall_by_name(b"sor_alloc_free_", SyscallAllocFree::call)?;
+    syscall_registry.register_syscall_by_name(b"sol_alloc_free_", SyscallAllocFree::call)?;
 
     // Return data
     if invoke_context
@@ -198,9 +198,9 @@ pub fn register_syscalls(
         .is_active(&return_data_syscall_enabled::id())
     {
         syscall_registry
-            .register_syscall_by_name(b"sor_set_return_data", SyscallSetReturnData::call)?;
+            .register_syscall_by_name(b"sol_set_return_data", SyscallSetReturnData::call)?;
         syscall_registry
-            .register_syscall_by_name(b"sor_get_return_data", SyscallGetReturnData::call)?;
+            .register_syscall_by_name(b"sol_get_return_data", SyscallGetReturnData::call)?;
     }
 
     // Log data
@@ -208,7 +208,7 @@ pub fn register_syscalls(
         .feature_set
         .is_active(&sor_log_data_syscall_enabled::id())
     {
-        syscall_registry.register_syscall_by_name(b"sor_log_data", SyscallLogData::call)?;
+        syscall_registry.register_syscall_by_name(b"sol_log_data", SyscallLogData::call)?;
     }
 
     if invoke_context
@@ -216,7 +216,7 @@ pub fn register_syscalls(
         .is_active(&add_get_processed_sibling_instruction_syscall::id())
     {
         syscall_registry.register_syscall_by_name(
-            b"sor_get_processed_sibling_instruction",
+            b"sol_get_processed_sibling_instruction",
             SyscallGetProcessedSiblingInstruction::call,
         )?;
     }
@@ -226,7 +226,7 @@ pub fn register_syscalls(
         .is_active(&add_get_processed_sibling_instruction_syscall::id())
     {
         syscall_registry
-            .register_syscall_by_name(b"sor_get_stack_height", SyscallGetStackHeight::call)?;
+            .register_syscall_by_name(b"sol_get_stack_height", SyscallGetStackHeight::call)?;
     }
 
     Ok(syscall_registry)
@@ -419,7 +419,7 @@ pub fn bind_syscall_context_objects<'a, 'b>(
         }),
     );
 
-    // sor_log_data
+    // sol_log_data
     bind_feature_gated_syscall_context_object!(
         vm,
         is_sor_log_data_syscall_active,
@@ -597,7 +597,7 @@ impl SyscallObject<BpfError> for SyscallAbort {
     }
 }
 
-/// Panic syscall function, called when the BPF program calls 'sor_panic_()`
+/// Panic syscall function, called when the BPF program calls 'sol_panic_()`
 /// Causes the BPF program to be halted immediately
 /// Log a user's info message
 pub struct SyscallPanic<'a, 'b> {
@@ -814,7 +814,7 @@ impl<'a, 'b> SyscallObject<BpfError> for SyscallLogPubkey<'a, 'b> {
 }
 
 /// Dynamic memory allocation syscall called when the BPF program calls
-/// `sor_alloc_free_()`.  The allocator is expected to allocate/free
+/// `sol_alloc_free_()`.  The allocator is expected to allocate/free
 /// from/to a given chunk of memory and enforce size restrictions.  The
 /// memory chunk is given to the allocator during allocator creation and
 /// information about that memory (start address and size) is passed

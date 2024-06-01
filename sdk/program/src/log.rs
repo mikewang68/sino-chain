@@ -42,7 +42,7 @@ macro_rules! msg {
 pub fn sor_log(message: &str) {
     #[cfg(target_arch = "bpf")]
     unsafe {
-        sor_log_(message.as_ptr(), message.len() as u64);
+        sol_log_(message.as_ptr(), message.len() as u64);
     }
 
     #[cfg(not(target_arch = "bpf"))]
@@ -51,7 +51,7 @@ pub fn sor_log(message: &str) {
 
 #[cfg(target_arch = "bpf")]
 extern "C" {
-    fn sor_log_(message: *const u8, len: u64);
+    fn sol_log_(message: *const u8, len: u64);
 }
 
 /// Print 64-bit values represented as hexadecimal to the log
@@ -62,7 +62,7 @@ extern "C" {
 pub fn sor_log_64(arg1: u64, arg2: u64, arg3: u64, arg4: u64, arg5: u64) {
     #[cfg(target_arch = "bpf")]
     unsafe {
-        sor_log_64_(arg1, arg2, arg3, arg4, arg5);
+        sol_log_64_(arg1, arg2, arg3, arg4, arg5);
     }
 
     #[cfg(not(target_arch = "bpf"))]
@@ -71,24 +71,24 @@ pub fn sor_log_64(arg1: u64, arg2: u64, arg3: u64, arg4: u64, arg5: u64) {
 
 #[cfg(target_arch = "bpf")]
 extern "C" {
-    fn sor_log_64_(arg1: u64, arg2: u64, arg3: u64, arg4: u64, arg5: u64);
+    fn sol_log_64_(arg1: u64, arg2: u64, arg3: u64, arg4: u64, arg5: u64);
 }
 
 /// Print some slices as base64
 ///
 /// @param data - The slices to print
-pub fn sor_log_data(data: &[&[u8]]) {
+pub fn sol_log_data(data: &[&[u8]]) {
     #[cfg(target_arch = "bpf")]
     {
         extern "C" {
-            fn sor_log_data(data: *const u8, data_len: u64);
+            fn sol_log_data(data: *const u8, data_len: u64);
         }
 
-        unsafe { sor_log_data(data as *const _ as *const u8, data.len() as u64) };
+        unsafe { sol_log_data(data as *const _ as *const u8, data.len() as u64) };
     }
 
     #[cfg(not(target_arch = "bpf"))]
-    crate::program_stubs::sor_log_data(data);
+    crate::program_stubs::sol_log_data(data);
 }
 
 /// Print the hexadecimal representation of a slice
@@ -130,7 +130,7 @@ pub fn sor_log_params(accounts: &[AccountInfo], data: &[u8]) {
 pub fn sor_log_compute_units() {
     #[cfg(target_arch = "bpf")]
     unsafe {
-        sor_log_compute_units_();
+        sol_log_compute_units_();
     }
     #[cfg(not(target_arch = "bpf"))]
     crate::program_stubs::sor_log_compute_units();
@@ -138,5 +138,5 @@ pub fn sor_log_compute_units() {
 
 #[cfg(target_arch = "bpf")]
 extern "C" {
-    fn sor_log_compute_units_();
+    fn sol_log_compute_units_();
 }

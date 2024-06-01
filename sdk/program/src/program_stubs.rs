@@ -38,16 +38,16 @@ pub trait SyscallStubs: Sync + Send {
         sor_log("SyscallStubs: sor_invoke_signed() not available");
         Ok(())
     }
-    fn sor_get_clock_sysvar(&self, _var_addr: *mut u8) -> u64 {
+    fn sol_get_clock_sysvar(&self, _var_addr: *mut u8) -> u64 {
         UNSUPPORTED_SYSVAR
     }
-    fn sor_get_epoch_schedule_sysvar(&self, _var_addr: *mut u8) -> u64 {
+    fn sol_get_epoch_schedule_sysvar(&self, _var_addr: *mut u8) -> u64 {
         UNSUPPORTED_SYSVAR
     }
-    fn sor_get_fees_sysvar(&self, _var_addr: *mut u8) -> u64 {
+    fn sol_get_fees_sysvar(&self, _var_addr: *mut u8) -> u64 {
         UNSUPPORTED_SYSVAR
     }
-    fn sor_get_rent_sysvar(&self, _var_addr: *mut u8) -> u64 {
+    fn sol_get_rent_sysvar(&self, _var_addr: *mut u8) -> u64 {
         UNSUPPORTED_SYSVAR
     }
     /// # Safety
@@ -84,17 +84,17 @@ pub trait SyscallStubs: Sync + Send {
             *val = c;
         }
     }
-    fn sor_get_return_data(&self) -> Option<(Pubkey, Vec<u8>)> {
+    fn sol_get_return_data(&self) -> Option<(Pubkey, Vec<u8>)> {
         None
     }
-    fn sor_set_return_data(&self, _data: &[u8]) {}
-    fn sor_log_data(&self, fields: &[&[u8]]) {
+    fn sol_set_return_data(&self, _data: &[u8]) {}
+    fn sol_log_data(&self, fields: &[&[u8]]) {
         println!("data: {}", fields.iter().map(base64::encode).join(" "));
     }
-    fn sor_get_processed_sibling_instruction(&self, _index: usize) -> Option<Instruction> {
+    fn sol_get_processed_sibling_instruction(&self, _index: usize) -> Option<Instruction> {
         None
     }
-    fn sor_get_stack_height(&self) -> u64 {
+    fn sol_get_stack_height(&self) -> u64 {
         0
     }
 }
@@ -128,23 +128,23 @@ pub(crate) fn sor_invoke_signed(
         .sor_invoke_signed(instruction, account_infos, signers_seeds)
 }
 
-pub(crate) fn sor_get_clock_sysvar(var_addr: *mut u8) -> u64 {
-    SYSCALL_STUBS.read().unwrap().sor_get_clock_sysvar(var_addr)
+pub(crate) fn sol_get_clock_sysvar(var_addr: *mut u8) -> u64 {
+    SYSCALL_STUBS.read().unwrap().sol_get_clock_sysvar(var_addr)
 }
 
-pub(crate) fn sor_get_epoch_schedule_sysvar(var_addr: *mut u8) -> u64 {
+pub(crate) fn sol_get_epoch_schedule_sysvar(var_addr: *mut u8) -> u64 {
     SYSCALL_STUBS
         .read()
         .unwrap()
-        .sor_get_epoch_schedule_sysvar(var_addr)
+        .sol_get_epoch_schedule_sysvar(var_addr)
 }
 
-pub(crate) fn sor_get_fees_sysvar(_var_addr: *mut u8) -> u64 {
+pub(crate) fn sol_get_fees_sysvar(_var_addr: *mut u8) -> u64 {
     UNSUPPORTED_SYSVAR
 }
 
-pub(crate) fn sor_get_rent_sysvar(var_addr: *mut u8) -> u64 {
-    SYSCALL_STUBS.read().unwrap().sor_get_rent_sysvar(var_addr)
+pub(crate) fn sol_get_rent_sysvar(var_addr: *mut u8) -> u64 {
+    SYSCALL_STUBS.read().unwrap().sol_get_rent_sysvar(var_addr)
 }
 
 pub(crate) fn sor_memcpy(dst: *mut u8, src: *const u8, n: usize) {
@@ -171,27 +171,27 @@ pub(crate) fn sor_memset(s: *mut u8, c: u8, n: usize) {
     }
 }
 
-pub(crate) fn sor_get_return_data() -> Option<(Pubkey, Vec<u8>)> {
-    SYSCALL_STUBS.read().unwrap().sor_get_return_data()
+pub(crate) fn sol_get_return_data() -> Option<(Pubkey, Vec<u8>)> {
+    SYSCALL_STUBS.read().unwrap().sol_get_return_data()
 }
 
-pub(crate) fn sor_set_return_data(data: &[u8]) {
-    SYSCALL_STUBS.read().unwrap().sor_set_return_data(data)
+pub(crate) fn sol_set_return_data(data: &[u8]) {
+    SYSCALL_STUBS.read().unwrap().sol_set_return_data(data)
 }
 
-pub(crate) fn sor_log_data(data: &[&[u8]]) {
-    SYSCALL_STUBS.read().unwrap().sor_log_data(data)
+pub(crate) fn sol_log_data(data: &[&[u8]]) {
+    SYSCALL_STUBS.read().unwrap().sol_log_data(data)
 }
 
-pub(crate) fn sor_get_processed_sibling_instruction(index: usize) -> Option<Instruction> {
+pub(crate) fn sol_get_processed_sibling_instruction(index: usize) -> Option<Instruction> {
     SYSCALL_STUBS
         .read()
         .unwrap()
-        .sor_get_processed_sibling_instruction(index)
+        .sol_get_processed_sibling_instruction(index)
 }
 
-pub(crate) fn sor_get_stack_height() -> u64 {
-    SYSCALL_STUBS.read().unwrap().sor_get_stack_height()
+pub(crate) fn sol_get_stack_height() -> u64 {
+    SYSCALL_STUBS.read().unwrap().sol_get_stack_height()
 }
 
 /// Check that two regions do not overlap.

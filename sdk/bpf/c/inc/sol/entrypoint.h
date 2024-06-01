@@ -27,8 +27,8 @@ typedef struct {
 
 /**
  * The Solana runtime provides a memory region that is available to programs at
- * a fixed virtual address and length. The builtin functions `sol_calloc` and
- * `sol_free` call into the Solana runtime to allocate from this memory region
+ * a fixed virtual address and length. The builtin functions `sor_calloc` and
+ * `sor_free` call into the Solana runtime to allocate from this memory region
  * for heap operations.  Because the memory region is directly available to
  * programs another option is a program can implement their own heap directly on
  * top of that region.  If a program chooses to implement their own heap they
@@ -54,7 +54,7 @@ typedef struct {
 /**
  * Program instruction entrypoint
  *
- * @param input Buffer of serialized input parameters.  Use sol_deserialize() to decode
+ * @param input Buffer of serialized input parameters.  Use sor_deserialize() to decode
  * @return 0 if the instruction executed successfully
  */
 uint64_t entrypoint(const uint8_t *input);

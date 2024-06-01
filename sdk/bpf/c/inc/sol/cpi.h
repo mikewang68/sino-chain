@@ -51,7 +51,7 @@ uint64_t sol_invoke_signed_c(
  * @param seeds Seed bytes used to sign program accounts
  * @param seeds_len Length of the seeds array
  */
-static uint64_t sol_invoke_signed(
+static uint64_t sor_invoke_signed(
     const SolInstruction *instruction,
     const SolAccountInfo *account_infos,
     int account_infos_len,
@@ -73,13 +73,13 @@ static uint64_t sol_invoke_signed(
  * @param account_infos Accounts used by instruction
  * @param account_infos_len Length of account_infos array
 */
-static uint64_t sol_invoke(
+static uint64_t sor_invoke(
     const SolInstruction *instruction,
     const SolAccountInfo *account_infos,
     int account_infos_len
 ) {
   const SolSignerSeeds signers_seeds[] = {{}};
-  return sol_invoke_signed(
+  return sor_invoke_signed(
     instruction,
     account_infos,
     account_infos_len,
